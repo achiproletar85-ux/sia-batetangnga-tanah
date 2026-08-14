@@ -60,8 +60,7 @@ Fitur:
    - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
    - `SESSION_SECRET` (acak panjang), `ADMIN_USER`, `ADMIN_PASS`, `ADMIN_NAME`
    - `GAS_SYNC_WEB_APP_URL`, `GAS_SYNC_TOKEN` (opsional, utk tombol Tarik dari Sheet)
-4. Deploy. Seluruh route (`/`, `/api/*`, `/sporadik`) dialihkan ke satu
-   serverless function (`api/server.js`). Tidak ada background job, jadi cocok serverless.
+4. Deploy. Aset statis (`public/`) dilayani langsung oleh Vercel CDN, rute `/sporadik` dialihkan ke `sporadik-executive.html`, dan Rute API (`/api/*`) dialihkan ke serverless function (`api/server.js`).
 
 > Tanpa auto-sync pun aplikasi tetap jalan penuh (data dikelola langsung di aplikasi).
 > Cron Vercel Hobby (2×/hari) tidak dipakai.

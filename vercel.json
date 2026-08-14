@@ -1,19 +1,17 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "api/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["public/**", "sporadik-executive.html"],
-        "maxDuration": 60
-      }
-    }
-  ],
-  "routes": [
+      "source": "/sporadik",
+      "destination": "/sporadik-executive.html"
+    },
     {
-      "src": "/(.*)",
-      "dest": "/api/server"
+      "source": "/api",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
     }
   ]
 }

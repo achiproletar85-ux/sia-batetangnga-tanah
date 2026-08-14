@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const supabase = require('./src/supabase');
 
@@ -13,6 +14,7 @@ const TABLE_UP = 'permohonan_uploads';
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders(res) {
     // Jangan simpan aset di cache agar tiap edit CSS/JS langsung terlihat (termasuk hasil cetak PDF).
@@ -384,8 +386,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ---------- Aplikasi standalone SPORADIK (single-file dari akar proyek) ----------
+// ---------- Aplikasi standalone SPORADIK ----------
 app.get(['/sporadik', '/sporadik-executive.html'], (req, res) => {
+  const pubFile = path.join(__dirname, 'public', 'sporadik-executive.html');
+  if (fs.existsSync(pubFile)) {
+    return res.sendFile(pubFile);
+  }
   res.sendFile(path.join(__dirname, 'sporadik-executive.html'));
 });
 
