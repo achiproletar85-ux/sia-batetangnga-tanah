@@ -179,18 +179,54 @@ function postToSupabase(table, rec, onConflict) {
   }
 }
 
-// Opsional: dorong SEMUA baris kedua tab sekali jalan (catch-up).
+// Kirim BANYAK baris dalam satu request (batch, cepat).
+function postToSupabaseBatch(table, records, onConflict) {
+  const props = PropertiesService.getScriptProperties();
+  const base = props.getProperty('SUPABASE_URL');
+  const anon = props.getProperty('SUPABASE_ANON_KEY');
+  if (!base || !anon) throw new Error('Script Properties SUPABASE_URL / SUPABASE_ANON_KEY belum diisi.');
+  const url = base + '/rest/v1/' + table + '?on_conflict=' + onConflict;
+  const res = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      apikey: anon,
+      Authorization: 'Bearer ' + anon,
+      Prefer: 'resolution=merge-duplicates,return=minimal'
+    },
+    payload: JSON.stringify(records),
+    muteHttpExceptions: true
+  });
+  const code = res.getResponseCode();
+  if (code >= 300) {
+    throw new Error('Supabase ' + code + ': ' + res.getContentText().slice(0, 300));
+  }
+}
+
+// Dorong SEMUA baris kedua tab sekali jalan (catch-up) — versi batch, cepat.
 function syncAllNow() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   for (const sheetName of Object.keys(DATA_TABS)) {
     const conf = DATA_TABS[sheetName];
     const tab = ss.getSheetByName(sheetName);
     if (!tab) continue;
-    const lastRow = tab.getLastRow();
-    if (lastRow < 2) continue;
-    for (let r = 2; r <= lastRow; r++) {
-      try { syncRow(sheetName, r, conf); } catch (err) { Logger.log('Baris ' + r + ': ' + err); }
+    const vals = tab.getDataRange().getValues();
+    if (vals.length < 2) continue;
+    const headers = vals[0].map((h) => String(h).trim());
+    const records = [];
+    for (let r = 1; r < vals.length; r++) {
+      const rec = conf.kind === 'upload' ? buildUpload(headers, vals[r]) : buildPermohonan(headers, vals[r]);
+      if (rec) {
+        rec.updated_at = new Date().toISOString();
+        records.push(rec);
+      }
     }
-    Logger.log(sheetName + ': ' + (lastRow - 1) + ' baris dikirim.');
+    if (!records.length) continue;
+    let total = 0;
+    for (let i = 0; i < records.length; i += 200) {
+      postToSupabaseBatch(conf.table, records.slice(i, i + 200), conf.onConflict);
+      total += Math.min(200, records.length - i);
+    }
+    Logger.log(sheetName + ': ' + total + ' baris berhasil dikirim (batch).');
   }
 }
