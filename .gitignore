@@ -1,0 +1,24 @@
+# Dependensi
+node_modules/
+
+# Environment & secret (JANGAN pernah commit)
+.env
+
+# Log runtime
+*.log
+server.out.log
+server.err.log
+
+# Upload / file sementara
+uploads/
+tmp/
+*.tmp
+
+# Vercel (deploy lokal / cache)
+.vercel/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

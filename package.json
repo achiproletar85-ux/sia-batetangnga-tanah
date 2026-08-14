@@ -1,0 +1,21 @@
+{
+  "name": "sync-surat-tanah",
+  "version": "1.0.0",
+  "description": "Pengelolaan pendaftaran surat tanah Batetangnga dengan Supabase sebagai sumber data. Aplikasi terpisah dari SIA.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sync Surat Tanah - Batetangnga</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=79" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) { window.lucide.createIcons(); } });</script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { corePlugins: { preflight: false } };</script>
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header topbar">
+      <div class="app-brand brand-section">
+        <span class="sidebar-logo brand-logo-badge" style="background:#ffffff; box-shadow:0 8px 16px rgba(2,44,34,.18); overflow:hidden;">
+          <img src="logo-desa.png" alt="Logo Desa Batetangnga" class="brand-logo-img" style="width:100%; height:100%; object-fit:contain; display:block;">
+        </span>
+        <div class="brand-info">
+          <h1 class="app-title">Surat Tanah — Batetangnga</h1>
+          <p class="app-subtitle">Pengelolaan Pendaftaran &#8644; Supabase &amp; Surat Digital</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="tb-status auth-data">
+          <span id="connStatus" class="badge">⏳ Menghubungkan…</span>
+          <span id="countBadge" class="badge">0 baris</span>
+          <span id="spSummary" class="badge"></span>
+        </div>
+        <span id="tbTitle" class="tb-title auth-data">Dashboard</span>
+        <input id="topSearch" type="search" class="tb-search auth-data" placeholder="Cari di tab aktif…" autocomplete="off" />
+        <button id="btnRefresh" class="tb-icon auth-data" title="Muat ulang data">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        </button>
+        <span class="tb-icon" title="Notifikasi">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </span>
+        <button id="btnOpenLogin" class="btn-login-header" style="display: none; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 10px; background: #064e3b; color: #ffffff; border: none; font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 2px 8px rgba(6,78,59,0.2);">
+          <i data-lucide="log-in" style="width: 16px; height: 16px;"></i> Masuk / Login
+        </button>
+        <div id="userProfileNav" style="display: none; align-items: center; gap: 12px;">
+          <div style="text-align: right; line-height: 1.2;">
+            <div id="displayUserName" style="font-size: 13px; font-weight: 700; color: #0f172a;">Admin Desa</div>
+            <div style="font-size: 11px; color: #059669; font-weight: 600;">&#9679; Aktif</div>
+          </div>
+          <button id="btnChangePw" onclick="openChangePw()" title="Ubah Kata Sandi" style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;">
+            <i data-lucide="key-round" style="width: 14px; height: 14px;"></i> Ubah Sandi
+          </button>
+          <button id="btnImportSheet" onclick="importFromSheet()" title="Tarik data dari spreadsheet ke Supabase (manual)" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;">
+            <i data-lucide="download" style="width: 14px; height: 14px;"></i> Tarik dari Sheet
+          </button>
+          <button id="btnLogout" onclick="handleLogout()" title="Keluar Sistem" style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;">
+            <i data-lucide="log-out" style="width: 14px; height: 14px;"></i> Keluar
+          </button>
+        </div>
+        <div class="user-avatar-badge" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; overflow: hidden; background: #ffffff; border: 1.5px solid #e2e8f0; box-shadow: 0 2px 6px rgba(0,0,0,0.06); cursor: pointer;">
+          <img src="/logo.bmp" alt="Logo Kabupaten Polewali Mandar" style="width: 100%; height: 100%; object-fit: contain; padding: 2px; display: block;" onerror="this.onerror=null; this.src='logo.bmp';">
+        </div>
+      </div>
+    </header>
+
+    <div id="authGuestNotice" class="auth-guest-notice" style="display: none;">
+      <div class="auth-guest-card">
+        <img src="logo-desa.png" alt="Logo Desa Batetangnga" class="auth-guest-logo" />
+        <h2>Silakan login untuk mengelola berkas</h2>
+        <p>Anda perlu masuk dengan akun petugas desa untuk melihat data pendaftaran, surat SPORADIK, dan mengelola berkas.</p>
+        <button id="btnOpenLoginNotice" class="btn-login-header" style="align-items: center; gap: 8px; padding: 10px 22px; border-radius: 10px; background: #064e3b; color: #ffffff; border: none; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 2px 8px rgba(6,78,59,0.2);">
+          <i data-lucide="log-in" style="width: 16px; height: 16px;"></i> Masuk / Login
+        </button>
+      </div>
+    </div>
+
+    <div id="appWorkspace">
+    <nav class="tabs tab-navigation nav-tab-wrapper" aria-label="Menu utama">
+      <button class="tabbtn nav-tab-item active" data-tab="dashboard">
+        <svg class="tab-ic" viewBox="0 0 24 24" aria-hidden="true">
+          <rect class="ic-fill" x="4" y="11" width="4" height="8" rx="1.3"/>
+          <rect class="ic-fill" x="10" y="6" width="4" height="13" rx="1.3"/>
+          <rect class="ic-line" x="16" y="3" width="4" height="16" rx="1.3"/>
+          <line class="ic-line" x1="3" y1="21" x2="21" y2="21"/>
+        </svg>
+        Dashboard
+      </button>
+      <button class="tabbtn nav-tab-item" data-tab="pendaftaran">
+        <svg class="tab-ic" viewBox="0 0 24 24" aria-hidden="true">
+          <path class="ic-line" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline class="ic-line" points="14 2 14 8 20 8"/>
+          <line class="ic-line" x1="8" y1="13" x2="16" y2="13"/>
+          <line class="ic-line" x1="8" y1="17" x2="13" y2="17"/>
+        </svg>
+        Pendaftaran
+      </button>
+      <button class="tabbtn nav-tab-item" data-tab="sporadik">
+        <svg class="tab-ic" viewBox="0 0 24 24" aria-hidden="true">
+          <path class="ic-fill" d="M12 2 14 7.5 20 8l-4.5 4 1.2 6L12 15l-4.7 3 1.2-6L4 8l6-.5z"/>
+          <line class="ic-line" x1="12" y1="3" x2="10" y2="21"/>
+        </svg>
+        Surat SPORADIK
+      </button>
+      <button class="tabbtn nav-tab-item" data-tab="uploads">
+        <svg class="tab-ic" viewBox="0 0 24 24" aria-hidden="true">
+          <rect class="ic-line" x="3" y="3" width="18" height="18" rx="2"/>
+          <path class="ic-line" d="m7.5 12.5 3 3 6-6"/>
+        </svg>
+        Uploads
+      </button>
+    </nav>
+
+    <main class="main-card main-card-workspace">
+
+    <section id="tab-dashboard">
+      <div class="dash-grid">
+        <div class="dash-card total"><div class="dash-ic">📊</div><div><div class="dash-val" id="dbTotal">0</div><div class="dash-lb">Total Pendaftaran</div></div></div>
+        <div class="dash-card up"><div class="dash-ic">📎</div><div><div class="dash-val" id="dbUpload">0</div><div class="dash-lb">Total Upload</div></div></div>
+        <div class="dash-card ok"><div class="dash-ic">🖨</div><div><div class="dash-val" id="dbLengkap">0</div><div class="dash-lb">Siap Cetak SPORADIK</div></div></div>
+        <div class="dash-card ko"><div class="dash-ic">⚠️</div><div><div class="dash-val" id="dbKurang">0</div><div class="dash-lb">Perlu Lengkapi Data</div></div></div>
+      </div>
+
+      <div class="dash-sec-title">Grafik</div>
+
+      <div class="dash-row">
+        <div class="dash-block">
+          <h3 class="panel-title">📈 Grafik Batang — Layanan</h3>
+          <div class="dash-body chart-bar" id="chartBarLayanan"></div>
+        </div>
+        <div class="dash-block">
+          <h3 class="panel-title">📈 Grafik Batang — Status Berkas</h3>
+          <div class="dash-body chart-bar" id="chartBarStatus"></div>
+        </div>
+        <div class="dash-block wide">
+          <h3 class="panel-title">📉 Grafik Garis — Tren Pendaftaran (per tanggal)</h3>
+          <div class="dash-body chart-line" id="chartLineTren"></div>
+        </div>
+        <div class="dash-block">
+          <h3 class="panel-title">🥧 Grafik Pie — Layanan</h3>
+          <div class="dash-body chart-pie" id="chartPieLayanan"></div>
+        </div>
+        <div class="dash-block">
+          <h3 class="panel-title">🥧 Grafik Pie — Status Berkas</h3>
+          <div class="dash-body chart-pie" id="chartPieStatus"></div>
+        </div>
+      </div>
+
+      <div class="dash-sec-title">Tabel Silang</div>
+
+      <div class="dash-row">
+        <div class="dash-block wide">
+          <h3 class="panel-title">🔀 Tabel 3 Arah — Layanan × Status Berkas × Pembayaran</h3>
+          <div class="dash-body dt-wrap" id="t3LayananStatusBayar"></div>
+        </div>
+        <div class="dash-block">
+          <h3 class="panel-title">🔀 Tabel 2 Arah — Layanan × Status Berkas</h3>
+          <div class="dash-body dt-wrap" id="t2LayananStatus"></div>
+        </div>
+        <div class="dash-block">
+          <h3 class="panel-title">🔀 Tabel 2 Arah — Layanan × Pembayaran</h3>
+          <div class="dash-body dt-wrap" id="t2LayananBayar"></div>
+        </div>
+      </div>
+
+      <div class="dash-sec-title">Frekuensi</div>
+
+      <div class="dash-row freq">
+        <div class="dash-block">
+          <h3 class="panel-title">📋 Frekuensi Layanan</h3>
+          <div class="dash-body dt-wrap" id="t1Layanan"></div>
+        </div>
+        <div class="dash-block">
+          <h3 class="panel-title">📋 Frekuensi Status Berkas</h3>
+          <div class="dash-body dt-wrap" id="t1Status"></div>
+        </div>
+        <div class="dash-block">
+          <h3 class="panel-title">📋 Frekuensi Pembayaran</h3>
+          <div class="dash-body dt-wrap" id="t1Bayar"></div>
+        </div>
+        <div class="dash-block">
+          <h3 class="panel-title">📋 Frekuensi Jenis Tanah</h3>
+          <div class="dash-body dt-wrap" id="t1Tanah"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-pendaftaran" hidden>
+      <div class="toolbar toolbar-container">
+        <div class="search-input-group">
+          <i data-lucide="search" class="search-icon-inside"></i>
+          <input id="searchInput" type="search" placeholder="Cari ID / nama / layanan / dusun / status…" />
+        </div>
+        <select id="filterLayanan">
+          <option value="">Semua Layanan</option>
+          <option value="HIBAH">HIBAH</option>
+          <option value="JUALBELI">JUAL BELI</option>
+          <option value="AHLIWARIS">AHLI WARIS</option>
+        </select>
+        <select id="filterStatus">
+          <option value="">Semua Status</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Layanan</th>
+              <th>Nama</th>
+              <th>HP</th>
+              <th>Pembayaran</th>
+              <th>Jenis Tanah</th>
+              <th>Status Berkas</th>
+              <th>Last Updated</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="dataBody"></tbody>
+        </table>
+        <p id="emptyMsg" class="empty" hidden>Belum ada data.</p>
+      </div>
+      <div class="pager" id="pagerPendaftaran"></div>
+    </section>
+
+    <section id="tab-sporadik" hidden>
+      <div class="toolbar sp-cari toolbar-container">
+        <div class="search-input-group">
+          <i data-lucide="search" class="search-icon-inside"></i>
+          <input id="spLoadInput" type="search" list="spLoadList" placeholder="Cari & muat ID / Nomor Surat / Nama… (contoh: 996158 atau nama)" autocomplete="off" />
+        </div>
+        <datalist id="spLoadList"></datalist>
+        <button id="btnSpLoad" class="btn primary btn-action-primary">📂 Muat Data</button>
+        <button id="btnSpReset" class="btn">↺ Reset / ID Baru</button>
+      </div>
+      <div id="sporadikPanel">
+        <div class="toolbar toolbar-container">
+          <div class="search-input-group">
+            <i data-lucide="search" class="search-icon-inside"></i>
+            <input id="spSearch" type="search" placeholder="Cari ID / nama / layanan…" />
+          </div>
+          <select id="spFilterLayanan">
+            <option value="">Semua Layanan</option>
+            <option value="HIBAH">HIBAH</option>
+            <option value="JUALBELI">JUAL BELI</option>
+            <option value="AHLIWARIS">AHLI WARIS</option>
+          </select>
+          <select id="spFilterKelengkapan">
+            <option value="">Semua Kelengkapan</option>
+            <option value="ok">Lengkap (siap cetak)</option>
+            <option value="ko">Kurang lengkap</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table id="sporadikTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Layanan</th>
+                <th>Nama</th>
+                <th>Jenis Tanah</th>
+                <th>Sporadik</th>
+                <th>Status Berkas</th>
+                <th>Catatan Admin</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="sporadikBody"></tbody>
+          </table>
+          <p id="spEmpty" class="empty" hidden>Belum ada data.</p>
+        </div>
+        <div class="pager" id="pagerSporadik"></div>
+      </div>
+
+      <div id="suratView" hidden>
+        <div class="surat-view-head print-hide">
+          <div>
+            <h2>Surat SPORADIK</h2>
+            <p id="suratIdLine" class="muted-line"></p>
+          </div>
+          <div class="modal-actions" style="margin-top:0">
+            <button id="btnBackSurat" class="btn-ghost">← Kembali</button>
+            <button id="btnSaveSuratEdit" class="btn">💾 Simpan Data</button>
+            <button id="btnPrintSurat" class="btn primary">🖨 Cetak / Simpan PDF</button>
+          </div>
+        </div>
+
+        <div class="surat-controls print-hide">
+          <label>Tanggal Surat <input id="srTgl" type="date" /></label>
+          <label>Nomor Urut <input id="srNoUrut" type="text" inputmode="numeric" maxlength="3" placeholder="001" /></label>
+          <label>Nomor Surat <input id="srNoSurat" readonly /></label>
+        </div>
+
+        <div class="surat-view-grid">
+          <div class="surat-editor-col print-hide">
+            <div class="surat-editor-head">
+              <h3 class="panel-title">🖊 Data Surat</h3>
+              <p class="surat-edit-hint">Isi field yang masih kosong (input aktif). Yang sudah terisi terkunci.</p>
+            </div>
+            <div id="suratEditFields" class="se-grid"></div>
+            <p id="seStatus" class="rev-note"></p>
+          </div>
+          <div class="surat-preview-col">
+            <h3 class="panel-title print-hide">📄 Pratinjau Surat</h3>
+            <div id="suratBody"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-uploads" hidden>
+      <div class="toolbar toolbar-container">
+        <div class="search-input-group">
+          <i data-lucide="search" class="search-icon-inside"></i>
+          <input id="uploadSearch" type="search" placeholder="Cari ID registrasi / jenis upload / nama file…" />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="uploadTable">
+          <thead>
+            <tr>
+              <th>ID Registrasi</th>
+              <th>Jenis Upload</th>
+              <th>Nama File</th>
+              <th>Timestamp</th>
+              <th>File</th>
+            </tr>
+          </thead>
+          <tbody id="uploadBody"></tbody>
+        </table>
+        <p id="uploadEmpty" class="empty" hidden>Belum ada upload.</p>
+      </div>
+      <div class="pager" id="pagerUploads"></div>
+    </section>
+  </main>
+  </div>
+
+  </div>
+
+  <dialog id="detailModal">
+    <div class="modal-head">
+      <h2 id="detailTitle">Detail</h2>
+      <button id="btnCloseModal" class="btn-ghost">✕</button>
+    </div>
+    <div id="detailBody"></div>
+  </dialog>
+
+  <dialog id="editModal">
+    <div class="modal-head">
+      <h2>Edit Berkas</h2>
+      <button id="btnCloseEdit" class="btn-ghost">✕</button>
+    </div>
+    <div class="form">
+      <label>Status Berkas <input id="editStatus" list="statusList" /></label>
+      <datalist id="statusList">
+        <option>SUDAH_DIUKUR</option>
+        <option>BELUM_DIUKUR</option>
+        <option>PROSES</option>
+        <option>DITOLAK</option>
+        <option>SELESAI</option>
+      </datalist>
+      <label>Catatan Admin <textarea id="editCatatan" rows="4"></textarea></label>
+      <div class="form-actions">
+        <button id="btnSaveEdit" class="btn primary">Simpan</button>
+        <button id="btnDelete" class="btn danger">Hapus</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="loginModal" class="login-modal">
+    <div class="login-modal-card">
+      <button id="btnCloseLogin" class="login-close" title="Tutup">&times;</button>
+      <div class="login-modal-brand">
+        <img src="logo-desa.png" alt="Logo Desa Batetangnga" class="login-modal-logo" />
+        <h2>Masuk ke Sistem</h2>
+        <p>Surat Tanah — Desa Batetangnga</p>
+      </div>
+      <form id="loginForm" autocomplete="on">
+        <label class="login-field">
+          <span>Username / Email</span>
+          <input id="loginEmail" type="text" placeholder="Masukkan username" autocomplete="username" required />
+        </label>
+        <label class="login-field">
+          <span>Kata Sandi</span>
+          <span class="pw-wrap">
+            <input id="loginPassword" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password" required />
+            <button type="button" id="togglePassword" class="pw-toggle" title="Lihat sandi">
+              <i data-lucide="eye" style="width: 17px; height: 17px;"></i>
+            </button>
+          </span>
+        </label>
+        <div id="loginError" class="login-error" style="display: none;">Username atau kata sandi salah.</div>
+        <button type="submit" id="btnLoginSubmit" class="login-submit">
+          <span id="loginSubmitLabel">Masuk ke Sistem</span>
+          <span id="loginSpinner" class="login-spinner" style="display: none;"></span>
+        </button>
+      </form>
+      <p class="login-hint">Gunakan akun petugas desa yang telah ditetapkan.</p>
+    </div>
+  </dialog>
+
+  <dialog id="changePwModal" class="login-modal">
+    <div class="login-modal-card">
+      <button id="btnCloseChangePw" class="login-close" title="Tutup">&times;</button>
+      <div class="login-modal-brand">
+        <img src="logo-desa.png" alt="Logo Desa Batetangnga" class="login-modal-logo" />
+        <h2>Ubah Kata Sandi</h2>
+        <p>Perbarui kata sandi akun petugas desa</p>
+      </div>
+      <form id="changePwForm">
+        <label class="login-field">
+          <span>Kata Sandi Lama</span>
+          <input id="cpCurrent" type="password" placeholder="Kata sandi saat ini" autocomplete="current-password" required />
+        </label>
+        <label class="login-field">
+          <span>Kata Sandi Baru</span>
+          <span class="pw-wrap">
+            <input id="cpNew" type="password" placeholder="Minimal 6 karakter" autocomplete="new-password" required />
+            <button type="button" id="toggleCpNew" class="pw-toggle" title="Lihat sandi">
+              <i data-lucide="eye" style="width: 17px; height: 17px;"></i>
+            </button>
+          </span>
+        </label>
+        <label class="login-field">
+          <span>Ulangi Kata Sandi Baru</span>
+          <input id="cpConfirm" type="password" placeholder="Ulangi kata sandi baru" autocomplete="new-password" required />
+        </label>
+        <div id="changePwError" class="login-error" style="display: none;"></div>
+        <div id="changePwOk" class="login-ok" style="display: none;"></div>
+        <button type="submit" id="btnChangePwSubmit" class="login-submit">
+          <span id="changePwSubmitLabel">Simpan Kata Sandi</span>
+          <span id="changePwSpinner" class="login-spinner" style="display: none;"></span>
+        </button>
+      </form>
+      <p class="login-hint">Kata sandi disimpan terenkripsi (scrypt) di tabel app_users Supabase.</p>
+    </div>
+  </dialog>
+
+   <script src="app.js?v=80"></script> </body>
+</html>
