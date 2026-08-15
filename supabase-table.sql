@@ -40,7 +40,7 @@ DROP POLICY IF EXISTS "allow_all_delete" ON public.permohonan_surat_tanah;
 CREATE POLICY "allow_all_read"   ON public.permohonan_surat_tanah FOR SELECT USING (true);
 CREATE POLICY "allow_all_insert" ON public.permohonan_surat_tanah FOR INSERT WITH CHECK (true);
 CREATE POLICY "allow_all_update" ON public.permohonan_surat_tanah FOR UPDATE USING (true);
-CREATE POLICY "allow_all_delete" ON public.permohonan_surat_tanah FOR DELETE USING (true) TO authenticated, service_role;
+CREATE POLICY "allow_all_delete" ON public.permohonan_surat_tanah FOR DELETE TO authenticated, service_role USING (true);
 
 GRANT ALL ON TABLE public.permohonan_surat_tanah TO anon, authenticated, service_role;
 
@@ -90,7 +90,7 @@ DROP POLICY IF EXISTS "uploads_delete" ON public.permohonan_uploads;
 CREATE POLICY "uploads_read"   ON public.permohonan_uploads FOR SELECT USING (true);
 CREATE POLICY "uploads_insert" ON public.permohonan_uploads FOR INSERT WITH CHECK (true);
 CREATE POLICY "uploads_update" ON public.permohonan_uploads FOR UPDATE USING (true);
-CREATE POLICY "uploads_delete" ON public.permohonan_uploads FOR DELETE USING (true) TO authenticated, service_role;
+CREATE POLICY "uploads_delete" ON public.permohonan_uploads FOR DELETE TO authenticated, service_role USING (true);
 
 GRANT ALL ON TABLE public.permohonan_uploads TO anon, authenticated, service_role;
 
@@ -111,6 +111,8 @@ $$;
 -- 4. TABEL PENGGUNA (AUTH: login + ubah sandi aplikasi)
 --    Jalankan bagian 4 ini setelah tabel data dibuat.
 --    app_users.id = 1 berisi satu baris akun admin (username, password_hash scrypt).
+--    PENTING: tabel ini HANYA diakses server (service_role). anon TIDAK boleh apa-apa
+--    (jangan beri akses anon, agar kredensial admin tidak bisa dibaca/diubah publik).
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.app_users (
     id            integer PRIMARY KEY DEFAULT 1,
@@ -120,7 +122,7 @@ CREATE TABLE IF NOT EXISTS public.app_users (
     updated_at    timestamptz DEFAULT now()
 );
 ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-    CREATE POLICY "app_users_admin_all" ON public.app_users FOR ALL TO anon, authenticated, service_role USING (true) WITH CHECK (true);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-GRANT ALL ON TABLE public.app_users TO anon, authenticated, service_role;
+DROP POLICY IF EXISTS "app_users_admin_all" ON public.app_users;
+CREATE POLICY "app_users_admin_all" ON public.app_users FOR ALL TO service_role, authenticated USING (true) WITH CHECK (true);
+REVOKE ALL ON TABLE public.app_users FROM anon;
+GRANT ALL ON TABLE public.app_users TO service_role, authenticated;

@@ -6,6 +6,7 @@
 // (endpoint /api/import-from-sheet).
 // ============================================================
 const TOKEN_KEY = 'GAS_SYNC_TOKEN';
+const SPREADSHEET_ID = '1wZgW7H2RTWRPGkIo6qC6x_uvaIHC5loGl5GGKAiFw6s';
 
 function doPost(e) {
   const body = JSON.parse(e.postData.contents);
@@ -16,7 +17,9 @@ function doPost(e) {
     return respond(401, { success: false, error: 'Token salah.' });
   }
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  // Gunakan ID spreadsheet eksplisit agar web app tetap jalan sebagai
+  // proyek STANDALONE (getActiveSpreadsheet() hanya bekerja di skrip bound).
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = String(body.sheet || 'Database_Pendaftaran');
   const tab = ss.getSheetByName(sheet);
   if (!tab) {
