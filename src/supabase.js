@@ -1,8 +1,20 @@
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
+function sanitizeUrl(rawUrl) {
+  if (!rawUrl) return '';
+  let u = String(rawUrl).trim();
+  u = u.replace(/\/+$/, '');
+  u = u.replace(/\/rest\/v1\/?$/i, '');
+  if (u && !/^https?:\/\//i.test(u)) {
+    u = 'https://' + u;
+  }
+  return u;
+}
+
+const rawUrl = process.env.SUPABASE_URL;
+const supabaseUrl = sanitizeUrl(rawUrl);
+const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || '').trim();
 
 let supabase;
 
@@ -32,7 +44,7 @@ if (!supabaseUrl || !supabaseKey) {
       auth: { persistSession: false, autoRefreshToken: false },
       realtime: { params: { eventsPerSecond: 10 } }
     });
-    console.log('✅ Supabase connected (sync-surat-tanah)');
+    console.log('✅ Supabase connected (sync-surat-tanah):', supabaseUrl);
   } catch (err) {
     console.error('❌ Gagal membuat Supabase client:', err.message);
     supabase = { from: () => makeChain() };
