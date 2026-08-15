@@ -58,9 +58,10 @@ async function verifyPassword(pw, stored) {
 
 // Sumber kebenaran kredensial: tabel app_users di Supabase (persisten utk hosting),
 // dengan fallback ke variabel env bila tabel belum dibuat.
-async function getAdminRecord() {
+// Mendukung banyak akun (bendahara = bisa input keuangan; user = hanya baca + cek).
+async function getUserByUsername(username) {
   try {
-    const { data, error } = await supabase.from(TABLE_USERS).select('*').eq('id', 1).maybeSingle();
+    const { data, error } = await supabase.from(TABLE_USERS).select('*').eq('username', username).maybeSingle();
     if (error) return null;
     return data || null;
   } catch (_) { return null; }
@@ -69,6 +70,20 @@ async function upsertAdminRecord({ username, name, password_hash }) {
   const rec = { id: 1, username, name, password_hash, updated_at: new Date().toISOString() };
   const { error } = await supabase.from(TABLE_USERS).upsert(rec, { onConflict: 'id' });
   if (error) throw new Error(error.message);
+}
+// Simpan password untuk akun yang sudah login (cari by username). Bila akun
+// belum ada di tabel (login via fallback env), semai sebagai bendahara (id=1).
+async function saveUserPassword({ username, name, password_hash }) {
+  const rec = await getUserByUsername(username);
+  if (rec) {
+    const { error } = await supabase
+      .from(TABLE_USERS)
+      .update({ password_hash, name: name || rec.name, updated_at: new Date().toISOString() })
+      .eq('username', username);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  await upsertAdminRecord({ username, name, password_hash });
 }
 
 function signToken(payload) {
@@ -98,6 +113,18 @@ function requireAuth(req, res, next) {
   }
   req.auth = payload;
   next();
+}
+
+// Batasi endpoint agar hanya boleh diakses oleh role tertentu (mis. 'bendahara').
+// Wajib dipakai SETELAH requireAuth agar req.auth terisi.
+function requireRole(...roles) {
+  return (req, res, next) => {
+    const role = req.auth && req.auth.role;
+    if (!role || !roles.includes(role)) {
+      return res.status(403).json({ success: false, error: 'Anda tidak memiliki izin (khusus Bendahara).' });
+    }
+    next();
+  };
 }
 
 // ---------- Helper import dari spreadsheet (manual, read-only via GAS) ----------
@@ -134,27 +161,34 @@ function restToRaw(row) {
 app.post('/api/login', async (req, res) => {
   const u = String(req.body && req.body.username || '').trim();
   const p = String(req.body && req.body.password || '');
-  let matched = false, name = AUTH_NAME;
-  const rec = await getAdminRecord();
+  let matched = false, name = AUTH_NAME, role = 'bendahara';
+  const rec = await getUserByUsername(u);
   if (rec && rec.password_hash) {
     const ok = await verifyPassword(p, rec.password_hash);
-    if (ok && u === (rec.username || AUTH_USER)) { matched = true; name = rec.name || AUTH_NAME; }
+    if (ok) {
+      matched = true;
+      name = rec.name || u;
+      // Bila kolom role belum dibuat (belum migration), akun admin fallback bendahara.
+      const r = rec.role;
+      role = (r === 'bendahara' || r === 'user') ? r : (u === AUTH_USER ? 'bendahara' : 'user');
+    }
   } else if (u === AUTH_USER && p === AUTH_PASS) {
     matched = true;
+    role = 'bendahara';
     // Migrasi awal: semai kredensial env ke tabel app_users (untuk fitur ubah sandi).
     hashPassword(p).then((h) => upsertAdminRecord({ username: u, name: AUTH_NAME, password_hash: h })).catch(() => {});
   }
   if (!matched) {
     return res.status(401).json({ success: false, error: 'Username atau kata sandi salah.' });
   }
-  const token = signToken({ username: u, name, exp: Date.now() + SESSION_TTL_MS });
-  res.json({ success: true, token, user: { username: u, name } });
+  const token = signToken({ username: u, name, role, exp: Date.now() + SESSION_TTL_MS });
+  res.json({ success: true, token, user: { username: u, name, role } });
 });
 
 app.get('/api/me', (req, res) => {
   const payload = verifyToken(authTokenFromReq(req));
   if (!payload) return res.status(401).json({ success: false, error: 'Sesi tidak valid.' });
-  res.json({ success: true, user: { username: payload.username, name: payload.name } });
+  res.json({ success: true, user: { username: payload.username, name: payload.name, role: payload.role || 'bendahara' } });
 });
 
 app.get('/api/config', (req, res) => {
@@ -181,7 +215,7 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
     if (next === current) {
       return res.status(400).json({ success: false, error: 'Kata sandi baru tidak boleh sama dengan kata sandi lama.' });
     }
-    const rec = await getAdminRecord();
+    const rec = await getUserByUsername(req.auth.username);
     let ok = false;
     if (rec && rec.password_hash) {
       ok = await verifyPassword(current, rec.password_hash);
@@ -190,7 +224,7 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
     }
     if (!ok) return res.status(401).json({ success: false, error: 'Kata sandi lama salah.' });
     const hash = await hashPassword(next);
-    await upsertAdminRecord({ username: req.auth.username || AUTH_USER, name: req.auth.name || AUTH_NAME, password_hash: hash });
+    await saveUserPassword({ username: req.auth.username || AUTH_USER, name: req.auth.name || AUTH_NAME, password_hash: hash });
     res.json({ success: true, message: 'Kata sandi berhasil diperbarui.' });
   } catch (e) {
     res.status(500).json({
@@ -610,7 +644,7 @@ app.get('/api/keuangan/transaksi', requireAuth, async (req, res) => {
 });
 
 // POST /api/keuangan/transaksi -> Tambah transaksi baru
-app.post('/api/keuangan/transaksi', requireAuth, async (req, res) => {
+app.post('/api/keuangan/transaksi', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
     const {
       tanggal,
@@ -639,7 +673,7 @@ app.post('/api/keuangan/transaksi', requireAuth, async (req, res) => {
 });
 
 // PATCH /api/keuangan/transaksi/:id -> Update transaksi
-app.patch('/api/keuangan/transaksi/:id', requireAuth, async (req, res) => {
+app.patch('/api/keuangan/transaksi/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
     try {
         const { id } = req.params;
         const { tanggal, jenis_transaksi, id_permohonan, nominal, keterangan, url_bukti } = req.body;
@@ -660,7 +694,7 @@ app.patch('/api/keuangan/transaksi/:id', requireAuth, async (req, res) => {
 
 
 // DELETE /api/keuangan/transaksi/:id -> Hapus transaksi
-app.delete('/api/keuangan/transaksi/:id', requireAuth, async (req, res) => {
+app.delete('/api/keuangan/transaksi/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
     const { id } = req.params;
     const { error } = await supabase.from(TABLE_TRX).delete().eq('id', id);
@@ -722,7 +756,7 @@ function parseSheetTime(v) {
 }
 
 // POST /api/keuangan/import-from-sheet -> Tarik semua transaksi dari tab TRANSAKSI (upsert).
-app.post('/api/keuangan/import-from-sheet', requireAuth, async (req, res) => {
+app.post('/api/keuangan/import-from-sheet', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
     const gasRes = await fetch(KEUANGAN_SHEET_URL, { redirect: 'follow' });
     if (!gasRes.ok) {

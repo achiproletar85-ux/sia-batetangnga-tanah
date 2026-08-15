@@ -139,6 +139,7 @@
     const shown = filtered.slice((stp.p - 1) * PER_PAGE, stp.p * PER_PAGE);
 
     const frag = document.createDocumentFragment();
+    const canInput = isBendahara();
     shown.forEach(t => {
       const tr = document.createElement('tr');
       const makerName = t.permohonan_surat_tanah ? t.permohonan_surat_tanah.nama : (t.id_permohonan || '-');
@@ -149,7 +150,7 @@
         <td class="num">${formatRp(t.nominal)}</td>
         <td class="wrap">${esc(t.keterangan)}</td>
         <td>${t.url_bukti ? `<a class="flink" href="${esc(t.url_bukti)}" target="_blank" rel="noopener">🔗 Lihat</a>` : '—'}</td>
-        <td><button class="btn" data-id="${esc(t.id)}">✏️ Edit</button></td>
+        ${canInput ? `<td><button class="btn" data-id="${esc(t.id)}">✏️ Edit</button></td>` : ''}
       `;
       frag.appendChild(tr);
     });
@@ -173,22 +174,111 @@
       : '<span class="tag status-ko">BELUM LUNAS</span>';
   }
 
+  // Label Indonesia untuk field data_raw (agar tampilan Cek Tagihan & Berkas mudah dibaca).
+  const DATA_RAW_LABELS = {
+    nama_lengkap: 'Nama Lengkap',
+    no_hp: 'No. HP',
+    nik: 'NIK',
+    alamat: 'Alamat',
+    dusun: 'Dusun',
+    jenis_tanah: 'Jenis Tanah',
+    alamat_tanah: 'Alamat Tanah (Pihak Kedua)',
+    luas_tanah: 'Luas Tanah',
+    batas_utara: 'Batas Utara',
+    batas_timur: 'Batas Timur',
+    batas_selatan: 'Batas Selatan',
+    batas_barat: 'Batas Barat',
+    tahun_pemberian: 'Tahun Pemberian',
+    status_bayar: 'Status Bayar',
+    nama_pasangan: 'Nama Pasangan',
+    pasangan_nama: 'Nama Pasangan',
+    anak_1_nama: 'Anak 1',
+    anak_2_nama: 'Anak 2',
+    anak_3_nama: 'Anak 3',
+    anak_4_nama: 'Anak 4',
+    anak_5_nama: 'Anak 5',
+    anak_6_nama: 'Anak 6',
+    jumlah_anak: 'Jumlah Anak',
+    saksi_1_nama: 'Saksi 1',
+    saksi_2_nama: 'Saksi 2',
+    saksi1_nama: 'Saksi 1',
+    saksi2_nama: 'Saksi 2',
+    identitas_pihak_kedua: 'Identitas Pihak Kedua',
+    nama_pihak_kedua: 'Nama Pihak Kedua',
+    alamat_pihak_kedua: 'Alamat Pihak Kedua',
+    nama_pemberi: 'Nama Pemberi (Pihak Pertama)',
+    nama_penerima: 'Nama Penerima (Pihak Kedua)',
+    hak_atas_tanah: 'Hak Atas Tanah',
+    nomor_hak: 'Nomor Hak',
+    atas_nama: 'Atas Nama',
+    luas_sertifikat: 'Luas Sertifikat',
+    keterangan: 'Keterangan',
+    permohonan_online: 'Permohonan Online',
+    tgl_permohonan: 'Tanggal Permohonan',
+    _nomorSuratTercetak: 'Nomor Surat Tercetak',
+    _tglCetakSurat: 'Tanggal Cetak Surat',
+  };
+  function humanizeKey(k) {
+    const s = String(k || '')
+      .replace(/^_+/, '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+    return s;
+  }
+  function dataRawLabel(k) {
+    return DATA_RAW_LABELS[k] || humanizeKey(k);
+  }
+  function parseRawData(v) {
+    if (!v) return null;
+    if (typeof v === 'object') return v;
+    try { return JSON.parse(String(v)); } catch (_) { return null; }
+  }
+  // Bangun grid detail permohonan: kolom utama + seluruh field data_raw.
+  function buildDetailRows(pm) {
+    const rows = [];
+    if (!pm) return rows;
+    const push = (k, v) => {
+      const s = (v === null || v === undefined) ? '' : String(v).trim();
+      if (s === '') return;
+      rows.push({ k: String(k), v: s });
+    };
+    push('ID Pendaftaran', pm.id);
+    push('Nama Pemohon', pm.nama);
+    push('No. HP', pm.hp);
+    push('Layanan', pm.layanan);
+    push('Status Berkas', pm.status_berkas);
+    push('Pembayaran', pm.pembayaran);
+    push('Catatan Admin', pm.catatan_admin);
+    push('Last Updated', pm.last_updated || pm.updated_at || null);
+    const raw = parseRawData(pm.data_raw);
+    if (raw && typeof raw === 'object') {
+      Object.keys(raw).forEach((k) => {
+        const v = raw[k];
+        if (v === null || v === undefined) return;
+        if (typeof v === 'object') {
+          try { push(dataRawLabel(k), JSON.stringify(v)); } catch (_) {}
+          return;
+        }
+        push(dataRawLabel(k), v);
+      });
+    }
+    return rows;
+  }
+
   function renderCekTb(data) {
     const pm = data.permohonan;
     const tg = data.tagihan;
     const riwayat = data.riwayat || [];
     const berkas = data.berkas || [];
 
-    const info = pm ? {
-      NAMA: pm.nama,
-      'NO. HP': pm.hp,
-      LAYANAN: pm.layanan,
-      'STATUS BERKAS': pm.status_berkas,
-      'PEMBAYARAN': pm.pembayaran,
-      'CATATAN ADMIN': pm.catatan_admin,
-    } : {};
-
     const pct = tg.biaya_total > 0 ? Math.min(100, Math.round((tg.total_terbayar / tg.biaya_total) * 100)) : 0;
+
+    const detailRows = buildDetailRows(pm);
+    const infoHtml = detailRows.length
+      ? `<div class="detail-grid">
+           ${detailRows.map((r) => `<div class="k">${esc(r.k)}</div><div><strong>${esc(r.v)}</strong></div>`).join('')}
+         </div>`
+      : '<p class="empty">Data permohonan tidak ditemukan.</p>';
 
     const riwayatHtml = riwayat.length
       ? `<table class="mini-table">
@@ -220,12 +310,6 @@
            </tbody>
          </table>`
       : '<p class="empty">Belum ada berkas.</p>';
-
-    const infoHtml = Object.keys(info).length
-      ? `<div class="detail-grid">
-           ${Object.keys(info).map((k) => `<div class="k">${esc(k)}</div><div><strong>${esc(info[k])}</strong></div>`).join('')}
-         </div>`
-      : '<p class="empty">Data permohonan tidak ditemukan.</p>';
 
     $('cekTbResult').innerHTML = `
       <div class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom:16px;">
@@ -406,6 +490,33 @@
     try { localStorage.removeItem(AUTH_KEY); } catch (_) {}
   }
 
+  // Role user: 'bendahara' bisa meng-input data keuangan; selain itu hanya baca + cek.
+  function currentRole() {
+    const s = getSession();
+    const role = (s && s.user && s.user.role) || 'user';
+    return (role === 'bendahara' || role === 'user') ? role : 'user';
+  }
+  function isBendahara() {
+    return currentRole() === 'bendahara';
+  }
+  function updateKeuPermissions() {
+    const canInput = isBendahara();
+    const setVisible = (id, show) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = show ? '' : 'none';
+    };
+    setVisible('btnTambahTransaksi', canInput);
+    setVisible('btnImportKeuangan', canInput);
+    const tbl = document.getElementById('keuTable');
+    if (tbl) {
+      const head = tbl.querySelector('thead tr');
+      if (head) {
+        const thAksi = head.querySelector('th:last-child');
+        if (thAksi) thAksi.style.display = canInput ? '' : 'none';
+      }
+    }
+  }
+
   // Sisipkan token Bearer ke setiap panggilan /api/* secara otomatis.
   {
     const _fetch = window.fetch;
@@ -421,13 +532,19 @@
 
   function setAuthedUI(user) {
     isAuthed = true;
+    const role = (user && user.role === 'bendahara') ? 'bendahara' : 'user';
     if ($('displayUserName')) $('displayUserName').textContent = (user && user.name) || 'Admin Desa';
+    if ($('displayUserRole')) {
+      $('displayUserRole').textContent = role === 'bendahara' ? '🏦 Bendahara' : '👤 Petugas / Pengguna';
+      $('displayUserRole').style.color = role === 'bendahara' ? '#059669' : '#0ea5e9';
+    }
     if ($('btnOpenLogin')) $('btnOpenLogin').style.display = 'none';
     if ($('btnOpenLoginNotice')) $('btnOpenLoginNotice').style.display = 'none';
     if ($('userProfileNav')) $('userProfileNav').style.display = 'flex';
     if ($('authGuestNotice')) $('authGuestNotice').style.display = 'none';
     if ($('appWorkspace')) $('appWorkspace').style.display = '';
     document.body.classList.remove('guest-mode');
+    updateKeuPermissions();
   }
 
   function setGuestUI() {
