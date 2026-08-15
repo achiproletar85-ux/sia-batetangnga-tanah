@@ -8,24 +8,8 @@
   let activeTab = 'dashboard';
   let curFp = '0';
   const renderedFp = {};
-  let supabaseClient = null;
 
   const $ = (id) => document.getElementById(id);
-
-  async function initAppConfig() {
-    try {
-      const res = await fetch('/api/config');
-      const config = await res.json();
-      if (config.success && config.supabaseUrl && config.supabaseAnonKey) {
-        supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-        console.log('Supabase client initialized for frontend.');
-      } else {
-        console.error('Failed to get frontend Supabase config:', config.error);
-      }
-    } catch (e) {
-      console.error('Error fetching app config:', e);
-    }
-  }
 
   // ---------- Keuangan Tab ----------
 
@@ -516,8 +500,8 @@
     const m = $('trxModal');
     $('trxForm').reset();
     $('trxId').value = '';
+    $('trxBukti').value = '';
     $('trxBuktiPreview').innerHTML = '';
-    $('trxUploadProgress').style.display = 'none';
     $('btnDeleteTrx').style.display = 'none';
 
     if (trx) {
@@ -528,7 +512,8 @@
       $('trxIdPemohon').value = trx.id_permohonan || '';
       $('trxNominal').value = trx.nominal;
       $('trxKeterangan').value = trx.keterangan || '';
-      if (trx.url_bukti) {
+      if (trx.url_bukti && trx.url_bukti !== '-') {
+        $('trxBukti').value = trx.url_bukti;
         $('trxBuktiPreview').innerHTML = `<a href="${esc(trx.url_bukti)}" target="_blank">Lihat Bukti Lama</a>`;
       }
       $('btnDeleteTrx').style.display = 'inline-block';
@@ -549,10 +534,6 @@
 
   async function handleTrxFormSubmit(e) {
     e.preventDefault();
-    if (!supabaseClient) {
-      alert('Klien Supabase belum siap. Coba lagi sebentar.');
-      return;
-    }
 
     const btn = $('btnSaveTrx');
     btn.disabled = true;
@@ -560,28 +541,20 @@
 
     try {
       const id = $('trxId').value;
-      const fileInput = $('trxBukti');
-      const file = fileInput.files[0];
-      let fileUrl = null;
 
-      if (file) {
-        const progress = $('trxUploadProgress');
-        progress.style.display = 'block';
-        progress.value = 0;
-        
-        const fileName = `public/${Date.now()}-${file.name}`;
-        const { data, error } = await supabaseClient.storage
-          .from('bukti_transaksi')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
+      // Bukti pembayaran berupa LINK Google Drive (file biner TIDAK disimpan
+      // di Supabase Storage; hanya link yang disimpan, konsisten dengan alur
+      // upload permohonan).
+      let urlBukti = ($('trxBukti').value || '').trim();
+      if (urlBukti && !/^https?:\/\//i.test(urlBukti)) {
+        throw new Error('Link bukti harus berupa URL yang valid (mulai dengan http/https).');
+      }
+      if (!urlBukti) urlBukti = null;
 
-        if (error) throw new Error(`Gagal upload bukti: ${error.message}`);
-        
-        const { data: { publicUrl } } = supabaseClient.storage.from('bukti_transaksi').getPublicUrl(data.path);
-        fileUrl = publicUrl;
-        progress.value = 100;
+      // Saat edit tanpa link baru, pertahankan bukti lama.
+      if (!urlBukti && id) {
+        const oldTrx = keuState.find(t => t.id === id);
+        urlBukti = oldTrx ? oldTrx.url_bukti : null;
       }
 
       const payload = {
@@ -590,14 +563,8 @@
         id_permohonan: $('trxJenis').value === 'Pemasukan Cicilan' ? $('trxIdPemohon').value : null,
         nominal: parseInt($('trxNominal').value, 10),
         keterangan: $('trxKeterangan').value,
-        url_bukti: fileUrl,
+        url_bukti: urlBukti,
       };
-      
-      // If we have a file, we overwrite the old url. If not, we need to preserve it on edit.
-      if (!fileUrl && id) {
-        const oldTrx = keuState.find(t => t.id === id);
-        payload.url_bukti = oldTrx ? oldTrx.url_bukti : null;
-      }
 
       const url = id ? `/api/keuangan/transaksi/${id}` : '/api/keuangan/transaksi';
       const method = id ? 'PATCH' : 'POST';
@@ -620,7 +587,6 @@
     } finally {
       btn.disabled = false;
       btn.textContent = 'Simpan';
-      $('trxUploadProgress').style.display = 'none';
     }
   }
 
@@ -909,7 +875,6 @@ hideChangePwMsg();
 
   async function initAuth() {
     const sess = getSession();
-    await initAppConfig(); // Panggil konfigurasi dulu
     if (sess && sess.token) {
       try {
         const res = await fetch('/api/me');

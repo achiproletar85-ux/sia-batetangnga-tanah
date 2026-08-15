@@ -191,15 +191,6 @@ app.get('/api/me', (req, res) => {
   res.json({ success: true, user: { username: payload.username, name: payload.name, role: payload.role || 'bendahara' } });
 });
 
-app.get('/api/config', (req, res) => {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return res.status(500).json({ success: false, error: 'Konfigurasi Supabase (URL atau Anon Key) tidak ditemukan di server.' });
-  }
-  res.json({ success: true, supabaseUrl, supabaseAnonKey });
-});
-
 app.post('/api/logout', (req, res) => {
   res.json({ success: true });
 });

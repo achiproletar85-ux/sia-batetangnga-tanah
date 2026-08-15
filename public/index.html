@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=79" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) { window.lucide.createIcons(); } });</script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -552,11 +551,10 @@
       
       <label>Keterangan <textarea id="trxKeterangan" rows="3" placeholder="Contoh: Pembayaran tahap 1"></textarea></label>
       
-      <label>Bukti Pembayaran (Opsional)
-        <input id="trxBukti" type="file" accept="image/*,application/pdf" />
+      <label>Bukti Pembayaran — Link Google Drive (Opsional)
+        <input id="trxBukti" type="url" inputmode="url" placeholder="Tempel link Google Drive ke bukti (contoh: https://drive.google.com/...)" />
         <div id="trxBuktiPreview" class="file-preview"></div>
       </label>
-      <progress id="trxUploadProgress" value="0" max="100" style="width: 100%; display: none;"></progress>
       
       <div class="form-actions">
         <button id="btnSaveTrx" type="submit" class="btn primary">Simpan</button>
