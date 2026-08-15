@@ -1659,7 +1659,28 @@ hideChangePwMsg();
     currentEditId = r.id;
     $('editStatus').value = r.status_berkas || '';
     $('editCatatan').value = r.catatan_admin || '';
+    // Tampilkan file KK/KTP yang sudah ada (dari tabel permohonan_uploads).
+    $('editKkFile').value = '';
+    $('editKtpFile').value = '';
+    renderEditUploadStatus(id);
     $('editModal').showModal();
+  }
+
+  function renderEditUploadStatus(id) {
+    const ups = uploads.filter((u) => u.id_registrasi === id);
+    const pick = (jenis) => ups.find((u) => (u.jenis_upload || '').toUpperCase() === jenis);
+    setSlotStatus('editKkStatus', pick('KK'));
+    setSlotStatus('editKtpStatus', pick('KTP'));
+  }
+
+  function setSlotStatus(elId, up) {
+    const el = $(elId);
+    if (!el) return;
+    if (up && up.file_url) {
+      el.innerHTML = `✅ Ada: <a href="${esc(up.file_url)}" target="_blank" rel="noopener">${esc(up.file_name || 'buka')}</a>`;
+    } else {
+      el.textContent = '';
+    }
   }
 
   async function saveEdit() {
@@ -1677,6 +1698,9 @@ hideChangePwMsg();
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal simpan');
+      // Upload KK & KTP jika ada file yang dipilih.
+      await uploadEditFile(currentEditId, 'KK', $('editKkFile'));
+      await uploadEditFile(currentEditId, 'KTP', $('editKtpFile'));
       $('editModal').close();
       await loadData();
     } catch (e) {
@@ -1684,6 +1708,20 @@ hideChangePwMsg();
     } finally {
       btn.disabled = false;
     }
+  }
+
+  async function uploadEditFile(idReg, jenis, input) {
+    if (!input || !input.files || input.files.length === 0) return;
+    const f = input.files[0];
+    if (f.size > 8 * 1024 * 1024) throw new Error('Ukuran file ' + jenis + ' melebihi 8 MB.');
+    const dataUrl = await readFileAsDataURL(f);
+    const res = await fetch('/api/permohonan/' + encodeURIComponent(idReg) + '/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jenis_upload: jenis, fileName: f.name, fileData: dataUrl })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error((json && json.error) || 'Gagal upload ' + jenis);
   }
 
   async function deleteRow() {

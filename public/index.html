@@ -448,6 +448,18 @@
         <option>SELESAI</option>
       </datalist>
       <label>Catatan Admin <textarea id="editCatatan" rows="4"></textarea></label>
+      <div class="upload-slots">
+        <div class="upload-slot">
+          <span class="slot-label">KK</span>
+          <input type="file" id="editKkFile" accept="image/*,.pdf" />
+          <div id="editKkStatus" class="slot-status"></div>
+        </div>
+        <div class="upload-slot">
+          <span class="slot-label">KTP</span>
+          <input type="file" id="editKtpFile" accept="image/*,.pdf" />
+          <div id="editKtpStatus" class="slot-status"></div>
+        </div>
+      </div>
       <div class="form-actions">
         <button id="btnSaveEdit" class="btn primary">Simpan</button>
         <button id="btnDelete" class="btn danger">Hapus</button>

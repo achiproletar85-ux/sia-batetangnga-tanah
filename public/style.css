@@ -447,6 +447,26 @@ dialog::backdrop {
 .form textarea { resize: vertical; }
 .form input[readonly] { background: var(--panel2); color: var(--muted); cursor: not-allowed; opacity: 0.8; }
 .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+.upload-slots { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.upload-slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--panel2);
+}
+.upload-slot .slot-label {
+  flex: 0 0 40px;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--accent);
+}
+.upload-slot input[type="file"] { flex: 1; min-width: 0; }
+.upload-slot .slot-status { flex: 1 1 100%; width: 100%; font-size: 12px; color: var(--muted); }
+.upload-slot .slot-status a { color: var(--accent); text-decoration: underline; }
+
 .muted-line { color: var(--muted); font-size: 13px; }
 .sec-title {
   font-size: 13px;

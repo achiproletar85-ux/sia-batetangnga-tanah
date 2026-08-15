@@ -751,6 +751,57 @@ async function uploadToDrive(fileName, mime, bytes) {
   return up.webViewLink || ('https://drive.google.com/file/d/' + up.id + '/view');
 }
 
+// ---------- Upload KK/KTP/dokumen per pendaftaran ----------
+// Terima file dari form Edit pendaftaran -> upload ke Google Drive -> simpan
+// LINK-nya di permohonan_uploads (konsisten: file biner tidak di database).
+app.post('/api/permohonan/:id/upload', requireAuth, async (req, res) => {
+  try {
+    const idReg = String(req.params.id || '').trim();
+    const { jenis_upload, fileName, fileData } = req.body;
+    if (!idReg) return res.status(400).json({ success: false, error: 'ID pendaftaran kosong.' });
+    const jenis = String(jenis_upload || 'DOKUMEN').trim();
+    if (!fileData || !/^data:/.test(String(fileData))) {
+      return res.status(400).json({ success: false, error: 'fileData harus berupa base64 data-URL.' });
+    }
+    const mimeMatch = String(fileData).match(/^data:([^;]+);base64,(.+)$/s);
+    if (!mimeMatch) return res.status(400).json({ success: false, error: 'Format data-URL tidak valid.' });
+    const bytes = Buffer.from(mimeMatch[2], 'base64');
+    if (bytes.length > 8 * 1024 * 1024) {
+      return res.status(413).json({ success: false, error: 'Ukuran file melebihi 8 MB.' });
+    }
+
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_REFRESH_TOKEN || !process.env.GOOGLE_DRIVE_FOLDER_ID) {
+      return res.status(500).json({ success: false, error: 'Konfigurasi upload Google belum diatur di .env' });
+    }
+
+    const safeName = String(fileName || jenis + '_' + Date.now() + '.jpg').replace(/[\\/:*?"<>|]/g, '_');
+    const url = await uploadToDrive(safeName, mimeMatch[1], bytes);
+    const fileId = String(url).match(/\/d\/([^/?]+)/)?.[1] || safeName;
+
+    // Hindari duplikat per (id_registrasi, jenis_upload): hapus yang lama dulu.
+    await supabase.from(TABLE_UP).delete().eq('id_registrasi', idReg).eq('jenis_upload', jenis);
+
+    const d = new Date();
+    const ts = d.toLocaleString('id-ID', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const { data, error } = await supabase.from(TABLE_UP).insert({
+      id_registrasi: idReg,
+      jenis_upload: jenis,
+      file_name: safeName,
+      file_url: url,
+      file_id: fileId,
+      timestamp: ts,
+      updated_at: d.toISOString(),
+      synced_at: d.toISOString()
+    }).select().single();
+    if (error) throw error;
+
+    res.json({ success: true, data, url });
+  } catch (e) {
+    console.error('[permohonan-upload] ERROR:', e && e.stack ? e.stack : e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // PATCH /api/keuangan/transaksi/:id -> Update transaksi
 app.patch('/api/keuangan/transaksi/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
     try {
