@@ -309,6 +309,20 @@ app.post('/api/import-from-sheet', requireAuth, async (req, res) => {
     const sheet = String((req.body && req.body.sheet) || 'ALL');
     const sheets = sheet === 'ALL' ? ['Database_Pendaftaran', 'Uploads'] : [sheet];
 
+    // Upsert dalam potongan besar (bukan baris per baris) agar cepat &
+    // tidak melewati batas waktu fungsi di Vercel.
+    const CHUNK = 200;
+    async function upsertChunks(table, recs, onConflict) {
+      let n = 0;
+      for (let i = 0; i < recs.length; i += CHUNK) {
+        const slice = recs.slice(i, i + CHUNK);
+        const { error } = await supabase.from(table).upsert(slice, { onConflict });
+        if (error) throw error;
+        n += slice.length;
+      }
+      return n;
+    }
+
     const results = [];
     for (const s of sheets) {
       const gasRes = await fetch(gasUrl, {
@@ -324,29 +338,28 @@ app.post('/api/import-from-sheet', requireAuth, async (req, res) => {
       let upserted = 0;
 
       if (s.toLowerCase().includes('upload')) {
+        const recs = [];
         for (const r of rows) {
           const file_id = clean(rowGet(r, 'FILE_ID', 'file_id', 'ID', 'id'));
-          const id_reg = clean(rowGet(r, 'ID_REGISTRASI', 'id_registrasi'));
           if (!file_id) continue;
-          const rec = {
-            id_registrasi: id_reg || '',
+          recs.push({
+            id_registrasi: clean(rowGet(r, 'ID_REGISTRASI', 'id_registrasi')) || '',
             jenis_upload: clean(rowGet(r, 'JENIS_UPLOAD', 'jenis_upload')),
             file_name: clean(rowGet(r, 'FILE_NAME', 'file_name', 'NAMA_FILE', 'nama_file')),
             file_url: clean(rowGet(r, 'FILE_URL', 'file_url')),
             file_id: file_id,
             timestamp: clean(rowGet(r, 'TIMESTAMP', 'timestamp')),
             updated_at: new Date().toISOString()
-          };
-          const { error } = await supabase.from(TABLE_UP).upsert(rec, { onConflict: 'file_id' });
-          if (error) throw error;
-          upserted++;
+          });
         }
+        upserted = await upsertChunks(TABLE_UP, recs, 'file_id');
       } else {
+        const recs = [];
         for (const r of rows) {
           const id = clean(rowGet(r, 'ID', 'id'));
           if (!id) continue;
           const data_raw = parseDataRaw(rowGet(r, 'DATA_RAW', 'data_raw')) || restToRaw(r);
-          const rec = {
+          recs.push({
             id: id,
             timestamp: clean(rowGet(r, 'TIMESTAMP', 'timestamp')),
             layanan: clean(rowGet(r, 'LAYANAN', 'layanan')),
@@ -358,11 +371,9 @@ app.post('/api/import-from-sheet', requireAuth, async (req, res) => {
             catatan_admin: clean(rowGet(r, 'CATATAN_ADMIN', 'catatan_admin')),
             last_updated: clean(rowGet(r, 'LAST_UPDATED', 'last_updated')),
             updated_at: new Date().toISOString()
-          };
-          const { error } = await supabase.from(TABLE_DB).upsert(rec, { onConflict: 'id' });
-          if (error) throw error;
-          upserted++;
+          });
         }
+        upserted = await upsertChunks(TABLE_DB, recs, 'id');
       }
       results.push({ sheet: s, received: rows.length, upserted });
     }
