@@ -663,39 +663,93 @@ app.post('/api/keuangan/transaksi', requireAuth, requireRole('bendahara'), async
   }
 });
 
-// ---------- Upload bukti ke Google Drive (via GAS web app) ----------
-// File biner TIDAK disimpan di Supabase. Server menerima base64 data-URL
-// dari frontend, mengirimkannya ke GAS (action=uploadBukti) yang menyimpan
-// ke folder Drive, lalu mengembalikan link publik.
+// ---------- Upload bukti ke Google Drive ----------
+// File biner TIDAK disimpan di Supabase. Jalur: OAuth pribadi (refresh token)
+// dari akun Google pemilik folder -> upload langsung ke Google Drive API v3.
+// Env yang dibutuhkan:
+//   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, GOOGLE_DRIVE_FOLDER_ID
 app.post('/api/keuangan/upload-bukti', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
-    const gasUrl = process.env.GAS_SYNC_WEB_APP_URL;
-    if (!gasUrl) {
-      return res.status(500).json({ success: false, error: 'GAS_SYNC_WEB_APP_URL belum diatur di .env' });
-    }
     const { fileName, fileData } = req.body;
     if (!fileData || !/^data:/.test(String(fileData))) {
       return res.status(400).json({ success: false, error: 'fileData harus berupa base64 data-URL.' });
     }
-    const gasRes = await fetch(gasUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'uploadBukti',
-        token: process.env.GAS_SYNC_TOKEN || '',
-        fileName: String(fileName || 'bukti_' + Date.now() + '.jpg'),
-        fileData: String(fileData)
-      })
-    });
-    const j = await gasRes.json();
-    if (!j || !j.success || !j.url) {
-      return res.status(502).json({ success: false, error: (j && j.error) || 'Gagal upload ke Google Drive.' });
+    const mimeMatch = String(fileData).match(/^data:([^;]+);base64,(.+)$/s);
+    if (!mimeMatch) return res.status(400).json({ success: false, error: 'Format data-URL tidak valid.' });
+    const mime = mimeMatch[1];
+    const bytes = Buffer.from(mimeMatch[2], 'base64');
+    if (bytes.length > 8 * 1024 * 1024) {
+      return res.status(413).json({ success: false, error: 'Ukuran file melebihi 8 MB.' });
     }
-    res.json({ success: true, url: j.url });
+
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_REFRESH_TOKEN || !process.env.GOOGLE_DRIVE_FOLDER_ID) {
+      return res.status(500).json({ success: false, error: 'Konfigurasi upload Google belum diatur di .env' });
+    }
+    const url = await uploadToDrive(fileName || 'bukti_' + Date.now() + '.jpg', mime, bytes);
+    res.json({ success: true, url });
   } catch (e) {
+    console.error('[upload-bukti] ERROR:', e && e.stack ? e.stack : e);
     res.status(500).json({ success: false, error: e.message });
   }
 });
+
+async function googleAccessToken() {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+      grant_type: 'refresh_token'
+    })
+  });
+  const j = await res.json();
+  if (!j.access_token) throw new Error('Gagal refresh token Google: ' + (j.error_description || j.error));
+  return j.access_token;
+}
+
+async function uploadToDrive(fileName, mime, bytes) {
+  const token = await googleAccessToken();
+  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  const boundary = 'sia_batetangnga_' + Date.now();
+
+  const metadata = JSON.stringify({ name: fileName, parents: [folderId] });
+  const head = Buffer.from(
+    '--' + boundary + '\r\n' +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    metadata + '\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Type: ' + mime + '\r\n\r\n'
+  );
+  const tail = Buffer.from('\r\n--' + boundary + '--\r\n');
+  const body = Buffer.concat([head, bytes, tail]);
+
+  const upRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + token,
+      'Content-Type': 'multipart/related; boundary=' + boundary
+    },
+    body: body
+  });
+  const up = await upRes.json();
+  if (!upRes.ok || !up.id) {
+    throw new Error('Gagal upload ke Drive: ' + JSON.stringify(up));
+  }
+
+  // Jadikan publik "siapapun dengan link bisa lihat" agar bisa dibuka dari aplikasi.
+  await fetch('https://www.googleapis.com/drive/v3/files/' + up.id + '/permissions', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ role: 'reader', type: 'anyone' })
+  });
+
+  return up.webViewLink || ('https://drive.google.com/file/d/' + up.id + '/view');
+}
 
 // PATCH /api/keuangan/transaksi/:id -> Update transaksi
 app.patch('/api/keuangan/transaksi/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
