@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=79" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) { window.lucide.createIcons(); } });</script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -108,6 +109,17 @@
           <path class="ic-line" d="m7.5 12.5 3 3 6-6"/>
         </svg>
         Uploads
+      </button>
+      <button class="tabbtn nav-tab-item" data-tab="keuangan">
+        <svg class="tab-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 8c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4Z"></path>
+            <path d="M22 12c0 5.5-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2s10 4.5 10 10Z"></path>
+            <path d="M8 12h.01"></path>
+            <path d="M16 12h.01"></path>
+            <path d="M12 16h.01"></path>
+            <path d="M12 8h.01"></path>
+        </svg>
+        Keuangan
       </button>
     </nav>
 
@@ -334,6 +346,61 @@
       </div>
       <div class="pager" id="pagerUploads"></div>
     </section>
+
+    <section id="tab-keuangan" hidden>
+        <div class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+            <div class="dash-card total">
+                <div class="dash-ic" style="background-color: #e0f2fe;">💰</div>
+                <div>
+                    <div class="dash-val" id="keuTotalPemasukan">Rp 0</div>
+                    <div class="dash-lb">Total Pemasukan</div>
+                </div>
+            </div>
+            <div class="dash-card ko">
+                <div class="dash-ic" style="background-color: #fee2e2;">💸</div>
+                <div>
+                    <div class="dash-val" id="keuTotalPengeluaran">Rp 0</div>
+                    <div class="dash-lb">Total Pengeluaran</div>
+                </div>
+            </div>
+            <div class="dash-card ok">
+                <div class="dash-ic" style="background-color: #ecfdf5;">🏦</div>
+                <div>
+                    <div class="dash-val" id="keuSaldoAkhir">Rp 0</div>
+                    <div class="dash-lb">Saldo Akhir</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="toolbar toolbar-container" style="margin-top: 24px;">
+            <div class="search-input-group">
+                <i data-lucide="search" class="search-icon-inside"></i>
+                <input id="keuSearchInput" type="search" placeholder="Cari keterangan, ID pemohon, jenis...">
+            </div>
+            <button id="btnTambahTransaksi" class="btn primary btn-action-primary" style="display:flex; align-items:center; gap: 6px;">
+                <i data-lucide="plus-circle" style="width:16px; height:16px;"></i> Tambah Transaksi
+            </button>
+        </div>
+
+        <div class="table-wrap">
+            <table id="keuTable">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Jenis</th>
+                        <th>Pemohon</th>
+                        <th>Nominal</th>
+                        <th>Keterangan</th>
+                        <th>Bukti</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="keuBody"></tbody>
+            </table>
+            <p id="keuEmpty" class="empty" hidden>Belum ada data transaksi.</p>
+        </div>
+        <div class="pager" id="pagerKeuangan"></div>
+    </section>
   </main>
   </div>
 
@@ -436,6 +503,46 @@
       </form>
       <p class="login-hint">Kata sandi disimpan terenkripsi (scrypt) di tabel app_users Supabase.</p>
     </div>
+  </dialog>
+
+  <dialog id="trxModal">
+    <div class="modal-head">
+      <h2 id="trxModalTitle">Tambah Transaksi</h2>
+      <button id="btnCloseTrx" class="btn-ghost">✕</button>
+    </div>
+    <form id="trxForm" class="form">
+      <input type="hidden" id="trxId" />
+      <label>Tanggal Transaksi <input id="trxTanggal" type="date" required /></label>
+      
+      <label>Jenis Transaksi
+        <select id="trxJenis" required>
+          <option value="">-- Pilih Jenis --</option>
+          <option value="Pemasukan Cicilan">Pemasukan Cicilan</option>
+          <option value="Pemasukan Lainnya">Pemasukan Lainnya</option>
+          <option value="Pengeluaran">Pengeluaran</option>
+        </select>
+      </label>
+      
+      <label id="trxPemohonLabel" style="display:none;">ID Pemohon
+        <input id="trxIdPemohon" list="pemohonList" placeholder="Ketik ID Pemohon/Pendaftar" />
+        <datalist id="pemohonList"></datalist>
+      </label>
+      
+      <label>Nominal (Rp) <input id="trxNominal" type="number" inputmode="numeric" required placeholder="Contoh: 50000" /></label>
+      
+      <label>Keterangan <textarea id="trxKeterangan" rows="3" placeholder="Contoh: Pembayaran tahap 1"></textarea></label>
+      
+      <label>Bukti Pembayaran (Opsional)
+        <input id="trxBukti" type="file" accept="image/*,application/pdf" />
+        <div id="trxBuktiPreview" class="file-preview"></div>
+      </label>
+      <progress id="trxUploadProgress" value="0" max="100" style="width: 100%; display: none;"></progress>
+      
+      <div class="form-actions">
+        <button id="btnSaveTrx" type="submit" class="btn primary">Simpan</button>
+        <button id="btnDeleteTrx" type="button" class="btn danger" style="display: none;">Hapus</button>
+      </div>
+    </form>
   </dialog>
 
    <script src="app.js?v=80"></script> </body>

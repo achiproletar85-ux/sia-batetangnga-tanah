@@ -1,13 +1,269 @@
 (() => {
   let allData = [];
   let uploads = [];
+  let keuState = [];
+  let pemohonCache = [];
   let currentEditId = null;
   let rowsCache = [];
   let activeTab = 'dashboard';
   let curFp = '0';
   const renderedFp = {};
+  let supabaseClient = null;
 
   const $ = (id) => document.getElementById(id);
+
+  async function initAppConfig() {
+    try {
+      const res = await fetch('/api/config');
+      const config = await res.json();
+      if (config.success && config.supabaseUrl && config.supabaseAnonKey) {
+        supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+        console.log('Supabase client initialized for frontend.');
+      } else {
+        console.error('Failed to get frontend Supabase config:', config.error);
+      }
+    } catch (e) {
+      console.error('Error fetching app config:', e);
+    }
+  }
+
+  // ---------- Keuangan Tab ----------
+
+  function formatRp(num) {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num || 0);
+  }
+
+  function initKeuangan() {
+    $('btnTambahTransaksi').addEventListener('click', () => openTrxModal(null));
+    $('btnCloseTrx').addEventListener('click', closeTrxModal);
+    $('trxForm').addEventListener('submit', handleTrxFormSubmit);
+    $('keuSearchInput').addEventListener('input', () => { if(pageState.keuangan) pageState.keuangan.p = 1; renderKeuanganTable(); });
+    $('trxJenis').addEventListener('change', (e) => {
+      $('trxPemohonLabel').style.display = e.target.value === 'Pemasukan Cicilan' ? 'block' : 'none';
+    });
+    $('keuBody').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-id]');
+      if (btn) {
+        const id = btn.dataset.id;
+        const trx = keuState.find(t => t.id === id);
+        if (trx) openTrxModal(trx);
+      }
+    });
+    $('btnDeleteTrx').addEventListener('click', async () => {
+      const id = $('trxId').value;
+      if (!id) return;
+      if (!confirm(`Anda yakin ingin menghapus transaksi ${id}?`)) return;
+      try {
+        const res = await fetch(`/api/keuangan/transaksi/${id}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        closeTrxModal();
+        await Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]);
+        renderKeuanganTable();
+      } catch(e) {
+        alert(`Gagal menghapus: ${e.message}`);
+      }
+    });
+  }
+
+  async function fetchPemohonList() {
+      if (pemohonCache.length > 0) return; // Avoid re-fetching
+      try {
+          const res = await fetch('/api/permohonan');
+          const json = await res.json();
+          if(json.success) {
+              pemohonCache = json.data || [];
+              const list = $('pemohonList');
+              list.innerHTML = '';
+              pemohonCache.forEach(p => {
+                  const opt = document.createElement('option');
+                  opt.value = p.id;
+                  opt.textContent = `${p.nama} (${p.id})`;
+                  list.appendChild(opt);
+              });
+          }
+      } catch(e) {
+          console.error("Gagal memuat daftar pemohon:", e);
+      }
+  }
+
+  async function fetchKeuanganSummary() {
+    try {
+      const res = await fetch('/api/keuangan/ringkasan');
+      const json = await res.json();
+      if (json.success) {
+        $('keuTotalPemasukan').textContent = formatRp(json.data.total_pemasukan);
+        $('keuTotalPengeluaran').textContent = formatRp(json.data.total_pengeluaran);
+        $('keuSaldoAkhir').textContent = formatRp(json.data.saldo_akhir);
+      }
+    } catch (e) {
+      console.error('Gagal memuat ringkasan keuangan:', e);
+    }
+  }
+
+  async function fetchKeuanganTransaksi() {
+    try {
+      const res = await fetch('/api/keuangan/transaksi');
+      const json = await res.json();
+      if (json.success) {
+        keuState = json.data || [];
+      }
+    } catch (e) {
+      console.error('Gagal memuat transaksi keuangan:', e);
+      keuState = [];
+    }
+  }
+
+  function renderKeuanganTable() {
+    const q = $('keuSearchInput').value.toLowerCase().trim();
+    const body = $('keuBody');
+    body.innerHTML = '';
+
+    const filtered = keuState.filter(t => {
+      if (!q) return true;
+      const makerName = t.permohonan_surat_tanah ? t.permohonan_surat_tanah.nama : '';
+      const hay = [t.id, t.jenis_transaksi, t.keterangan, t.id_permohonan, makerName].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+
+    $('keuEmpty').hidden = filtered.length > 0;
+    
+    if (!pageState.keuangan) pageState.keuangan = { p: 1 };
+    const stp = pageState.keuangan;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+    if (stp.p > totalPages) stp.p = totalPages;
+    const shown = filtered.slice((stp.p - 1) * PER_PAGE, stp.p * PER_PAGE);
+
+    const frag = document.createDocumentFragment();
+    shown.forEach(t => {
+      const tr = document.createElement('tr');
+      const makerName = t.permohonan_surat_tanah ? t.permohonan_surat_tanah.nama : (t.id_permohonan || '-');
+      tr.innerHTML = `
+        <td>${new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
+        <td><span class="tag ${t.jenis_transaksi.includes('Pemasukan') ? 'status-ok' : 'status-ko'}">${esc(t.jenis_transaksi)}</span></td>
+        <td>${esc(makerName)}</td>
+        <td class="num">${formatRp(t.nominal)}</td>
+        <td class="wrap">${esc(t.keterangan)}</td>
+        <td>${t.url_bukti ? `<a class="flink" href="${esc(t.url_bukti)}" target="_blank" rel="noopener">🔗 Lihat</a>` : '—'}</td>
+        <td><button class="btn" data-id="${esc(t.id)}">✏️ Edit</button></td>
+      `;
+      frag.appendChild(tr);
+    });
+    body.appendChild(frag);
+    drawPager('pagerKeuangan', 'keuangan', filtered.length);
+  }
+
+  function openTrxModal(trx) {
+    const m = $('trxModal');
+    $('trxForm').reset();
+    $('trxId').value = '';
+    $('trxBuktiPreview').innerHTML = '';
+    $('trxUploadProgress').style.display = 'none';
+    $('btnDeleteTrx').style.display = 'none';
+
+    if (trx) {
+      $('trxModalTitle').textContent = 'Edit Transaksi';
+      $('trxId').value = trx.id;
+      $('trxTanggal').value = new Date(trx.tanggal).toISOString().split('T')[0];
+      $('trxJenis').value = trx.jenis_transaksi;
+      $('trxIdPemohon').value = trx.id_permohonan || '';
+      $('trxNominal').value = trx.nominal;
+      $('trxKeterangan').value = trx.keterangan || '';
+      if (trx.url_bukti) {
+        $('trxBuktiPreview').innerHTML = `<a href="${esc(trx.url_bukti)}" target="_blank">Lihat Bukti Lama</a>`;
+      }
+      $('btnDeleteTrx').style.display = 'inline-block';
+    } else {
+      $('trxModalTitle').textContent = 'Tambah Transaksi';
+      $('trxTanggal').value = new Date().toISOString().split('T')[0];
+    }
+
+    $('trxPemohonLabel').style.display = $('trxJenis').value === 'Pemasukan Cicilan' ? 'block' : 'none';
+    fetchPemohonList();
+    if (typeof m.showModal === 'function') m.showModal(); else m.setAttribute('open', '');
+  }
+
+  function closeTrxModal() {
+    const m = $('trxModal');
+    if (m && typeof m.close === 'function') m.close();
+  }
+
+  async function handleTrxFormSubmit(e) {
+    e.preventDefault();
+    if (!supabaseClient) {
+      alert('Klien Supabase belum siap. Coba lagi sebentar.');
+      return;
+    }
+
+    const btn = $('btnSaveTrx');
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    try {
+      const id = $('trxId').value;
+      const fileInput = $('trxBukti');
+      const file = fileInput.files[0];
+      let fileUrl = null;
+
+      if (file) {
+        const progress = $('trxUploadProgress');
+        progress.style.display = 'block';
+        progress.value = 0;
+        
+        const fileName = `public/${Date.now()}-${file.name}`;
+        const { data, error } = await supabaseClient.storage
+          .from('bukti_transaksi')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (error) throw new Error(`Gagal upload bukti: ${error.message}`);
+        
+        const { data: { publicUrl } } = supabaseClient.storage.from('bukti_transaksi').getPublicUrl(data.path);
+        fileUrl = publicUrl;
+        progress.value = 100;
+      }
+
+      const payload = {
+        tanggal: $('trxTanggal').value,
+        jenis_transaksi: $('trxJenis').value,
+        id_permohonan: $('trxJenis').value === 'Pemasukan Cicilan' ? $('trxIdPemohon').value : null,
+        nominal: parseInt($('trxNominal').value, 10),
+        keterangan: $('trxKeterangan').value,
+        url_bukti: fileUrl,
+      };
+      
+      // If we have a file, we overwrite the old url. If not, we need to preserve it on edit.
+      if (!fileUrl && id) {
+        const oldTrx = keuState.find(t => t.id === id);
+        payload.url_bukti = oldTrx ? oldTrx.url_bukti : null;
+      }
+
+      const url = id ? `/api/keuangan/transaksi/${id}` : '/api/keuangan/transaksi';
+      const method = id ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error);
+      
+      closeTrxModal();
+      await Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]);
+      renderKeuanganTable();
+
+    } catch(e) {
+      alert(`Gagal menyimpan transaksi: ${e.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Simpan';
+      $('trxUploadProgress').style.display = 'none';
+    }
+  }
 
   // ---------- Autentikasi User (Login / Logout) ----------
   const AUTH_KEY = 'sta_auth_session';
@@ -175,7 +431,7 @@
     if (next !== confirm) { showChangePwMsg('err', 'Konfirmasi kata sandi tidak cocok.'); return; }
     if (next === current) { showChangePwMsg('err', 'Kata sandi baru tidak boleh sama dengan kata sandi lama.'); return; }
     setChangePwLoading(true);
-    hideChangePwMsg();
+hideChangePwMsg();
     try {
       const res = await fetch('/api/change-password', {
         method: 'POST',
@@ -223,6 +479,7 @@
 
   async function initAuth() {
     const sess = getSession();
+    await initAppConfig(); // Panggil konfigurasi dulu
     if (sess && sess.token) {
       try {
         const res = await fetch('/api/me');
@@ -272,6 +529,7 @@
       fillSpLoadList();
       buildCitizenCache();
       statusOptions();
+      fetchPemohonList(); // Pre-fetch list for finance modal
       const koCount = rowsCache.filter((c) => c.missing.length > 0).length;
       $('spSummary').textContent = koCount > 0
         ? '🟠 ' + koCount + ' belum lengkap SPORADIK'
@@ -530,7 +788,7 @@
 
   // Pagination client-side (per tabel). Jumlah baris per halaman.
   const PER_PAGE = 15;
-  const pageState = { pendaftaran: { p: 1 }, sporadik: { p: 1 }, uploads: { p: 1 } };
+  const pageState = { pendaftaran: { p: 1 }, sporadik: { p: 1 }, uploads: { p: 1 }, keuangan: { p: 1 } };
 
   function drawPager(elId, key, total) {
     const el = $(elId);
@@ -1965,11 +2223,14 @@
     $('tab-pendaftaran').hidden = name !== 'pendaftaran';
     $('tab-sporadik').hidden = name !== 'sporadik';
     $('tab-uploads').hidden = name !== 'uploads';
+    $('tab-keuangan').hidden = name !== 'keuangan';
     activeTab = name;
-    $('tbTitle').textContent = ({ dashboard: 'Dashboard', pendaftaran: 'Pendaftaran', sporadik: 'Surat SPORADIK', uploads: 'Uploads' }[name] || name);
+    $('tbTitle').textContent = ({ dashboard: 'Dashboard', pendaftaran: 'Pendaftaran', sporadik: 'Surat SPORADIK', uploads: 'Uploads', keuangan: 'Keuangan' }[name] || name);
     if (name === 'pendaftaran') pageState.pendaftaran.p = 1;
     else if (name === 'sporadik') pageState.sporadik.p = 1;
     else if (name === 'uploads') pageState.uploads.p = 1;
+    else if (name === 'keuangan') pageState.keuangan.p = 1;
+    
     if (activeTab === 'dashboard') showTab('dashboard', renderDashboard);
     else if (activeTab === 'pendaftaran') showTab('pendaftaran', render);
     else if (activeTab === 'sporadik') {
@@ -1979,6 +2240,13 @@
       }
     }
     else if (activeTab === 'uploads') showTab('uploads', renderUploads);
+    else if (activeTab === 'keuangan') {
+        // Fetch and render, but don't use showTab memoization for finance data
+        // to ensure it's always fresh when tab is opened.
+        Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]).then(() => {
+            renderKeuanganTable();
+        });
+    }
   }
 
   $('btnRefresh').addEventListener('click', loadData);
@@ -1991,14 +2259,15 @@
   $('spFilterLayanan').addEventListener('change', () => { resetPage('sporadik'); renderSporadik(); });
   $('spFilterKelengkapan').addEventListener('change', () => { resetPage('sporadik'); renderSporadik(); });
   $('uploadSearch').addEventListener('input', () => { resetPage('uploads'); renderUploads(); });
-  [['pagerPendaftaran', 'pendaftaran'], ['pagerSporadik', 'sporadik'], ['pagerUploads', 'uploads']].forEach(([pid, key]) => {
+  [['pagerPendaftaran', 'pendaftaran'], ['pagerSporadik', 'sporadik'], ['pagerUploads', 'uploads'], ['pagerKeuangan', 'keuangan']].forEach(([pid, key]) => {
     $(pid).addEventListener('click', (e) => {
       const btn = e.target.closest('.pg-btn');
       if (!btn || btn.disabled) return;
       const pg = parseInt(btn.dataset.pg, 10);
       if (!pg || pg < 1) return;
       pageState[key].p = pg;
-      pageRenderers[key]();
+      const renderer = key === 'keuangan' ? renderKeuanganTable : pageRenderers[key];
+      if (renderer) renderer();
     });
   });
   $('topSearch').addEventListener('input', () => {
@@ -2007,6 +2276,7 @@
     if (activeTab === 'pendaftaran') el = $('searchInput');
     else if (activeTab === 'sporadik') el = $('spSearch');
     else if (activeTab === 'uploads') el = $('uploadSearch');
+    else if (activeTab === 'keuangan') el = $('keuSearchInput');
     if (!el) return;
     el.value = q;
     el.dispatchEvent(new Event('input'));
@@ -2082,6 +2352,7 @@
   });
 
   initAuth();
+  initKeuangan();
   setInterval(() => { if (isAuthed) loadData(); }, 30000);
 
 })();

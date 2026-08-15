@@ -11,6 +11,8 @@ const app = express();
 const PORT = parseInt(process.env.PORT || '3344', 10);
 const TABLE_DB = 'permohonan_surat_tanah';
 const TABLE_UP = 'permohonan_uploads';
+const TABLE_TRX = 'transaksi_keuangan';
+const TABLE_SET = 'pengaturan_app';
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -148,6 +150,15 @@ app.get('/api/me', (req, res) => {
   const payload = verifyToken(authTokenFromReq(req));
   if (!payload) return res.status(401).json({ success: false, error: 'Sesi tidak valid.' });
   res.json({ success: true, user: { username: payload.username, name: payload.name } });
+});
+
+app.get('/api/config', (req, res) => {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return res.status(500).json({ success: false, error: 'Konfigurasi Supabase (URL atau Anon Key) tidak ditemukan di server.' });
+  }
+  res.json({ success: true, supabaseUrl, supabaseAnonKey });
 });
 
 app.post('/api/logout', (req, res) => {
@@ -387,6 +398,162 @@ app.post('/api/import-from-sheet', requireAuth, async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
+
+// ---------- API: Keuangan ----------
+
+// Helper untuk mengambil pengaturan dari tabel pengaturan_app
+async function getPengaturan(kunci, nilaiDefault = null) {
+  const { data, error } = await supabase.from(TABLE_SET).select('nilai').eq('kunci', kunci).maybeSingle();
+  if (error || !data) return nilaiDefault;
+  return data.nilai;
+}
+
+// GET /api/pemohon/:id/keuangan -> Rincian keuangan untuk satu pemohon
+app.get('/api/pemohon/:id/keuangan', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data: trxData, error: trxError } = await supabase
+      .from(TABLE_TRX)
+      .select('nominal')
+      .eq('id_permohonan', id)
+      .eq('jenis_transaksi', 'Pemasukan Cicilan');
+
+    if (trxError) throw trxError;
+
+    const totalTerbayar = trxData.reduce((sum, row) => sum + row.nominal, 0);
+    const biayaTotalStr = await getPengaturan('biaya_total_sertifikat', '250000');
+    const biayaTotal = parseInt(biayaTotalStr, 10);
+    const sisaTagihan = Math.max(0, biayaTotal - totalTerbayar);
+
+    res.json({
+      success: true,
+      data: {
+        id_permohonan: id,
+        biaya_total: biayaTotal,
+        total_terbayar: totalTerbayar,
+        sisa_tagihan: sisaTagihan,
+        status_lunas: sisaTagihan <= 0,
+      }
+    });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+
+// GET /api/keuangan/ringkasan -> Ringkasan total keuangan
+app.get('/api/keuangan/ringkasan', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase.from(TABLE_TRX).select('jenis_transaksi, nominal');
+    if (error) throw error;
+
+    let totalPemasukan = 0;
+    let totalPengeluaran = 0;
+
+    for (const row of data) {
+      if (row.jenis_transaksi.includes('Pemasukan')) {
+        totalPemasukan += row.nominal;
+      } else if (row.jenis_transaksi === 'Pengeluaran') {
+        totalPengeluaran += row.nominal;
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        total_pemasukan: totalPemasukan,
+        total_pengeluaran: totalPengeluaran,
+        saldo_akhir: totalPemasukan - totalPengeluaran,
+      }
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/keuangan/transaksi -> Daftar semua transaksi dengan filter
+app.get('/api/keuangan/transaksi', requireAuth, async (req, res) => {
+  try {
+    const { order = 'desc', id_permohonan } = req.query;
+    let query = supabase.from(TABLE_TRX)
+      .select('*, permohonan_surat_tanah(nama)')
+      .order('tanggal', { ascending: order === 'asc' });
+
+    if (id_permohonan) {
+      query = query.eq('id_permohonan', id_permohonan);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw error;
+
+    res.json({ success: true, data: data || [] });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// POST /api/keuangan/transaksi -> Tambah transaksi baru
+app.post('/api/keuangan/transaksi', requireAuth, async (req, res) => {
+  try {
+    const {
+      tanggal,
+      jenis_transaksi,
+      id_permohonan,
+      nominal,
+      keterangan,
+      url_bukti
+    } = req.body;
+
+    if (!tanggal || !jenis_transaksi || !nominal) {
+      return res.status(400).json({ success: false, error: 'Tanggal, jenis transaksi, and nominal are required.' });
+    }
+
+    const { data, error } = await supabase
+      .from(TABLE_TRX)
+      .insert([{ tanggal, jenis_transaksi, id_permohonan, nominal, keterangan, url_bukti }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    res.status(201).json({ success: true, data });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// PATCH /api/keuangan/transaksi/:id -> Update transaksi
+app.patch('/api/keuangan/transaksi/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { tanggal, jenis_transaksi, id_permohonan, nominal, keterangan, url_bukti } = req.body;
+
+        const { data, error } = await supabase
+            .from(TABLE_TRX)
+            .update({ tanggal, jenis_transaksi, id_permohonan, nominal, keterangan, url_bukti, updated_at: new Date() })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json({ success: true, data });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+
+// DELETE /api/keuangan/transaksi/:id -> Hapus transaksi
+app.delete('/api/keuangan/transaksi/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase.from(TABLE_TRX).delete().eq('id', id);
+    if (error) throw error;
+    res.json({ success: true, message: 'Transaksi berhasil dihapus' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 
 // ---------- Health ----------
 app.get('/api/health', (req, res) => {
