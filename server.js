@@ -395,10 +395,19 @@ app.get(['/sporadik', '/sporadik-executive.html'], (req, res) => {
   res.sendFile(path.join(__dirname, 'sporadik-executive.html'));
 });
 
+// ---------- Catch-all & Error Handler ----------
+app.use((req, res, next) => {
+  res.status(404).json({ success: false, error: 'Endpoint API tidak ditemukan.' });
+});
+
+app.use((err, req, res, next) => {
+  console.error('Unhandled Server Error:', err);
+  res.status(500).json({ success: false, error: err.message || 'Internal Server Error' });
+});
+
 // ---------- Start ----------
 // Saat dijalankan langsung (npm start) -> listen seperti biasa.
 // Saat di-deploy ke Vercel -> app di-export sebagai handler serverless
-// (lihat api/server.js), jadi tidak boleh memanggil listen.
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🚀 sync-surat-tanah (Supabase-only) running at http://localhost:${PORT}`);
