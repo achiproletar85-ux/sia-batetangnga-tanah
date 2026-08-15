@@ -592,8 +592,8 @@ app.get('/api/pemohon/:id/tagihan-berkas', requireAuth, async (req, res) => {
 });
 
 
-// GET /api/keuangan/ringkasan -> Ringkasan total keuangan
-app.get('/api/keuangan/ringkasan', requireAuth, async (req, res) => {
+// GET /api/keuangan/ringkasan -> Ringkasan total keuangan (khusus Bendahara)
+app.get('/api/keuangan/ringkasan', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
     const { data, error } = await supabase.from(TABLE_TRX).select('jenis_transaksi, nominal');
     if (error) throw error;
@@ -622,8 +622,8 @@ app.get('/api/keuangan/ringkasan', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/keuangan/transaksi -> Daftar semua transaksi dengan filter
-app.get('/api/keuangan/transaksi', requireAuth, async (req, res) => {
+// GET /api/keuangan/transaksi -> Daftar semua transaksi dengan filter (khusus Bendahara)
+app.get('/api/keuangan/transaksi', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
     const { order = 'desc', id_permohonan } = req.query;
     let query = supabase.from(TABLE_TRX)

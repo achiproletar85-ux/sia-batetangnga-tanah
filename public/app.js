@@ -233,7 +233,21 @@
     if (typeof v === 'object') return v;
     try { return JSON.parse(String(v)); } catch (_) { return null; }
   }
-  // Bangun grid detail permohonan: kolom utama + seluruh field data_raw.
+  // Field data_raw yang dianggap penting untuk ditampilkan di panel Cek.
+  // Hanya ±10 kolom kunci agar tampilan tidak membludak dengan semua isian.
+  const DATA_RAW_PRIORITY = [
+    'jenis_tanah',
+    'alamat_tanah',
+    'alamat',
+    'dusun',
+    'luas_tanah',
+    'tahun_pemberian',
+    'batas_utara',
+    'batas_timur',
+    'batas_selatan',
+    'batas_barat',
+  ];
+  // Bangun grid detail permohonan: kolom utama + field data_raw yang penting saja.
   function buildDetailRows(pm) {
     const rows = [];
     if (!pm) return rows;
@@ -249,10 +263,9 @@
     push('Status Berkas', pm.status_berkas);
     push('Pembayaran', pm.pembayaran);
     push('Catatan Admin', pm.catatan_admin);
-    push('Last Updated', pm.last_updated || pm.updated_at || null);
     const raw = parseRawData(pm.data_raw);
     if (raw && typeof raw === 'object') {
-      Object.keys(raw).forEach((k) => {
+      DATA_RAW_PRIORITY.forEach((k) => {
         const v = raw[k];
         if (v === null || v === undefined) return;
         if (typeof v === 'object') {
@@ -505,8 +518,17 @@
       const el = document.getElementById(id);
       if (el) el.style.display = show ? '' : 'none';
     };
+    // Hanya Bendahara yang boleh meng-input & melihat tabel/ringkasan keuangan.
     setVisible('btnTambahTransaksi', canInput);
     setVisible('btnImportKeuangan', canInput);
+    setVisible('keuRingkasan', canInput);
+    setVisible('keuSearchInput', canInput);
+    setVisible('keuTableWrap', canInput);
+    setVisible('keuEmpty', canInput);
+    setVisible('pagerKeuangan', canInput);
+    // Cek Tagihan & Berkas tetap tersedia untuk semua user.
+    setVisible('btnCekTagihanBerkas', true);
+    // Kolom "Aksi" di tabel hanya relevan untuk Bendahara.
     const tbl = document.getElementById('keuTable');
     if (tbl) {
       const head = tbl.querySelector('thead tr');
@@ -514,6 +536,11 @@
         const thAksi = head.querySelector('th:last-child');
         if (thAksi) thAksi.style.display = canInput ? '' : 'none';
       }
+    }
+    // Jika bukan Bendahara, isi tabel dikosongkan agar tidak menampilkan data.
+    if (!canInput) {
+      const body = document.getElementById('keuBody');
+      if (body) body.innerHTML = '';
     }
   }
 
@@ -2509,11 +2536,13 @@ hideChangePwMsg();
     }
     else if (activeTab === 'uploads') showTab('uploads', renderUploads);
     else if (activeTab === 'keuangan') {
-        // Fetch and render, but don't use showTab memoization for finance data
-        // to ensure it's always fresh when tab is opened.
-        Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]).then(() => {
-            renderKeuanganTable();
-        });
+        // Hanya Bendahara yang melihat ringkasan/tabel; user biasa hanya Cek Tagihan & Berkas.
+        updateKeuPermissions();
+        if (isBendahara()) {
+            Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]).then(() => {
+                renderKeuanganTable();
+            });
+        }
     }
   }
 
