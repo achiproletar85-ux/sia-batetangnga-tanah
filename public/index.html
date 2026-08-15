@@ -380,9 +380,26 @@
             <button id="btnImportKeuangan" onclick="importKeuanganFromSheet()" title="Tarik data transaksi dari spreadsheet ke Supabase (manual)" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;">
                 <i data-lucide="download" style="width: 14px; height: 14px;"></i> Tarik dari Sheet
             </button>
+            <button id="btnCekTagihanBerkas" class="btn btn-action-primary" style="display:flex; align-items: center; gap: 6px;" title="Cek tagihan dan berkas berdasarkan ID pendaftaran">
+                <i data-lucide="search-check" style="width:16px; height:16px;"></i> Cek Tagihan & Berkas
+            </button>
             <button id="btnTambahTransaksi" class="btn primary btn-action-primary" style="display:flex; align-items: center; gap: 6px;">
                 <i data-lucide="plus-circle" style="width:16px; height:16px;"></i> Tambah Transaksi
             </button>
+        </div>
+
+        <div id="cekTbPanel" class="card" style="display:none; margin-top:16px; padding:20px;">
+            <div class="modal-head" style="border-bottom:none; padding:0 0 12px 0;">
+                <h2 style="margin:0; font-size:16px;">Cek Tagihan & Berkas</h2>
+                <button id="btnCloseCekTb" class="btn-ghost">✕</button>
+            </div>
+            <div class="form" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                <label style="flex:1; min-width:220px;">ID Pendaftaran
+                    <input id="cekTbId" list="pemohonList" placeholder="Contoh: REG-907237" />
+                </label>
+                <button id="btnCekTbCari" class="btn primary">Cari</button>
+            </div>
+            <div id="cekTbResult" style="margin-top:16px;"></div>
         </div>
 
         <div class="table-wrap">

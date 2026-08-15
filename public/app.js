@@ -38,6 +38,10 @@
     $('btnCloseTrx').addEventListener('click', closeTrxModal);
     $('trxForm').addEventListener('submit', handleTrxFormSubmit);
     $('keuSearchInput').addEventListener('input', () => { if(pageState.keuangan) pageState.keuangan.p = 1; renderKeuanganTable(); });
+    $('btnCekTagihanBerkas').addEventListener('click', () => { openCekTbPanel(); });
+    $('btnCloseCekTb').addEventListener('click', () => { $('cekTbPanel').style.display = 'none'; });
+    $('btnCekTbCari').addEventListener('click', () => cekTagihanBerkas());
+    $('cekTbId').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); cekTagihanBerkas(); } });
     $('trxJenis').addEventListener('change', (e) => {
       $('trxPemohonLabel').style.display = e.target.value === 'Pemasukan Cicilan' ? 'block' : 'none';
     });
@@ -151,6 +155,129 @@
     });
     body.appendChild(frag);
     drawPager('pagerKeuangan', 'keuangan', filtered.length);
+  }
+
+  function openCekTbPanel() {
+    fetchPemohonList();
+    $('cekTbPanel').style.display = 'block';
+    $('cekTbResult').innerHTML = '';
+    const inp = $('cekTbId');
+    inp.value = '';
+    setTimeout(() => inp.focus(), 50);
+    inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function statusLunasBadge(lunas) {
+    return lunas
+      ? '<span class="tag status-ok">LUNAS</span>'
+      : '<span class="tag status-ko">BELUM LUNAS</span>';
+  }
+
+  function renderCekTb(data) {
+    const pm = data.permohonan;
+    const tg = data.tagihan;
+    const riwayat = data.riwayat || [];
+    const berkas = data.berkas || [];
+
+    const info = pm ? {
+      NAMA: pm.nama,
+      'NO. HP': pm.hp,
+      LAYANAN: pm.layanan,
+      'STATUS BERKAS': pm.status_berkas,
+      'PEMBAYARAN': pm.pembayaran,
+      'CATATAN ADMIN': pm.catatan_admin,
+    } : {};
+
+    const pct = tg.biaya_total > 0 ? Math.min(100, Math.round((tg.total_terbayar / tg.biaya_total) * 100)) : 0;
+
+    const riwayatHtml = riwayat.length
+      ? `<table class="mini-table">
+           <thead><tr><th>Tanggal</th><th>Jenis</th><th>Nominal</th><th>Keterangan</th><th>Bukti</th></tr></thead>
+           <tbody>
+             ${riwayat.map((t) => `
+               <tr>
+                 <td>${new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
+                 <td><span class="tag ${t.jenis_transaksi.includes('Pemasukan') ? 'status-ok' : 'status-ko'}">${esc(t.jenis_transaksi)}</span></td>
+                 <td class="num">${formatRp(t.nominal)}</td>
+                 <td class="wrap">${esc(t.keterangan)}</td>
+                 <td>${t.url_bukti && t.url_bukti !== '-' ? `<a class="flink" href="${esc(t.url_bukti)}" target="_blank" rel="noopener">🔗 Lihat</a>` : '—'}</td>
+               </tr>`).join('')}
+           </tbody>
+         </table>`
+      : '<p class="empty">Belum ada riwayat transaksi.</p>';
+
+    const berkasHtml = berkas.length
+      ? `<table class="mini-table">
+           <thead><tr><th>Jenis Berkas</th><th>Nama File</th><th>Waktu</th><th>Aksi</th></tr></thead>
+           <tbody>
+             ${berkas.map((b) => `
+               <tr>
+                 <td><span class="tag status-s">${esc(b.jenis_upload)}</span></td>
+                 <td class="wrap">${esc(b.file_name)}</td>
+                 <td>${esc(b.timestamp)}</td>
+                 <td>${b.file_url ? `<a class="flink" href="${esc(b.file_url)}" target="_blank" rel="noopener">🔗 Buka</a>` : '—'}</td>
+               </tr>`).join('')}
+           </tbody>
+         </table>`
+      : '<p class="empty">Belum ada berkas.</p>';
+
+    const infoHtml = Object.keys(info).length
+      ? `<div class="detail-grid">
+           ${Object.keys(info).map((k) => `<div class="k">${esc(k)}</div><div><strong>${esc(info[k])}</strong></div>`).join('')}
+         </div>`
+      : '<p class="empty">Data permohonan tidak ditemukan.</p>';
+
+    $('cekTbResult').innerHTML = `
+      <div class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom:16px;">
+        <div class="dash-card total">
+          <div class="dash-ic" style="background-color:#e0f2fe;">💰</div>
+          <div><div class="dash-val">${formatRp(tg.biaya_total)}</div><div class="dash-lb">Biaya Total</div></div>
+        </div>
+        <div class="dash-card ok">
+          <div class="dash-ic" style="background-color:#ecfdf5;">✅</div>
+          <div><div class="dash-val">${formatRp(tg.total_terbayar)}</div><div class="dash-lb">Total Terbayar</div></div>
+        </div>
+        <div class="dash-card ko">
+          <div class="dash-ic" style="background-color:#fee2e2;">📌</div>
+          <div><div class="dash-val">${formatRp(tg.sisa_tagihan)}</div><div class="dash-lb">Sisa Tagihan</div></div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-ic" style="background-color:#fef3c7;">📋</div>
+          <div><div class="dash-val">${statusLunasBadge(tg.status_lunas)}</div><div class="dash-lb">Status</div></div>
+        </div>
+      </div>
+      <div class="progress" style="margin-bottom:16px;"><div class="progress-bar" style="width:${pct}%"></div></div>
+      <h3 style="margin:0 0 8px; font-size:14px;">Data Pemohon</h3>
+      ${infoHtml}
+      <h3 style="margin:18px 0 8px; font-size:14px;">Riwayat Pembayaran (${riwayat.length})</h3>
+      ${riwayatHtml}
+      <h3 style="margin:18px 0 8px; font-size:14px;">Berkas (${berkas.length})</h3>
+      ${berkasHtml}`;
+  }
+
+  async function cekTagihanBerkas() {
+    const id = $('cekTbId').value.trim().toUpperCase();
+    if (!id) { alert('Masukkan ID pendaftaran terlebih dahulu.'); return; }
+    const btn = $('btnCekTbCari');
+    btn.disabled = true;
+    const lbl = btn.textContent;
+    btn.textContent = 'Mencari...';
+    $('cekTbResult').innerHTML = '<p class="empty">Memuat...</p>';
+    try {
+      const res = await fetch('/api/pemohon/' + encodeURIComponent(id) + '/tagihan-berkas');
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error((json && json.error) || 'Gagal memuat data.');
+      if (!json.data || !json.data.permohonan) {
+        $('cekTbResult').innerHTML = '<p class="empty">ID <strong>' + esc(id) + '</strong> tidak ditemukan.</p>';
+        return;
+      }
+      renderCekTb(json.data);
+    } catch (e) {
+      $('cekTbResult').innerHTML = '<p class="empty">Gagal: ' + esc(e.message) + '</p>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = lbl;
+    }
   }
 
   function openTrxModal(trx) {

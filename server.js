@@ -485,6 +485,78 @@ app.get('/api/pemohon/:id/keuangan', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/pemohon/:id/tagihan-berkas -> Cek Tagihan & Berkas untuk satu pemohon
+// Gabungan: data permohonan (permohonan_surat_tanah by id) + ringkasan tagihan +
+// riwayat cicilan (transaksi_keuangan) + daftar berkas (permohonan_uploads).
+app.get('/api/pemohon/:id/tagihan-berkas', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: permohonan, error: dbError } = await supabase
+      .from(TABLE_DB)
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (dbError) throw dbError;
+
+    const { data: trxData, error: trxError } = await supabase
+      .from(TABLE_TRX)
+      .select('id, tanggal, jenis_transaksi, nominal, keterangan, url_bukti, updated_at')
+      .eq('id_permohonan', id)
+      .order('tanggal', { ascending: true });
+    if (trxError) throw trxError;
+
+    const riwayat = (trxData || []).map((t) => ({
+      id: t.id,
+      tanggal: t.tanggal,
+      jenis_transaksi: t.jenis_transaksi,
+      nominal: t.nominal,
+      keterangan: t.keterangan,
+      url_bukti: t.url_bukti
+    }));
+
+    const totalTerbayar = (trxData || [])
+      .filter((t) => t.jenis_transaksi === 'Pemasukan Cicilan')
+      .reduce((sum, t) => sum + t.nominal, 0);
+    const biayaTotalStr = await getPengaturan('biaya_total_sertifikat', '250000');
+    const biayaTotal = parseInt(biayaTotalStr, 10);
+    const sisaTagihan = Math.max(0, biayaTotal - totalTerbayar);
+
+    const { data: berkasData, error: upError } = await supabase
+      .from(TABLE_UP)
+      .select('*')
+      .eq('id_registrasi', id)
+      .order('timestamp', { ascending: true });
+    if (upError) throw upError;
+
+    const berkas = (berkasData || []).map((b) => ({
+      file_id: b.file_id,
+      jenis_upload: b.jenis_upload,
+      file_name: b.file_name,
+      file_url: b.file_url,
+      timestamp: b.timestamp
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        permohonan: permohonan || null,
+        tagihan: {
+          id_permohonan: id,
+          biaya_total: biayaTotal,
+          total_terbayar: totalTerbayar,
+          sisa_tagihan: sisaTagihan,
+          status_lunas: sisaTagihan <= 0,
+        },
+        riwayat,
+        berkas,
+      }
+    });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 
 // GET /api/keuangan/ringkasan -> Ringkasan total keuangan
 app.get('/api/keuangan/ringkasan', requireAuth, async (req, res) => {
