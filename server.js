@@ -663,6 +663,40 @@ app.post('/api/keuangan/transaksi', requireAuth, requireRole('bendahara'), async
   }
 });
 
+// ---------- Upload bukti ke Google Drive (via GAS web app) ----------
+// File biner TIDAK disimpan di Supabase. Server menerima base64 data-URL
+// dari frontend, mengirimkannya ke GAS (action=uploadBukti) yang menyimpan
+// ke folder Drive, lalu mengembalikan link publik.
+app.post('/api/keuangan/upload-bukti', requireAuth, requireRole('bendahara'), async (req, res) => {
+  try {
+    const gasUrl = process.env.GAS_SYNC_WEB_APP_URL;
+    if (!gasUrl) {
+      return res.status(500).json({ success: false, error: 'GAS_SYNC_WEB_APP_URL belum diatur di .env' });
+    }
+    const { fileName, fileData } = req.body;
+    if (!fileData || !/^data:/.test(String(fileData))) {
+      return res.status(400).json({ success: false, error: 'fileData harus berupa base64 data-URL.' });
+    }
+    const gasRes = await fetch(gasUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'uploadBukti',
+        token: process.env.GAS_SYNC_TOKEN || '',
+        fileName: String(fileName || 'bukti_' + Date.now() + '.jpg'),
+        fileData: String(fileData)
+      })
+    });
+    const j = await gasRes.json();
+    if (!j || !j.success || !j.url) {
+      return res.status(502).json({ success: false, error: (j && j.error) || 'Gagal upload ke Google Drive.' });
+    }
+    res.json({ success: true, url: j.url });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // PATCH /api/keuangan/transaksi/:id -> Update transaksi
 app.patch('/api/keuangan/transaksi/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
     try {

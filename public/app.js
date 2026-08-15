@@ -502,6 +502,7 @@
     $('trxId').value = '';
     $('trxBukti').value = '';
     $('trxBuktiPreview').innerHTML = '';
+    $('trxBuktiOld').value = '';
     $('btnDeleteTrx').style.display = 'none';
 
     if (trx) {
@@ -513,7 +514,7 @@
       $('trxNominal').value = trx.nominal;
       $('trxKeterangan').value = trx.keterangan || '';
       if (trx.url_bukti && trx.url_bukti !== '-') {
-        $('trxBukti').value = trx.url_bukti;
+        $('trxBuktiOld').value = trx.url_bukti;
         $('trxBuktiPreview').innerHTML = `<a href="${esc(trx.url_bukti)}" target="_blank">Lihat Bukti Lama</a>`;
       }
       $('btnDeleteTrx').style.display = 'inline-block';
@@ -542,19 +543,32 @@
     try {
       const id = $('trxId').value;
 
-      // Bukti pembayaran berupa LINK Google Drive (file biner TIDAK disimpan
-      // di Supabase Storage; hanya link yang disimpan, konsisten dengan alur
-      // upload permohonan).
-      let urlBukti = ($('trxBukti').value || '').trim();
-      if (urlBukti && !/^https?:\/\//i.test(urlBukti)) {
-        throw new Error('Link bukti harus berupa URL yang valid (mulai dengan http/https).');
+      // Bukti pembayaran: file biner TIDAK disimpan di Supabase Storage.
+      // Jika bendahara memilih file, unggah ke Google Drive via server,
+      // lalu simpan hanya LINK-nya (konsisten dengan alur upload permohonan).
+      const fileInput = $('trxBukti');
+      let urlBukti = null;
+      if (fileInput.files && fileInput.files.length > 0) {
+        const f = fileInput.files[0];
+        if (f.size > 8 * 1024 * 1024) {
+          throw new Error('Ukuran file bukti melebihi 8 MB.');
+        }
+        const dataUrl = await readFileAsDataURL(f);
+        btn.textContent = 'Mengunggah bukti...';
+        const upRes = await fetch('/api/keuangan/upload-bukti', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName: f.name, fileData: dataUrl }),
+        });
+        const upJson = await upRes.json();
+        if (!upRes.ok || !upJson.success) throw new Error((upJson && upJson.error) || 'Gagal mengunggah bukti ke Google Drive.');
+        urlBukti = upJson.url;
       }
-      if (!urlBukti) urlBukti = null;
 
-      // Saat edit tanpa link baru, pertahankan bukti lama.
+      // Saat edit tanpa file baru, pertahankan bukti lama.
       if (!urlBukti && id) {
         const oldTrx = keuState.find(t => t.id === id);
-        urlBukti = oldTrx ? oldTrx.url_bukti : null;
+        urlBukti = (oldTrx && oldTrx.url_bukti !== '-') ? oldTrx.url_bukti : null;
       }
 
       const payload = {
@@ -1566,6 +1580,15 @@ hideChangePwMsg();
     return String(v).replace(/[&<>"']/g, (c) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[c]));
+  }
+
+  function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error || new Error('Gagal membaca file.'));
+      reader.readAsDataURL(file);
+    });
   }
 
   function renderUploads() {

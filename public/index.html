@@ -551,9 +551,11 @@
       
       <label>Keterangan <textarea id="trxKeterangan" rows="3" placeholder="Contoh: Pembayaran tahap 1"></textarea></label>
       
-      <label>Bukti Pembayaran — Link Google Drive (Opsional)
-        <input id="trxBukti" type="url" inputmode="url" placeholder="Tempel link Google Drive ke bukti (contoh: https://drive.google.com/...)" />
+      <label>Bukti Pembayaran — File Otomatis ke Google Drive (Opsional, maks 8 MB)
+        <input id="trxBukti" type="file" accept="image/*,.pdf,.jpg,.jpeg,.png" />
+        <input id="trxBuktiOld" type="hidden" />
         <div id="trxBuktiPreview" class="file-preview"></div>
+        <small id="trxBuktiNote" style="opacity:.7;display:block;margin-top:4px">Pilih file bukti — otomatis diunggah & disimpan ke Google Drive, lalu linknya dicatat.</small>
       </label>
       
       <div class="form-actions">
