@@ -377,7 +377,10 @@
                 <i data-lucide="search" class="search-icon-inside"></i>
                 <input id="keuSearchInput" type="search" placeholder="Cari keterangan, ID pemohon, jenis...">
             </div>
-            <button id="btnTambahTransaksi" class="btn primary btn-action-primary" style="display:flex; align-items:center; gap: 6px;">
+            <button id="btnImportKeuangan" onclick="importKeuanganFromSheet()" title="Tarik data transaksi dari spreadsheet ke Supabase (manual)" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;">
+                <i data-lucide="download" style="width: 14px; height: 14px;"></i> Tarik dari Sheet
+            </button>
+            <button id="btnTambahTransaksi" class="btn primary btn-action-primary" style="display:flex; align-items: center; gap: 6px;">
                 <i data-lucide="plus-circle" style="width:16px; height:16px;"></i> Tambah Transaksi
             </button>
         </div>

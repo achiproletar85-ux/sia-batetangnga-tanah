@@ -13,6 +13,11 @@ const TABLE_DB = 'permohonan_surat_tanah';
 const TABLE_UP = 'permohonan_uploads';
 const TABLE_TRX = 'transaksi_keuangan';
 const TABLE_SET = 'pengaturan_app';
+// Tab transaksi keuangan (Google Sheet, publik "Anyone with link can view").
+const KEUANGAN_SHEET_URL = process.env.KEUANGAN_SHEET_URL ||
+  'https://docs.google.com/spreadsheets/d/1KK7EUwdZe7jRfuymJ43GLH3zf7uKoouQwJx2QSfxlwc/export?format=csv&gid=1798420765';
+// Zona waktu spreadsheet (jam offset dari UTC). WITA (Sulawesi Barat) = UTC+8.
+const SHEET_TZ_H = parseInt(process.env.SHEET_TZ_H || '8', 10);
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -348,45 +353,85 @@ app.post('/api/import-from-sheet', requireAuth, async (req, res) => {
       const rows = Array.isArray(j.rows) ? j.rows : [];
       let upserted = 0;
 
+      // "Latest-wins": baris baru di-insert; baris lama hanya ditimpa bila
+      // waktu terakhir diubah di sheet LEBIH BARU daripada updated_at di Supabase
+      // (edit di aplikasi menaikkan updated_at sehingga tidak akan tertimpa).
+      const now = new Date().toISOString();
+      let skipped = 0;
+
       if (s.toLowerCase().includes('upload')) {
+        const { data: existing } = await supabase.from(TABLE_UP).select('file_id, updated_at');
+        const exist = new Map((existing || []).map((e) => [e.file_id, e.updated_at]));
         const recs = [];
         for (const r of rows) {
           const file_id = clean(rowGet(r, 'FILE_ID', 'file_id', 'ID', 'id'));
           if (!file_id) continue;
-          recs.push({
-            id_registrasi: clean(rowGet(r, 'ID_REGISTRASI', 'id_registrasi')) || '',
-            jenis_upload: clean(rowGet(r, 'JENIS_UPLOAD', 'jenis_upload')),
-            file_name: clean(rowGet(r, 'FILE_NAME', 'file_name', 'NAMA_FILE', 'nama_file')),
-            file_url: clean(rowGet(r, 'FILE_URL', 'file_url')),
-            file_id: file_id,
-            timestamp: clean(rowGet(r, 'TIMESTAMP', 'timestamp')),
-            updated_at: new Date().toISOString()
-          });
+          const tsRaw = clean(rowGet(r, 'TIMESTAMP', 'timestamp'));
+          const verMs = parseSheetTime(tsRaw);
+          const verISO = verMs ? new Date(verMs).toISOString() : now;
+          const cur = exist.get(file_id);
+          if (!cur) {
+            recs.push({
+              id_registrasi: clean(rowGet(r, 'ID_REGISTRASI', 'id_registrasi')) || '',
+              jenis_upload: clean(rowGet(r, 'JENIS_UPLOAD', 'jenis_upload')),
+              file_name: clean(rowGet(r, 'FILE_NAME', 'file_name', 'NAMA_FILE', 'nama_file')),
+              file_url: clean(rowGet(r, 'FILE_URL', 'file_url')),
+              file_id: file_id,
+              timestamp: tsRaw,
+              updated_at: verISO,
+              synced_at: now
+            });
+          } else if (verMs && new Date(cur).getTime() < verMs) {
+            recs.push({
+              id_registrasi: clean(rowGet(r, 'ID_REGISTRASI', 'id_registrasi')) || '',
+              jenis_upload: clean(rowGet(r, 'JENIS_UPLOAD', 'jenis_upload')),
+              file_name: clean(rowGet(r, 'FILE_NAME', 'file_name', 'NAMA_FILE', 'nama_file')),
+              file_url: clean(rowGet(r, 'FILE_URL', 'file_url')),
+              file_id: file_id,
+              timestamp: tsRaw,
+              updated_at: verISO,
+              synced_at: now
+            });
+          } else {
+            skipped++;
+          }
         }
         upserted = await upsertChunks(TABLE_UP, recs, 'file_id');
       } else {
+        const { data: existing } = await supabase.from(TABLE_DB).select('id, updated_at');
+        const exist = new Map((existing || []).map((e) => [e.id, e.updated_at]));
         const recs = [];
         for (const r of rows) {
           const id = clean(rowGet(r, 'ID', 'id'));
           if (!id) continue;
-          const data_raw = parseDataRaw(rowGet(r, 'DATA_RAW', 'data_raw')) || restToRaw(r);
-          recs.push({
-            id: id,
-            timestamp: clean(rowGet(r, 'TIMESTAMP', 'timestamp')),
-            layanan: clean(rowGet(r, 'LAYANAN', 'layanan')),
-            nama: clean(rowGet(r, 'NAMA', 'nama')),
-            hp: clean(rowGet(r, 'HP', 'hp', 'NO_HP', 'no_hp')),
-            pembayaran: clean(rowGet(r, 'PEMBAYARAN', 'pembayaran')),
-            data_raw: data_raw,
-            status_berkas: clean(rowGet(r, 'STATUS_BERKAS', 'status_berkas', 'STATUS', 'status')),
-            catatan_admin: clean(rowGet(r, 'CATATAN_ADMIN', 'catatan_admin')),
-            last_updated: clean(rowGet(r, 'LAST_UPDATED', 'last_updated')),
-            updated_at: new Date().toISOString()
-          });
+          const lastUpdated = clean(rowGet(r, 'LAST_UPDATED', 'last_updated'));
+          const tsRaw = clean(rowGet(r, 'TIMESTAMP', 'timestamp'));
+          const verMs = parseSheetTime(lastUpdated) || parseSheetTime(tsRaw);
+          const verISO = verMs ? new Date(verMs).toISOString() : now;
+          const cur = exist.get(id);
+          if (!cur || (verMs && new Date(cur).getTime() < verMs)) {
+            const data_raw = parseDataRaw(rowGet(r, 'DATA_RAW', 'data_raw')) || restToRaw(r);
+            recs.push({
+              id: id,
+              timestamp: tsRaw,
+              layanan: clean(rowGet(r, 'LAYANAN', 'layanan')),
+              nama: clean(rowGet(r, 'NAMA', 'nama')),
+              hp: clean(rowGet(r, 'HP', 'hp', 'NO_HP', 'no_hp')),
+              pembayaran: clean(rowGet(r, 'PEMBAYARAN', 'pembayaran')),
+              data_raw: data_raw,
+              status_berkas: clean(rowGet(r, 'STATUS_BERKAS', 'status_berkas', 'STATUS', 'status')),
+              catatan_admin: clean(rowGet(r, 'CATATAN_ADMIN', 'catatan_admin')),
+              last_updated: lastUpdated,
+              updated_at: verISO,
+              synced_at: now
+            });
+          } else {
+            skipped++;
+          }
         }
         upserted = await upsertChunks(TABLE_DB, recs, 'id');
       }
-      results.push({ sheet: s, received: rows.length, upserted });
+      results.push({ sheet: s, received: rows.length, upserted, skipped });
     }
 
     res.json({
@@ -510,7 +555,7 @@ app.post('/api/keuangan/transaksi', requireAuth, async (req, res) => {
 
     const { data, error } = await supabase
       .from(TABLE_TRX)
-      .insert([{ tanggal, jenis_transaksi, id_permohonan, nominal, keterangan, url_bukti }])
+      .insert([{ tanggal, jenis_transaksi, id_permohonan, nominal, keterangan, url_bukti, updated_at: new Date().toISOString() }])
       .select()
       .single();
     
@@ -529,7 +574,7 @@ app.patch('/api/keuangan/transaksi/:id', requireAuth, async (req, res) => {
 
         const { data, error } = await supabase
             .from(TABLE_TRX)
-            .update({ tanggal, jenis_transaksi, id_permohonan, nominal, keterangan, url_bukti, updated_at: new Date() })
+            .update({ tanggal, jenis_transaksi, id_permohonan, nominal, keterangan, url_bukti, updated_at: new Date().toISOString() })
             .eq('id', id)
             .select()
             .single();
@@ -549,6 +594,141 @@ app.delete('/api/keuangan/transaksi/:id', requireAuth, async (req, res) => {
     const { error } = await supabase.from(TABLE_TRX).delete().eq('id', id);
     if (error) throw error;
     res.json({ success: true, message: 'Transaksi berhasil dihapus' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ---------- Import manual transaksi keuangan dari Google Sheet (CSV publik) ----------
+function parseCSV(text) {
+  const rows = [];
+  let cur = '', row = [], inQ = false;
+  const s = String(text || '');
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inQ) {
+      if (c === '"') { if (s[i + 1] === '"') { cur += '"'; i++; } else inQ = false; }
+      else cur += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+    else if (c !== '\r') cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+
+function parseKeuTanggal(v) {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s).toISOString();
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (!m) return null;
+  const [, d, mo, y, hh, mm, ss] = m;
+  // Waktu pada spreadsheet adalah waktu lokal (WITA); gunakan Date.UTC agar
+  // hasilnya sama di mesin mana pun (Vercel berjalan pada UTC).
+  const dt = new Date(Date.UTC(+y, +mo - 1, +d, +(hh || 0) - SHEET_TZ_H, +(mm || 0), +(ss || 0)));
+  return isNaN(dt.getTime()) ? null : dt.toISOString();
+}
+
+// Parse waktu terakhir diubah pada spreadsheet (nilai tampilan seperti
+// "29/6/2026, 20.50.56"). Mengembalikan epoch ms, atau null bila tidak dikenal.
+function parseSheetTime(v) {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const dt = new Date(s);
+    return isNaN(dt.getTime()) ? null : dt.getTime();
+  }
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[, ]\s*(\d{1,2})[.:](\d{1,2})(?:[.:](\d{1,2}))?)?/);
+  if (!m) return null;
+  const [, d, mo, y, hh, mm, ss] = m;
+  const dt = new Date(Date.UTC(+y, +mo - 1, +d, +(hh || 0) - SHEET_TZ_H, +(mm || 0), +(ss || 0)));
+  return isNaN(dt.getTime()) ? null : dt.getTime();
+}
+
+// POST /api/keuangan/import-from-sheet -> Tarik semua transaksi dari tab TRANSAKSI (upsert).
+app.post('/api/keuangan/import-from-sheet', requireAuth, async (req, res) => {
+  try {
+    const gasRes = await fetch(KEUANGAN_SHEET_URL, { redirect: 'follow' });
+    if (!gasRes.ok) {
+      return res.status(502).json({ success: false, error: 'Gagal mengambil spreadsheet (HTTP ' + gasRes.status + '). Pastikan tab dibagikan sebagai "Anyone with link" (viewer).' });
+    }
+    const csv = await gasRes.text();
+    const rows = parseCSV(csv);
+    if (rows.length < 2) {
+      return res.status(400).json({ success: false, error: 'Spreadsheet kosong atau format CSV tidak dikenali.' });
+    }
+    const headers = rows[0].map((h) => String(h || '').trim().toUpperCase());
+    const iId = headers.indexOf('ID_TRANSAKSI');
+    const iTgl = headers.indexOf('TANGGAL');
+    const iJenis = headers.indexOf('JENIS');
+    const iNom = headers.indexOf('NOMINAL');
+    const iPem = headers.indexOf('ID_PEMOHON');
+    const iKet = headers.indexOf('KETERANGAN');
+    const iUrl = headers.indexOf('URL_BUKTI');
+    const iMod = headers.indexOf('MODIFIED_AT');
+    if (iId < 0 || iTgl < 0 || iJenis < 0 || iNom < 0) {
+      return res.status(400).json({ success: false, error: 'Kolom wajib (ID_TRANSAKSI / TANGGAL / JENIS / NOMINAL) tidak ditemukan di spreadsheet.' });
+    }
+
+    // Hanya tautkan id_permohonan yang benar-benar ada (hindari pelanggaran foreign key).
+    const { data: permData } = await supabase.from(TABLE_DB).select('id');
+    const permSet = new Set((permData || []).map((p) => p.id));
+
+    // "Latest-wins": baris baru di-insert; baris lama hanya ditimpa bila waktu
+    // MODIFIED_AT di sheet LEBIH BARU daripada updated_at di Supabase. Dengan
+    // begitu edit transaksi di aplikasi (yang menaikkan updated_at) tidak akan
+    // tertimpa, sedangkan transaksi baru/diubah lewat Apps Script (yang
+    // menaikkan MODIFIED_AT) tetap tersinkron.
+    const { data: trxExisting } = await supabase.from(TABLE_TRX).select('id, tanggal, updated_at');
+    const exist = new Map((trxExisting || []).map((e) => [e.id, e]));
+
+    const recs = [];
+    let skipped = 0;
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const g = (n) => (n >= 0 && r[n] !== undefined) ? String(r[n]).trim() : '';
+      const id = g(iId);
+      if (!id) { skipped++; continue; }
+      const tanggal = parseKeuTanggal(g(iTgl));
+      if (!tanggal) { skipped++; continue; }
+      const sheetModMs = parseSheetTime(g(iMod));
+      const cur = exist.get(id);
+      if (cur) {
+        const appMs = cur.updated_at ? new Date(cur.updated_at).getTime() : new Date(cur.tanggal).getTime();
+        if (!sheetModMs || !(sheetModMs > appMs)) {
+          // Belum pernah ada stempel, atau data di aplikasi sama/lebih baru -> pertahankan.
+          skipped++;
+          continue;
+        }
+      }
+      const nominal = parseInt(g(iNom).replace(/[^0-9]/g, ''), 10) || 0;
+      const pemohon = g(iPem);
+      recs.push({
+        id,
+        tanggal,
+        jenis_transaksi: g(iJenis) || 'Pemasukan Lainnya',
+        id_permohonan: permSet.has(pemohon) ? pemohon : null,
+        nominal,
+        keterangan: g(iKet) || null,
+        url_bukti: g(iUrl) || null,
+        updated_at: sheetModMs ? new Date(sheetModMs).toISOString() : new Date().toISOString()
+      });
+    }
+
+    const CHUNK = 200;
+    let upserted = 0;
+    for (let i = 0; i < recs.length; i += CHUNK) {
+      const slice = recs.slice(i, i + CHUNK);
+      const { error } = await supabase.from(TABLE_TRX).upsert(slice, { onConflict: 'id' });
+      if (error) throw error;
+      upserted += slice.length;
+    }
+
+    res.json({ success: true, table: TABLE_TRX, inserted: upserted, skipped, totalUpserted: upserted });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }

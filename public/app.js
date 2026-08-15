@@ -466,8 +466,8 @@ hideChangePwMsg();
       });
       const j = await res.json();
       if (!res.ok || !j.success) throw new Error((j && j.error) || 'Gagal import dari spreadsheet.');
-      const parts = (j.tables || []).map((t) => t.sheet + ': ' + t.upserted + '/' + t.received + ' baris');
-      alert('Import selesai.\n' + parts.join('\n') + '\nTotal tersimpan: ' + j.totalUpserted + ' baris.');
+      const parts = (j.tables || []).map((t) => t.sheet + ': ditulis ' + t.upserted + ' dari ' + t.received + ' | dilewati (sudah terbaru): ' + (t.skipped || 0));
+      alert('Import selesai (latest-wins).\n' + parts.join('\n') + '\nTotal ditulis: ' + j.totalUpserted + ' baris.');
       await loadData();
     } catch (e) {
       alert('Import gagal: ' + (e && e.message));
@@ -476,6 +476,30 @@ hideChangePwMsg();
     }
   }
   window.importFromSheet = importFromSheet;
+
+  // ---------- Import manual transaksi keuangan dari spreadsheet (CSV publik) ----------
+  async function importKeuanganFromSheet() {
+    if (!confirm('Tarik data transaksi keuangan dari spreadsheet sekarang? Data akan di-merge (upsert) ke tabel transaksi_keuangan.')) return;
+    const btn = $('btnImportKeuangan');
+    if (btn) btn.disabled = true;
+    try {
+      const res = await fetch('/api/keuangan/import-from-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const j = await res.json();
+      if (!res.ok || !j.success) throw new Error((j && j.error) || 'Gagal import keuangan.');
+      alert('Import keuangan selesai (latest-wins).\nDitulis (baru/diperbarui): ' + (j.inserted || 0) + ' transaksi.\nDilewati (data di aplikasi lebih baru/sama): ' + (j.skipped || 0) + ' baris.');
+      await Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]);
+      renderKeuanganTable();
+    } catch (e) {
+      alert('Import keuangan gagal: ' + (e && e.message));
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+  window.importKeuanganFromSheet = importKeuanganFromSheet;
 
   async function initAuth() {
     const sess = getSession();

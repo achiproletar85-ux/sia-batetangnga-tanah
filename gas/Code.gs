@@ -6,7 +6,7 @@
 // (endpoint /api/import-from-sheet).
 // ============================================================
 const TOKEN_KEY = 'GAS_SYNC_TOKEN';
-const SPREADSHEET_ID = '1wZgW7H2RTWRPGkIo6qC6x_uvaIHC5loGl5GGKAiFw6s';
+const SPREADSHEET_ID = '1KK7EUwdZe7jRfuymJ43GLH3zf7uKoouQwJx2QSfxlwc';
 
 function doPost(e) {
   const body = JSON.parse(e.postData.contents);
@@ -17,8 +17,6 @@ function doPost(e) {
     return respond(401, { success: false, error: 'Token salah.' });
   }
 
-  // Gunakan ID spreadsheet eksplisit agar web app tetap jalan sebagai
-  // proyek STANDALONE (getActiveSpreadsheet() hanya bekerja di skrip bound).
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = String(body.sheet || 'Database_Pendaftaran');
   const tab = ss.getSheetByName(sheet);
@@ -58,4 +56,13 @@ function respond(code, obj) {
     // Versi Apps Script lama: abaikan status code (tetap JSON).
   }
   return out;
+}
+
+
+function test_ListSheetNames() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheets = ss.getSheets();
+  const names = sheets.map(sheet => sheet.getName());
+  Logger.log(names);
+  Browser.msgBox('Nama-nama Sheet yang Ditemukan:', JSON.stringify(names, null, 2));
 }

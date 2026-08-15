@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS transaksi_keuangan (
     nominal BIGINT NOT NULL,
     keterangan TEXT,
     url_bukti TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Tambahkan komentar untuk menjelaskan tabel dan kolom
