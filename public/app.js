@@ -325,6 +325,7 @@
       : '<p class="empty">Belum ada berkas.</p>';
 
     $('cekTbResult').innerHTML = `
+      ${tg.status_lunas ? `<div style="margin-bottom:14px;"><button id="btnCetakNota" class="btn primary" style="display:inline-flex; align-items:center; gap:6px;"><i data-lucide="printer" style="width:16px;height:16px;"></i> Cetak Nota Lunas</button></div>` : ''}
       <div class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom:16px;">
         <div class="dash-card total">
           <div class="dash-ic" style="background-color:#e0f2fe;">💰</div>
@@ -350,6 +351,10 @@
       ${riwayatHtml}
       <h3 style="margin:18px 0 8px; font-size:14px;">Berkas (${berkas.length})</h3>
       ${berkasHtml}`;
+
+    const btnNota = $('btnCetakNota');
+    if (btnNota) btnNota.addEventListener('click', () => cetakNotaLunas(data));
+    if (window.lucide) window.lucide.createIcons();
   }
 
   async function cekTagihanBerkas() {
@@ -375,6 +380,136 @@
       btn.disabled = false;
       btn.textContent = lbl;
     }
+  }
+
+  // Ubah angka menjadi kata-kata bahasa Indonesia (mis. 250000 -> "dua ratus lima puluh ribu").
+  function terbilang(n) {
+    n = Math.floor(Math.abs(Number(n) || 0));
+    if (n === 0) return 'nol';
+    const satuan = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
+    const urai = (x) => {
+      if (x < 12) return satuan[x];
+      if (x < 20) return satuan[x - 10] + ' belas';
+      if (x < 100) return urai(Math.floor(x / 10)) + ' puluh ' + urai(x % 10);
+      if (x < 200) return 'seratus ' + urai(x - 100);
+      if (x < 1000) return urai(Math.floor(x / 100)) + ' ratus ' + urai(x % 100);
+      if (x < 2000) return 'seribu ' + urai(x - 1000);
+      if (x < 1000000) return urai(Math.floor(x / 1000)) + ' ribu ' + urai(x % 1000);
+      if (x < 1000000000) return urai(Math.floor(x / 1000000)) + ' juta ' + urai(x % 1000000);
+      return urai(Math.floor(x / 1000000000)) + ' miliar ' + urai(x % 1000000000);
+    };
+    return urai(n).trim().replace(/\s+/g, ' ');
+  }
+
+  // Buka jendela nota pelunasan siap cetak (hanya saat status LUNAS).
+  function cetakNotaLunas(data) {
+    if (!data || !data.permohonan || !data.tagihan || !data.tagihan.status_lunas) {
+      alert('Nota hanya dapat dicetak bila tagihan sudah LUNAS.');
+      return;
+    }
+    const pm = data.permohonan;
+    const tg = data.tagihan;
+    const riwayat = data.riwayat || [];
+    const raw = parseRawData(pm.data_raw) || {};
+    const v = (k, d) => (raw[k] !== undefined && raw[k] !== null && String(raw[k]).trim() !== '') ? String(raw[k]).trim() : (d || '');
+    const tanggal = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+    const noNota = 'NOTA/' + (pm.id || '') + '/' + new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const riwayatRows = riwayat.map((t, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
+        <td>${esc(t.jenis_transaksi)}</td>
+        <td>${esc(t.keterangan || '-')}</td>
+        <td class="num">${formatRp(t.nominal)}</td>
+      </tr>`).join('');
+
+    const win = window.open('', '_blank', 'width=900,height=1200');
+    if (!win) { alert('Browser memblokir pop-up. Izinkan pop-up untuk mencetak nota.'); return; }
+    win.document.write(`<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Nota Pelunasan ${esc(pm.nama || pm.id || '')}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Times New Roman', Times, serif; margin: 0; padding: 24px; color: #000; }
+  .kop { text-align: center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px; }
+  .kop h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+  .kop h2 { margin: 2px 0 0; font-size: 14px; font-weight: normal; }
+  .kop p { margin: 2px 0 0; font-size: 11px; }
+  .judul { text-align: center; font-size: 16px; font-weight: bold; text-transform: uppercase; margin: 10px 0 4px; }
+  .sub { text-align: center; font-size: 12px; margin-bottom: 18px; }
+  table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
+  table.data td { padding: 3px 4px; vertical-align: top; }
+  table.data td.k { width: 210px; font-weight: bold; }
+  table.trx { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0 16px; }
+  table.trx th, table.trx td { border: 1px solid #000; padding: 5px 6px; }
+  table.trx th { background: #eee; text-align: left; }
+  .num { text-align: right; white-space: nowrap; }
+  .total-lunas { margin: 14px 0; padding: 10px 14px; border: 2px solid #000; display: inline-block; font-size: 14px; font-weight: bold; }
+  .terbilang { font-size: 13px; margin-bottom: 28px; }
+  .ttd { display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px; }
+  .ttd > div { text-align: center; width: 45%; }
+  .ttd .sp { height: 70px; }
+  .ttd .garis { border-top: 1px solid #000; width: 100%; margin-top: 4px; }
+  @media print { body { padding: 12px; } }
+</style>
+</head>
+<body>
+  <div class="kop">
+    <h1>PEMERINTAH KABUPATEN POLEWALI MANDAR</h1>
+    <h2>KECAMATAN &mdash; DESA BATETANGNGA</h2>
+    <p>Desa Batetangnga, Kabupaten Polewali Mandar, Sulawesi Barat</p>
+  </div>
+  <div class="judul">Nota Pelunasan Biaya Administrasi Sertifikat Tanah</div>
+  <div class="sub">Nomor: <strong>${esc(noNota)}</strong></div>
+
+  <table class="data">
+    <tr><td class="k">Nomor / ID Pendaftaran</td><td>: ${esc(pm.id || '-')}</td></tr>
+    <tr><td class="k">Nama Pemohon</td><td>: ${esc(pm.nama || '-')}</td></tr>
+    <tr><td class="k">No. HP</td><td>: ${esc(pm.hp || '-')}</td></tr>
+    <tr><td class="k">Layanan</td><td>: ${esc(pm.layanan || '-')}</td></tr>
+    <tr><td class="k">Jenis Tanah</td><td>: ${esc(v('jenis_tanah', '-'))}</td></tr>
+    <tr><td class="k">Alamat Tanah</td><td>: ${esc(v('alamat_tanah', '-'))}</td></tr>
+    <tr><td class="k">Alamat</td><td>: ${esc(v('alamat', '-'))}</td></tr>
+    <tr><td class="k">Dusun</td><td>: ${esc(v('dusun', '-'))}</td></tr>
+    <tr><td class="k">Luas Tanah</td><td>: ${esc(v('luas_tanah', '-'))} m&sup2;</td></tr>
+  </table>
+
+  <table class="trx">
+    <thead><tr><th>No</th><th>Tanggal</th><th>Jenis</th><th>Keterangan</th><th class="num">Nominal</th></tr></thead>
+    <tbody>
+      ${riwayatRows || '<tr><td colspan="5">Tidak ada riwayat.</td></tr>'}
+      <tr><td colspan="4" style="text-align:right; font-weight:bold;">TOTAL PEMBAYARAN</td><td class="num" style="font-weight:bold;">${formatRp(tg.total_terbayar)}</td></tr>
+    </tbody>
+  </table>
+
+  <div class="total-lunas">STATUS: LUNAS &mdash; Biaya ${formatRp(tg.biaya_total)} telah dibayar penuh (${formatRp(tg.total_terbayar)})</div>
+  <div class="terbilang">Terbilang: <strong>${esc(terbilang(tg.total_terbayar))} rupiah</strong>.</div>
+
+  <div class="ttd">
+    <div>
+      <div>Pemohon,</div>
+      <div class="sp"></div>
+      <div class="garis"></div>
+      <div><strong>${esc(pm.nama || '............................')}</strong></div>
+    </div>
+    <div>
+      <div>Batetangnga, ${esc(tanggal)}</div>
+      <div>Bendahara Desa,</div>
+      <div class="sp"></div>
+      <div class="garis"></div>
+      <div><strong>............................</strong></div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function () { setTimeout(function () { window.print(); }, 300); };
+  <\/script>
+</body>
+</html>`);
+    win.document.close();
+    win.focus();
   }
 
   function openTrxModal(trx) {
