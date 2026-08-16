@@ -1748,7 +1748,7 @@ hideChangePwMsg();
           <h4>📄 Nomor Surat (Otomatis)</h4>
           <p>Nomor urut diambil dari surat terakhir; bisa diubah manual. Kosongkan jika belum mau dicetak.</p>
           <div class="tambah-nomor-row">
-            <div class="field"><label>Tanggal Surat</label><input type="text" id="${p}tglSurat" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY" value="${esc(isoToDmy(tglSurat))}"></div>
+            <div class="field"><label>Tanggal Surat</label><input type="date" id="${p}tglSurat" value="${esc(tglSurat)}"></div>
             <div class="field"><label>Nomor Urut (3 digit)</label><input type="text" id="${p}noUrut" inputmode="numeric" maxlength="3" value="${esc(urutMatch ? urutMatch[1] : '')}" placeholder="001"></div>
             <button id="${p}btnNoUrut" class="btn" type="button">🔄 Auto</button>
           </div>
@@ -1882,7 +1882,8 @@ hideChangePwMsg();
       const nomorSurat = $(`${p}nomorSurat`).value.trim();
       if (nomorSurat) raw._nomorSuratTercetak = nomorSurat;
       else delete raw._nomorSuratTercetak;
-      const tgl = dmyToIso($(`${p}tglSurat`).value);
+      const tglEl = $(`${p}tglSurat`);
+      const tgl = tglEl.type === 'date' ? tglEl.value : dmyToIso(tglEl.value);
       if (tgl) raw._tglCetakSurat = tgl;
       else delete raw._tglCetakSurat;
       if (nomorSurat) {
@@ -2686,6 +2687,12 @@ hideChangePwMsg();
   function toISODate(v) {
     if (!v) return todayISO();
     if (/^\d{4}-\d{2}-\d{2}/.test(String(v))) return v;
+    // Data lama tersimpan DD-MM-YYYY (input teks) -> baca ulang jadi ISO.
+    const dmy = /^(\d{2})-(\d{2})-(\d{4})$/.exec(String(v).trim());
+    if (dmy) {
+      const dd = parseInt(dmy[1], 10), mm = parseInt(dmy[2], 10);
+      if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) return dmy[3] + '-' + dmy[2] + '-' + dmy[1];
+    }
     const m = /(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/.exec(String(v));
     if (m) {
       const MON = {
@@ -3884,7 +3891,9 @@ hideChangePwMsg();
     const tgl = $(`${prefix}tglSurat`);
     const hasil = $(`${prefix}nomorSurat`);
     if (!noUrut || !tgl || !hasil) return;
-    const rebuild = () => { hasil.value = buildNomorSurat(noUrut.value, dmyToIso(tgl.value)); };
+    // Input type=date menyimpan ISO (yyyy-MM-dd); input teks lama DD-MM-YYYY.
+    const isDate = tgl.type === 'date';
+    const rebuild = () => { hasil.value = buildNomorSurat(noUrut.value, isDate ? tgl.value : dmyToIso(tgl.value)); };
     const nextUrut = () => {
       let max = 0;
       rowsCache.forEach((c) => {
@@ -3893,9 +3902,9 @@ hideChangePwMsg();
       });
       return String(max + 1).padStart(3, '0');
     };
-    if (!tgl.value) tgl.value = isoToDmy(todayISO());
+    if (!tgl.value) tgl.value = isDate ? todayISO() : isoToDmy(todayISO());
     if (!noUrut.value) noUrut.value = nextUrut();
-    maskDmyInput(tgl);
+    if (!isDate) maskDmyInput(tgl);
     noUrut.addEventListener('input', rebuild);
     tgl.addEventListener('input', rebuild);
     const btn = root.querySelector(`#${prefix}btnNoUrut`);
