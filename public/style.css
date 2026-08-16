@@ -1149,6 +1149,13 @@ body.aw-1pg .surat-sheet.surat-aw .aw-ttd-space { height: 40px; }
     page-break-inside: auto;
     break-inside: auto;
   }
+  /* PASTIKAN 2 halaman: blok tanda tangan & footer selalu dipindah ke
+     halaman 2, jadi dengan >= 5 anak hasil cetak SELALU 2 halaman
+     ("Halaman 1 dari 2"), bukan hanya saat konten meluber. */
+  body.aw-2pg .surat-sheet.surat-aw .aw-sig-block {
+    page-break-before: always;
+    break-before: page;
+  }
 }
 
 /* ===== Cetak multi-halaman (surat JUAL BELI / HIBAH yang panjang) =====
