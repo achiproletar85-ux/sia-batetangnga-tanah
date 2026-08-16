@@ -4557,6 +4557,39 @@ hideChangePwMsg();
 
   initAuth();
   initKeuangan();
+
+  // ===== Cetak AHLI WARIS <= 4 anak: JAMINAN pas 1 halaman =====
+  // Beberapa printer/browser melayout di kertas A4/Letter (bukan F4 8.5x13in)
+  // sehingga isi surat bisa meluber ke halaman 2 walau pratinjau layar tampak
+  // muat. Saat masuk mode cetak, ukur area isi halaman yang SEBENARNYA dipakai
+  // lalu perkecil lembar (zoom) secukupnya agar selalu tercetak persis 1 halaman.
+  // >= 5 anak (body.aw-2pg) tidak disentuh — tetap 2 halaman.
+  (function wireAwPrintFit() {
+    if (typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('print');
+    const handler = (e) => {
+      const sheet = document.querySelector('#suratBody .surat-sheet');
+      if (!sheet) return;
+      // Hanya mode 1 halaman (AHLI WARIS <= 4 anak). Selain itu kembalikan normal.
+      if (!document.body.classList.contains('aw-1pg')) { sheet.style.zoom = ''; return; }
+      if (!e.matches) { sheet.style.zoom = ''; return; }
+      let probe = document.getElementById('print-fit-probe');
+      if (!probe) {
+        probe = document.createElement('div');
+        probe.id = 'print-fit-probe';
+        probe.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;visibility:hidden;pointer-events:none;';
+        document.body.appendChild(probe);
+      }
+      const availH = probe.offsetHeight;   // tinggi area isi halaman cetak sebenarnya
+      const sheetH = sheet.offsetHeight;   // tinggi lembar surat (dikunci 1 halaman)
+      if (availH > 0 && sheetH > availH) {
+        sheet.style.zoom = String((availH / sheetH).toFixed(4));
+      }
+    };
+    if (mq.addEventListener) mq.addEventListener('change', handler);
+    else if (mq.addListener) mq.addListener(handler);
+  })();
+
   setInterval(() => { if (isAuthed) loadData(); }, 30000);
 
 })();
