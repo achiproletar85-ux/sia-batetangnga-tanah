@@ -464,9 +464,12 @@ app.post('/api/import-from-sheet', requireAuth, async (req, res) => {
       const rows = Array.isArray(j.rows) ? j.rows : [];
       let upserted = 0;
 
-      // "Latest-wins": baris baru di-insert; baris lama hanya ditimpa bila
-      // waktu terakhir diubah di sheet LEBIH BARU daripada updated_at di Supabase
-      // (edit di aplikasi menaikkan updated_at sehingga tidak akan tertimpa).
+      // KEBIJAKAN "INSERT-ONLY" (putuskan koneksi sheet -> timpa data):
+      // baris yang SUDAH ADA di Supabase TIDAK PERNAH ditimpa oleh spreadsheet,
+      // apa pun timestamp-nya. Edit lewat aplikasi (mis. jumlah anak) dijamin
+      // aman dari balik-ke-nilai-lama. Spreadsheet hanya menambah data BARU.
+      // (Sebelumnya memakai "latest-wins" berdasar timestamp sheet vs updated_at,
+      //  yang masih bisa menimpa edit web bila timestamp sheet lebih baru.)
       const now = new Date().toISOString();
       let skipped = 0;
 
@@ -520,7 +523,8 @@ app.post('/api/import-from-sheet', requireAuth, async (req, res) => {
           const verMs = parseSheetTime(lastUpdated) || parseSheetTime(tsRaw);
           const verISO = verMs ? new Date(verMs).toISOString() : now;
           const cur = exist.get(id);
-          if (!cur || (verMs && new Date(cur).getTime() < verMs)) {
+          if (!cur) {
+            // Record baru dari sheet -> INSERT.
             const data_raw = parseDataRaw(rowGet(r, 'DATA_RAW', 'data_raw')) || restToRaw(r);
             recs.push({
               id: id,
@@ -537,6 +541,7 @@ app.post('/api/import-from-sheet', requireAuth, async (req, res) => {
               synced_at: now
             });
           } else {
+            // Sudah ada di Supabase -> TIDAK DITIMPA (insert-only).
             skipped++;
           }
         }
