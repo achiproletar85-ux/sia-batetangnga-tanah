@@ -1846,7 +1846,10 @@ hideChangePwMsg();
     for (let i = 1; i <= n; i++) {
       html += `<div class="sec-title" style="margin-top:6px;">Anak ke-${i}</div>`;
       ['nama', 'tempat_lahir', 'tanggal_lahir', 'pekerjaan', 'alamat'].forEach((k) => {
-        html += tambahFieldHtml({ id: `anak_${i}_${k}`, label: k === 'nama' ? 'Nama' : k.replace('_', ' ') }, raw[`anak_${i}_${k}`], 'ed_');
+        const f = { id: `anak_${i}_${k}`, label: k === 'nama' ? 'Nama' : k.replace('_', ' ') };
+        if (k === 'tanggal_lahir') f.type = 'date';
+        const v = k === 'tanggal_lahir' ? toBirthISO(raw[`anak_${i}_${k}`] || '') : raw[`anak_${i}_${k}`];
+        html += tambahFieldHtml(f, v, 'ed_');
       });
     }
     wrap.innerHTML = html;
@@ -2084,18 +2087,17 @@ hideChangePwMsg();
     const st = currentSurat;
     if (!st) return { ok: false, msg: 'Tidak ada dokumen yang dimuat.' };
 
-    // Batasan status berkas (PENDING tidak boleh cetak) KHUSUS untuk SPORADIK.
-    // Tiga surat keterangan — JUAL BELI, HIBAH, AHLI WARIS — bebas dicetak
-    // apa pun status berkasnya (mis. masih PENDING).
-    if (!skipStatus && activeTemplate() === 'SPORADIK') {
+    // Validasi status berkas: DITOLAK, PENDING, DIPROSES, TMS dilarang cetak.
+    // Hanya berkas dengan status SUDAH_UKUR atau SELESAI yang dapat dieksekusi ke dialog cetak.
+    if (!skipStatus) {
       const stt = String(st.r.status_berkas || '').trim().toUpperCase();
       const allowed = ['SUDAH_DIUKUR', 'SUDAH_UKUR', 'SELESAI'];
       if (!allowed.includes(stt)) {
         return {
           ok: false,
-          msg: 'Dokumen tidak dapat dicetak karena Status Berkas saat ini masih ' +
-               (stt || '(kosong)') +
-               '. Hanya berkas dengan status SUDAH_UKUR atau SELESAI yang dapat dicetak.'
+          msg: 'Dokumen tidak dapat dicetak karena Status Berkas saat ini adalah: ' +
+               (stt || '(KOSONG / PENDING / DIPROSES / DITOLAK / TMS)') +
+               '. Hanya berkas dengan status SUDAH_UKUR atau SELESAI yang dapat dieksekusi ke dialog cetak.'
         };
       }
     }
@@ -2802,10 +2804,12 @@ hideChangePwMsg();
       ? `⚠️ ${filledCnt} dari ${reqKeys.length} field wajib terisi. Isi field yang masih kosong di kiri, lalu klik "💾 Simpan Data".`
       : `✅ Semua ${reqKeys.length} field wajib terisi — surat siap dicetak.`;
 
-    // Surat Jual Beli, Hibah & Ahli Waris boleh cetak lebih dari 1 halaman
-    // (jangan dipaksa 1 halaman karena data bisa terpotong/hilang).
+    // JUAL BELI & HIBAH WAJIB pas 1 halaman (terkunci CSS + auto-fit zoom,
+    // lihat body.fit-1pg). AHLIWARIS memakai multi-print: >= 5 anak boleh
+    // mengalir ke halaman 2 (aw-2pg), <= 4 anak tetap terkunci 1 halaman.
     // SPORADIK tetap terkunci pas 1 halaman (kertas 8.5x13in).
-    document.body.classList.toggle('multi-print', t === 'JUALBELI' || t === 'HIBAH' || t === 'AHLIWARIS');
+    document.body.classList.toggle('multi-print', t === 'AHLIWARIS');
+    document.body.classList.toggle('fit-1pg', t === 'JUALBELI' || t === 'HIBAH');
     // Ahli Waris memakai halaman bernama 'aw' (margin + footer halaman).
     // Class dipasang di <html> agar seluruh konten memakai page: aw dan
     // tidak memicu pecah halaman kosong di awal (beda nama halaman = break paksa).
@@ -3356,25 +3360,26 @@ hideChangePwMsg();
       <p class="surat-p">Demikian Pernyataan Pengalihan Hak Milik tanah ini kami buat dan kami tanda tangani bersama dihadapan 2 orang Saksi yang tersebut namanya dibawah ini untuk dipergunakan seperlunya dan sebagai bukti dikemudian hari.</p>
       <p class="surat-p surat-tgl-line">Batetangnga, ${escFill(f.tgl_surat)}</p>
       ${ttd2('Pihak Kedua<br>Yang Menerima Pengoperan,', f.pembeli_nama, 'Pihak Pertama<br>Yang Melakukan Pengoperan,', f.penjual_nama)}
-      <p class="surat-p surat-saksi-head">Saksi - Saksi :</p>
-      <div class="surat-saksi">
-        <div class="surat-saksi-baris">
-          <div class="surat-saksi-kiri">1 . <b>${escFill(f.saksi1_nama)}</b></div>
-          <div class="surat-saksi-kanan">( ...................................... )</div>
+      <div class="aw-footer">
+        <div class="aw-footer-left">
+          <div class="aw-saksi-title">Saksi-Saksi :</div>
+          <div class="aw-saksi-space"></div>
+          <div class="aw-saksi-pair">
+            <div class="aw-saksi-satu">1. ( <b>${escFill(f.saksi1_nama)}</b> )</div>
+            <div class="aw-saksi-dua">2. ( <b>${escFill(f.saksi2_nama)}</b> )</div>
+          </div>
         </div>
-        <div class="surat-saksi-baris">
-          <div class="surat-saksi-kiri">2 . <b>${escFill(f.saksi2_nama)}</b></div>
-          <div class="surat-saksi-kanan">( ...................................... )</div>
-        </div>
-      </div>
-      <p class="surat-p surat-no-line">Nomor Surat : <b>${escFill(f.no_surat)}</b></p>
-      <div class="surat-ttd-row">
-        <div></div>
-        <div class="surat-ttd">
-          <div>Batetangnga, ${escFill(f.tgl_surat)}</div>
-          <div>Kepala Desa Batetangnga</div>
-          <div class="surat-ttd-space"></div>
-          <div><b>(SUMAILA DAMANG)</b></div>
+        <div class="aw-footer-right">
+          <div class="aw-nomor-wrap">
+            <div class="aw-nomor"><span class="aw-lbl2">Nomor</span> : <b>${escFill(f.no_surat)}</b></div>
+            <div class="aw-nomor"><span class="aw-lbl2">Tanggal</span> : ${escFill(f.tgl_surat)}</div>
+          </div>
+          <div class="aw-kades">
+            <div>Disaksikan dan Dibenarkan Oleh</div>
+            <div>Kepala Desa Batetangnga</div>
+            <div class="aw-ttd-space"></div>
+            <div><b>SUMAILA DAMANG</b></div>
+          </div>
         </div>
       </div>
       <div class="surat-materai-row">
@@ -3392,21 +3397,33 @@ hideChangePwMsg();
     b.className = 'surat-sheet surat-aw';
 
     const n = Math.max(0, Math.min(20, parseInt(String(f.jumlah_anak || '0').replace(/\D/g, ''), 10) || 0));
-    const anakList = [];
-    const ttdRows = [];
+    const tableRows = [];
     for (let i = 1; i <= n; i++) {
       const nm = f['anak_' + i + '_nama'];
-      const umur = fmtUmur(umurFromTgl(f['anak_' + i + '_tanggal_lahir']));
+      const tmpl = f['anak_' + i + '_tempat_lahir'] || '';
+      const tgl = fmtTglDate(f['anak_' + i + '_tanggal_lahir']);
+      const ttl = (tmpl && tgl) ? `${tmpl}, ${tgl}` : (tmpl || tgl || fmtUmur(f['anak_' + i + '_umur']));
       const pek = f['anak_' + i + '_pekerjaan'];
       const alm = f['anak_' + i + '_alamat'];
-      if (!nm && !umur && !pek && !alm) continue;
+      if (!nm && !ttl && !pek && !alm) continue;
+
       anakList.push(`
         <div class="aw-anak">
           <div class="aw-anak-line"><span class="aw-no">${i}.</span><span class="aw-lbl">Nama</span> : <b>${escFill(nm)}</b></div>
-          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Umur</span> : ${escFill(umur)}</div>
+          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">TTL/Umur</span> : ${escFill(ttl)}</div>
           <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Pekerjaan</span> : ${escFill(pek)}</div>
           <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Alamat</span> : ${escBr(alm)}</div>
         </div>`);
+
+      tableRows.push(`
+        <tr>
+          <td style="text-align:center; font-weight:600;">${i}</td>
+          <td><b>${escFill(nm)}</b></td>
+          <td>${escFill(ttl)}</td>
+          <td>${escFill(pek)}</td>
+          <td>${escBr(alm)}</td>
+        </tr>`);
+
       if (nm) {
         ttdRows.push(`
           <div class="aw-ttd-row">
@@ -3415,8 +3432,23 @@ hideChangePwMsg();
           </div>`);
       }
     }
-    const daftar = anakList.length
-      ? `<div class="aw-anak-list">${anakList.join('')}</div>`
+    const daftar = tableRows.length
+      ? `<div class="aw-table-wrap" style="width:100%; margin:10px 0; page-break-inside:avoid; break-inside:avoid;">
+          <table class="aw-table" style="width:100%; border-collapse:collapse; font-size:11pt;">
+            <thead>
+              <tr style="background:#f1f5f9; text-align:center; font-weight:bold;">
+                <th style="border:1px solid #000; padding:5px 4px; width:35px;">NO</th>
+                <th style="border:1px solid #000; padding:5px 6px;">NAMA</th>
+                <th style="border:1px solid #000; padding:5px 6px;">TEMPAT / TANGGAL LAHIR</th>
+                <th style="border:1px solid #000; padding:5px 6px;">PEKERJAAN</th>
+                <th style="border:1px solid #000; padding:5px 6px;">ALAMAT</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows.join('')}
+            </tbody>
+          </table>
+        </div>`
       : '';
     const ttdBlock = ttdRows.length
       ? `<div class="aw-ttd-para">Para Ahli Waris,</div>
@@ -3520,25 +3552,26 @@ hideChangePwMsg();
       <p class="surat-p">dan Pihak Kedua menerima pemberian/Hibah atas tanah tersebut. demikian surat pernyataan Pemberian/Hibah ini kami buat dan Kami tanda tangani bersama dihadapan 2 orang saksi yang tersebut namanya dibahwa ini untuk dipergunakan seperlunya dan sebagai bukti dikemudian hari.</p>
       <p class="surat-p surat-tgl-line">Batetangnga, ${escFill(f.tgl_surat)}</p>
       ${ttd2('Pihak Kedua<br>Yang Menerima Hibah,', f.penerima_nama, 'Pihak Pertama<br>Yang Memberikan Hibah,', f.pemberi_nama)}
-      <p class="surat-p surat-saksi-head">Saksi - Saksi :</p>
-      <div class="surat-saksi">
-        <div class="surat-saksi-baris">
-          <div class="surat-saksi-kiri">1 . <b>${escFill(f.saksi1_nama)}</b></div>
-          <div class="surat-saksi-kanan">( ...................................... )</div>
+      <div class="aw-footer">
+        <div class="aw-footer-left">
+          <div class="aw-saksi-title">Saksi-Saksi :</div>
+          <div class="aw-saksi-space"></div>
+          <div class="aw-saksi-pair">
+            <div class="aw-saksi-satu">1. ( <b>${escFill(f.saksi1_nama)}</b> )</div>
+            <div class="aw-saksi-dua">2. ( <b>${escFill(f.saksi2_nama)}</b> )</div>
+          </div>
         </div>
-        <div class="surat-saksi-baris">
-          <div class="surat-saksi-kiri">2 . <b>${escFill(f.saksi2_nama)}</b></div>
-          <div class="surat-saksi-kanan">( ...................................... )</div>
-        </div>
-      </div>
-      <p class="surat-p surat-no-line">Nomor : <b>${escFill(f.no_surat)}</b> &nbsp; Tanggal : ${escFill(f.tgl_surat)}</p>
-      <div class="surat-ttd-row">
-        <div></div>
-        <div class="surat-ttd">
-          <div>Diketahui Oleh</div>
-          <div>Kepala DesaBatetangnga</div>
-          <div class="surat-ttd-space"></div>
-          <div><b>(SUMAILA DAMANG)</b></div>
+        <div class="aw-footer-right">
+          <div class="aw-nomor-wrap">
+            <div class="aw-nomor"><span class="aw-lbl2">Nomor</span> : <b>${escFill(f.no_surat)}</b></div>
+            <div class="aw-nomor"><span class="aw-lbl2">Tanggal</span> : ${escFill(f.tgl_surat)}</div>
+          </div>
+          <div class="aw-kades">
+            <div>Disaksikan dan Dibenarkan Oleh</div>
+            <div>Kepala Desa Batetangnga</div>
+            <div class="aw-ttd-space"></div>
+            <div><b>SUMAILA DAMANG</b></div>
+          </div>
         </div>
       </div>
       <div class="surat-materai-row">
@@ -4558,20 +4591,21 @@ hideChangePwMsg();
   initAuth();
   initKeuangan();
 
-  // ===== Cetak AHLI WARIS <= 4 anak: JAMINAN pas 1 halaman =====
+  // ===== Cetak 1 Halaman (AHLI WARIS <= 4 anak + JUAL BELI/HIBAH): JAMINAN pas 1 halaman =====
   // Beberapa printer/browser melayout di kertas A4/Letter (bukan F4 8.5x13in)
   // sehingga isi surat bisa meluber ke halaman 2 walau pratinjau layar tampak
   // muat. Saat masuk mode cetak, ukur area isi halaman yang SEBENARNYA dipakai
   // lalu perkecil lembar (zoom) secukupnya agar selalu tercetak persis 1 halaman.
-  // >= 5 anak (body.aw-2pg) tidak disentuh — tetap 2 halaman.
+  // AHLI WARIS >= 5 anak (body.aw-2pg) tidak disentuh — tetap 2 halaman.
   (function wireAwPrintFit() {
     if (typeof window.matchMedia !== 'function') return;
     const mq = window.matchMedia('print');
     const handler = (e) => {
       const sheet = document.querySelector('#suratBody .surat-sheet');
       if (!sheet) return;
-      // Hanya mode 1 halaman (AHLI WARIS <= 4 anak). Selain itu kembalikan normal.
-      if (!document.body.classList.contains('aw-1pg')) { sheet.style.zoom = ''; return; }
+      // Hanya mode 1 halaman: AHLI WARIS <= 4 anak (aw-1pg) & JUAL BELI/HIBAH
+      // (fit-1pg). AHLI WARIS >= 5 anak (aw-2pg) tetap 2 halaman.
+      if (!document.body.classList.contains('aw-1pg') && !document.body.classList.contains('fit-1pg')) { sheet.style.zoom = ''; return; }
       if (!e.matches) { sheet.style.zoom = ''; return; }
       let probe = document.getElementById('print-fit-probe');
       if (!probe) {
@@ -4580,8 +4614,14 @@ hideChangePwMsg();
         probe.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;visibility:hidden;pointer-events:none;';
         document.body.appendChild(probe);
       }
-      const availH = probe.offsetHeight;   // tinggi area isi halaman cetak sebenarnya
-      const sheetH = sheet.offsetHeight;   // tinggi lembar surat (dikunci 1 halaman)
+      // Area isi = tinggi #suratBody (calc(100vh - 2cm)). Probe fixed mengukur
+      // SELURUH halaman (termasuk margin) sehingga lembar bisa 76px lebih tinggi
+      // dari container dan baris bawahnya terpotong — pakai #suratBody.
+      const bodyEl = document.getElementById('suratBody');
+      const availH = bodyEl ? bodyEl.clientHeight : probe.offsetHeight;
+      // Tinggi isi sebenarnya: scrollHeight menangkap konten yang meluber dari
+      // kotak yang dikunci 1 halaman (offsetHeight saja bisa menutupi overflow).
+      const sheetH = Math.max(sheet.offsetHeight, sheet.scrollHeight);
       if (availH > 0 && sheetH > availH) {
         sheet.style.zoom = String((availH / sheetH).toFixed(4));
       }

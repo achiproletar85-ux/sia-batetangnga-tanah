@@ -17,6 +17,9 @@ tmp/
 # Vercel (deploy lokal / cache)
 .vercel/
 
+# Folder harness kerja (jangan ikut deploy)
+.freebuff/
+
 # OS / editor
 .DS_Store
 Thumbs.db

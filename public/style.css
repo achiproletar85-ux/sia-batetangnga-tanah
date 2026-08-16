@@ -117,7 +117,7 @@ header h1 span { display: block; font-size: 11px; font-weight: 500; color: var(-
 .btn-ghost { background: transparent; border: none; color: var(--muted); font-size: 20px; cursor: pointer; transition: color 0.2s ease, transform 0.15s ease; border-radius: 8px; }
 .btn-ghost:hover { color: var(--text); transform: rotate(90deg); }
 
-main { padding: 24px; max-width: 1440px; margin: 0 auto; }
+main { padding: 24px; max-width: 100%; margin: 0 auto; }
 
 /* ===== Tabs ===== */
 .tabs {
@@ -787,7 +787,7 @@ dialog::backdrop {
 .surat-aw .aw-batas .aw-bt-lbl { display: inline-block; width: 175px; }
 .surat-aw .aw-ttd-para { text-align: center; margin: 12px 0 4px; }
 .surat-aw .aw-ttd-rows { margin: 0; }
-.surat-aw .aw-ttd-row { display: flex; justify-content: space-between; align-items: baseline; line-height: 1.7; }
+.surat-aw .aw-ttd-row { display: flex; justify-content: space-between; align-items: baseline; line-height: 1.7; margin-bottom: 12px; }
 .surat-aw .aw-ttd-name { white-space: nowrap; }
 .surat-aw .aw-ttd-dots { white-space: nowrap; }
 /* Daftar ahli waris — BUKAN tabel: 2 kolom kiri-kanan (1,2 sejajar; 3 di bawah 1, dst).
@@ -812,35 +812,36 @@ dialog::backdrop {
 .surat-aw .aw-anak .aw-no { display: inline-block; width: 22px; }
 .surat-aw .aw-anak .aw-lbl { display: inline-block; width: 74px; }
 .surat-aw .aw-anak-sub { display: block; }
-.surat-aw .aw-footer { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: start; margin-top: 14px; }
-.surat-aw .aw-footer-left { grid-column: 1 / -1; grid-row: 1; text-align: left; line-height: 1.45; }
-.surat-aw .aw-footer-right { grid-column: 2; grid-row: 2; text-align: center; line-height: 1.4; }
-.surat-aw .aw-saksi-title { text-align: center; margin-bottom: 4px; }
-.surat-aw .aw-saksi-space { height: 55px; }
-.surat-aw .aw-saksi-pair { display: flex; justify-content: space-between; }
-.surat-aw .aw-saksi-satu { text-align: left; }
-.surat-aw .aw-saksi-dua { text-align: right; }
-.surat-aw .aw-nomor { }
-.surat-aw .aw-nomor-wrap { display: inline-block; text-align: left; }
-.surat-aw .aw-nomor .aw-lbl2 { display: inline-block; width: 64px; text-align: right; }
+.aw-footer { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: start; margin-top: 14px; }
+.aw-footer-left { grid-column: 1 / -1; grid-row: 1; text-align: left; line-height: 1.45; }
+.aw-footer-right { grid-column: 2; grid-row: 2; text-align: center; line-height: 1.4; }
+.aw-saksi-title { text-align: center; margin-bottom: 4px; }
+.aw-saksi-space { height: 55px; }
+.aw-saksi-pair { display: flex; justify-content: space-between; }
+.aw-saksi-satu { text-align: left; }
+.aw-saksi-dua { text-align: right; }
+.aw-nomor { }
+.aw-nomor-wrap { display: inline-block; text-align: left; }
+.aw-nomor .aw-lbl2 { display: inline-block; width: 64px; text-align: right; }
 
 /* ===== Ahli Waris: jumlah halaman berbasis jumlah anak =====
    body.aw-1pg (<= 4 anak): teks & spasi dirapatkan agar isi PASTI muat
    1 halaman bahkan di kertas A4/Letter (footer otomatis "Halaman 1 dari 1").
    body.aw-2pg (>= 5 anak): spasi normal, isi mengalir ke 2 halaman
    (footer otomatis "Halaman 1 dari 2" / "Halaman 2 dari 2"). */
-body.aw-1pg .surat-sheet.surat-aw { font-size: 11.5pt; line-height: 1.3; }
+body.aw-1pg .surat-sheet.surat-aw { font-size: 11.5pt; line-height: 1.22; }
 body.aw-1pg .surat-sheet.surat-aw .surat-p { margin: 3px 0; }
 body.aw-1pg .surat-sheet.surat-aw .surat-head { font-size: 14.5pt; margin-bottom: 8px; line-height: 1.15; }
 body.aw-1pg .surat-sheet.surat-aw .aw-anak-list { margin: 3px 0; row-gap: 3px; column-gap: 22px; }
 body.aw-1pg .surat-sheet.surat-aw .aw-anak { line-height: 1.22; }
 body.aw-1pg .surat-sheet.surat-aw .aw-ttd-para { margin: 6px 0 3px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-sig-block { margin-top: 12px; }
 body.aw-1pg .surat-sheet.surat-aw .aw-footer { margin-top: 8px; }
-body.aw-1pg .surat-sheet.surat-aw .aw-saksi-space { height: 30px; }
-body.aw-1pg .surat-sheet.surat-aw .aw-ttd-space { height: 30px; }
-body.aw-1pg .surat-sheet.surat-aw .aw-ttd-row { line-height: 1.5; }
+body.aw-1pg .surat-sheet.surat-aw .aw-saksi-space { height: 26px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-ttd-space { height: 26px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-ttd-row { line-height: 1.5; margin-bottom: 3px; }
 body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.3; }
-.surat-aw .aw-ttd-space { height: 55px; }
+.aw-ttd-space { height: 55px; }
 
 /* ===== Kontrol manual tanggal & nomor surat (layar saja) ===== */
 .surat-controls {
@@ -1075,7 +1076,7 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.3; }
   }
   .surat-head { page-break-after: avoid; }
   .surat-tb, .surat-tb tr { page-break-inside: avoid; break-inside: avoid; }
-  .surat-ttd-row, .surat-saksi { page-break-inside: avoid; break-inside: avoid; }
+  .surat-ttd-row, .surat-saksi, .aw-footer { page-break-inside: avoid; break-inside: avoid; }
   .print-hide { display: none !important; }
 
   /* ---- Kompakkan 2-3px (hanya cetak/PDF) agar muat 1 halaman ---- */
@@ -1161,9 +1162,10 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.3; }
   }
 }
 
-/* ===== Cetak multi-halaman (surat JUAL BELI / HIBAH yang panjang) =====
+/* ===== Cetak multi-halaman (surat AHLI WARIS >= 5 anak) =====
    Aturan ini ditulis SETELAH blok @media print utama sehingga menang saat
-   body diberi kelas .multi-print (di-set JS saat template JUALBELI/HIBAH aktif). */
+   body diberi kelas .multi-print (di-set JS saat template AHLIWARIS aktif;
+   JUAL BELI & HIBAH kini memakai body.fit-1pg = terkunci 1 halaman). */
 @media print {
   html:has(body.multi-print), body.multi-print {
     height: auto !important;
@@ -1205,10 +1207,35 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.3; }
   body.aw-1pg .surat-sheet.surat-aw {
     height: 100% !important;
     max-height: 100% !important;
+    /* min-height F4 (13in - 2cm) harus dinolkan: kalau tidak, lembar selalu
+       setinggi F4 (1172px) walau kertas printer Letter/A4 lebih pendek,
+       sehingga baris bawah (Saksi + Kepala Desa) terpotong oleh overflow. */
+    min-height: 0 !important;
     overflow: hidden !important;
     page-break-inside: avoid;
     break-inside: avoid;
   }
+}
+
+/* ===== Cetak JUAL BELI & HIBAH: TERKUNCI PAS 1 HALAMAN =====
+   body.fit-1pg (di-set JS saat template JUALBELI/HIBAH aktif): lembar
+   dikunci persis 1 halaman seperti SPORADIK (tanpa multi-print) dan
+   memakai gaya yang SAMA dengan pratinjau layar; JS auto-fit zoom menjamin
+   tetap 1 halaman walau printer memakai A4/Letter (isi tidak terpotong). */
+@media print {
+  /* JUAL BELI & HIBAH: cetak = pratinjau layar, PERSIS sama.
+     Lembar memakai gaya yang sama dengan pratinjau (font 15px, line-height
+     1.55, padding 38px 46px, jarak tanda tangan 55px) lalu diskalakan
+     otomatis oleh JS auto-fit zoom agar selalu pas 1 halaman
+     (F4/A4/Letter) — isi tidak pernah meluber atau terpotong. */
+  body.fit-1pg .surat-sheet {
+    font-size: 15px;
+    line-height: 1.55;
+    padding: 38px 46px;
+  }
+  body.fit-1pg .surat-sheet .surat-head { line-height: 1.3; }
+  body.fit-1pg .surat-sheet .surat-p { margin: 12px 0; }
+  body.fit-1pg .surat-sheet .surat-tb { margin: 6px 0; }
 }
 
 /* =============================================================
@@ -1218,6 +1245,55 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.3; }
    Tidak ada perubahan struktur HTML/JS/variabel.
    ============================================================= */
 @media screen {
+  /* Reset & Pembungkus Utama Layar Penuh */
+  html, body {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background-color: #f8fafc;
+    overflow-x: hidden; /* Mencegah scrollbar horizontal liar */
+  }
+
+  /* Container Aplikasi Memenuhi 100% Layar */
+  .app-container,
+  .app-wrapper,
+  .main-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 16px 24px !important; /* Jarak aman tepi layar */
+    box-sizing: border-box !important;
+  }
+
+  /* Header & Card Utama Menyesuaikan Lebar 100% */
+  .app-header,
+  .top-navbar,
+  .glass-header,
+  .workspace-card,
+  .main-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Grid Toolbar & Baris Form Input Otomatis Melebar Proporsional */
+  .toolbar-deck,
+  .toolbar-section {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .form-grid-4,
+  .form-row-grid,
+  .row-grid-4 {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1.4fr 1fr 1.2fr 1.8fr !important;
+    gap: 16px !important;
+  }
+
   body {
     font-family: "Plus Jakarta Sans", "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
     background:
@@ -1508,7 +1584,7 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.3; }
     display: grid; place-items: center; font-weight: 800;
   }
 
-  main.content { padding: 22px; max-width: 1440px; margin: 0 auto; width: 100%; }
+  main.content { padding: 22px; max-width: 100%; margin: 0 auto; width: 100%; }
 
   /* ---- Kartu statistik: chip ikon gradient ---- */
   .dash-card {
@@ -1690,7 +1766,7 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.3; }
 
   /* Container / batang tubuh utama terpusat */
   .app-container {
-    max-width: 1320px;
+    max-width: 100% !important;
     margin: 0 auto;
     padding: 0 22px;
   }
@@ -1781,10 +1857,10 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.3; }
 /* Cetak: chrome baru disembunyikan + main-card/container di-reset agar surat
    tetap pas 1 halaman. Aturan @media print lama (Kompakkan, N.I.B., dsb) utuh. */
 @media print {
-  .app-container { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+  .app-container, .app-wrapper, .main-wrapper { max-width: none !important; margin: 0 !important; padding: 0 !important; }
   .app-header, .tab-navigation, .pager, .tb-search, .tb-icon, .tb-avatar,
   .sidebar, .topbar { display: none !important; }
-  .main-card {
+  .main-card, .workspace-card {
     background: none !important; border: none !important; border-radius: 0 !important;
     box-shadow: none !important; padding: 0 !important;
   }
@@ -1831,7 +1907,7 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.3; }
   }
 
   .app-container {
-    max-width: 1240px;
+    max-width: 100% !important;
     margin: 0 auto;
     padding: 0;
   }
@@ -2178,4 +2254,121 @@ body.guest-mode .auth-data { display: none !important; }
 .mini-table td.wrap { max-width: 260px; overflow-wrap: anywhere; }
 .progress { height: 10px; background: rgba(14, 26, 47, 0.08); border-radius: 999px; overflow: hidden; }
 .progress-bar { height: 100%; background: linear-gradient(90deg, #0ea5e9, #10b981); border-radius: 999px; transition: width .4s ease; }
+
+/* ==================================================
+   STANDARISASI FULL-WIDTH & FLUID LAYOUT SEMUA TAB
+   ================================================== */
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+.app-container, .main-card, .workspace-card, main, #appWorkspace, #tab-dashboard, #tab-pendaftaran, #tab-sporadik, #tab-uploads, #tab-keuangan {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Dashboard Fluid 100% Width Grid */
+#tab-dashboard {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+#tab-dashboard .dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  width: 100% !important;
+}
+#tab-dashboard .dash-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100% !important;
+}
+#tab-dashboard .dash-block {
+  flex: 1 1 320px;
+  width: 100% !important;
+}
+#tab-dashboard .dash-block.wide {
+  flex: 2 1 640px;
+  width: 100% !important;
+}
+
+/* Master Tables Full Width 100% with Smooth Horizontal Scroll */
+.table-wrap {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  border-radius: 12px;
+}
+table#dataTable, table#sporadikTable, table#uploadTable, table#keuTable {
+  width: 100% !important;
+  min-width: 100%;
+}
+
+/* Inline Grid Form Inputs 4-Column Full-Width on Desktop */
+.se-grid, #suratEditFields {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px 14px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+.se-field.se-ac, .se-field.se-full {
+  grid-column: 1 / -1 !important;
+}
+
+@media (max-width: 1100px) {
+  .se-grid, #suratEditFields {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 640px) {
+  .se-grid, #suratEditFields {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Ahli Waris Table & Form Full Width */
+.aw-table-wrap, .aw-table {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* ==================================================
+   FORMAT CETAK BAKU 8.5 x 13 INCI (FOLIO / F4)
+   ================================================== */
+@media print {
+  @page {
+    size: 8.5in 13in portrait;
+    margin: 1cm 1.8cm;
+  }
+  @page aw {
+    size: 8.5in 13in portrait;
+    margin: 1cm 1.8cm;
+  }
+  html, body {
+    width: 8.5in !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .surat-sheet {
+    padding: 0.5cm 0 !important;
+  }
+  .aw-table {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .aw-table thead {
+    display: table-header-group;
+  }
+  .aw-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
 
