@@ -1,16 +1,18 @@
 // ============================================================
-// AUTO: Spreadsheet -> Supabase (satu arah, real-time) + WEB APP
+// MANUAL: Spreadsheet -> Supabase TIDAK LAGI OTOMATIS + WEB APP
 // untuk IMPORT MANUAL ("Tarik dari Sheet") — STANDALONE
 // Proyek Apps Script TERPISAH (tidak menempel pada spreadsheet),
 // jadi TIDAK mengganggu skrip lama yang sudah ada di spreadsheet.
 //
-// 1) AUTO-SYNC (real-time):
-//    - Simple trigger onEdit TIDAK otomatis jalan di script standalone.
-//    - WAJIB jalankan installTriggers() SEKALI dari editor.
+// 1) AUTO-SYNC DIMATIKAN (koneksi sheet -> Supabase diputus):
+//    - onEdit / onSheetChange sengaja dijadikan no-op (tidak menulis apa pun).
+//    - installTriggers() tidak lagi memasang trigger, malah MENGHAPUS trigger.
+//    - Semua tulis memakai 'resolution=ignore-duplicates' (INSERT-ONLY):
+//      baris yang SUDAH ADA di Supabase TIDAK PERNAH ditimpa oleh spreadsheet.
 //
 // 2) WEB APP (import manual dari aplikasi web):
 //    - Deploy proyek ini sebagai Web app (Execute as: Me, access: Anyone).
-//    - Server memanggil doPost(action=getRows).
+//    - Server memanggil doPost(action=getRows) — READ-ONLY.
 //
 // Script properties (Project Settings -> Script properties):
 //   SUPABASE_URL       = https://<ref>.supabase.co
@@ -79,13 +81,12 @@ function respond(code, obj) {
 
 // ================= AUTO-SYNC (REAL-TIME) =================
 
-// Wajib: buat trigger installable utk spreadsheet (jalankan SEKALI dari editor).
+// AUTO-SYNC DIMATIKAN: fungsi ini TIDAK lagi memasang trigger.
+// Jika dijalankan, ia justru menghapus semua trigger proyek ini
+// (menghentikan sinkronisasi otomatis yang masih terpasang di Google).
 function installTriggers() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  ScriptApp.getProjectTriggers().forEach((t) => ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger('onEdit').forSpreadsheet(ss).onEdit().create();
-  ScriptApp.newTrigger('onSheetChange').forSpreadsheet(ss).onChange().create();
-  Logger.log('Trigger onEdit + onChange terpasang utk spreadsheet ' + SPREADSHEET_ID);
+  Logger.log('AUTO-SYNC DIMATIKAN: tidak ada trigger baru yang dipasang.');
+  uninstallTriggers();
 }
 
 // Hapus trigger installable proyek ini (bila ingin berhenti).
@@ -94,41 +95,16 @@ function uninstallTriggers() {
   Logger.log('Semua trigger proyek ini dihapus.');
 }
 
-// Handler trigger installable onEdit.
+// AUTO-SYNC DIMATIKAN: no-op sengaja — kalau trigger lama masih terpasang,
+// ia TIDAK menulis apa pun ke Supabase. Sinkronisasi hanya manual
+// lewat tombol "Tarik dari Sheet" di aplikasi.
 function onEdit(e) {
-  if (!e || !e.range) return;
-  const sheetName = e.range.getSheet().getName();
-  const conf = DATA_TABS[sheetName];
-  if (!conf) return;
-  const rowStart = e.range.getRow();
-  const numRows = e.range.getNumRows();
-  if (rowStart < 2) return; // jangan sentuh baris header
-  processRange(sheetName, rowStart, numRows, conf);
+  console.log('Auto-sync dimatikan: onEdit tidak menulis apa pun ke Supabase.');
 }
 
-// Handler trigger installable onChange (utk penyisipan baris).
+// AUTO-SYNC DIMATIKAN: no-op (lihat onEdit).
 function onSheetChange(e) {
-  if (!e || !e.source) return;
-  const changeType = e.changeType || '';
-  if (changeType === 'INSERT_ROW') {
-    const sheet = e.source.getActiveSheet();
-    const name = sheet.getName();
-    const conf = DATA_TABS[name];
-    if (!conf) return;
-    const activeRange = sheet.getActiveRange();
-    if (activeRange) {
-      processRange(name, activeRange.getRow(), activeRange.getNumRows(), conf);
-    }
-  } else if (changeType === 'EDIT') {
-    const sheet = e.source.getActiveSheet();
-    const name = sheet.getName();
-    const conf = DATA_TABS[name];
-    if (!conf) return;
-    const activeRange = sheet.getActiveRange();
-    if (activeRange) {
-      processRange(name, activeRange.getRow(), activeRange.getNumRows(), conf);
-    }
-  }
+  console.log('Auto-sync dimatikan: onSheetChange tidak menulis apa pun ke Supabase.');
 }
 
 function processRange(sheetName, rowStart, numRows, conf) {
@@ -227,7 +203,8 @@ function postToSupabase(table, rec, onConflict) {
     headers: {
       apikey: anon,
       Authorization: 'Bearer ' + anon,
-      Prefer: 'resolution=merge-duplicates,return=minimal'
+      // INSERT-ONLY: baris yang sudah ada TIDAK PERNAH ditimpa (hanya menambah baris baru).
+      Prefer: 'resolution=ignore-duplicates,return=minimal'
     },
     payload: JSON.stringify(rec),
     muteHttpExceptions: true
@@ -251,7 +228,8 @@ function postToSupabaseBatch(table, records, onConflict) {
     headers: {
       apikey: anon,
       Authorization: 'Bearer ' + anon,
-      Prefer: 'resolution=merge-duplicates,return=minimal'
+      // INSERT-ONLY: baris yang sudah ada TIDAK PERNAH ditimpa (hanya menambah baris baru).
+      Prefer: 'resolution=ignore-duplicates,return=minimal'
     },
     payload: JSON.stringify(records),
     muteHttpExceptions: true
