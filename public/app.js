@@ -959,17 +959,17 @@ hideChangePwMsg();
       $('spSummary').textContent = koCount > 0
         ? '🟠 ' + koCount + ' belum lengkap SPORADIK'
         : '🟢 Semua data SPORADIK lengkap';
-      // Sidik data murah (hash isi id+updated_at) agar render ulang tab bisa
-      // di-skip saat data tidak berubah — kunci untuk mencegah "berat".
-      let h = 2166136261;
+      // Sidik data murah (id + updated_at) agar render ulang tab bisa di-skip
+      // saat data tidak berubah — kunci untuk mencegah "berat".
+      // CATATAN: dulu memakai XOR bitwise pada string (h ^ '...'), yang selalu
+      // menghasilkan 0 karena string -> NaN, jadi curFp TIDAK PERNAH berubah dan
+      // tabel tidak pernah di-render ulang setelah edit/tambah data. Sekarang
+      // memakai string concatenation agar setiap perubahan id/updated_at terlihat.
+      let fp = '';
       allData.forEach((r) => {
-        h ^= String(r.id || '');
-        h = (h * 16777619) | 0;
-        h ^= String(r.updated_at || r.last_updated || '');
-        h = (h * 16777619) | 0;
-        h |= 0;
+        fp += (r.id || '') + '\u0001' + (r.updated_at || r.last_updated || '') + '\u0002';
       });
-      curFp = allData.length + ':' + uploads.length + ':' + (h >>> 0);
+      curFp = allData.length + ':' + uploads.length + ':' + fp;
       renderCurrent();
     } catch (e) {
       setConn(false, '❌ Gagal ambil data: ' + e.message);
