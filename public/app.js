@@ -4,12 +4,29 @@
   let keuState = [];
   let pemohonCache = [];
   let currentEditId = null;
+  let currentEditLayanan = 'HIBAH';
   let rowsCache = [];
   let activeTab = 'dashboard';
   let curFp = '0';
   const renderedFp = {};
 
   const $ = (id) => document.getElementById(id);
+
+  // Indikator "sedang bekerja" pada tombol: nonaktifkan + spinner + label
+  // (label asli disimpan agar bisa dipulihkan setelah selesai).
+  function busyBtn(btn, on, label) {
+    if (!btn) return;
+    if (on) {
+      if (!btn.dataset.busyOrig) btn.dataset.busyOrig = btn.innerHTML;
+      btn.disabled = true;
+      btn.classList.add('is-busy');
+      btn.innerHTML = `<span class="spinner" aria-hidden="true"></span> ${label || 'Memuat…'}`;
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('is-busy');
+      if (btn.dataset.busyOrig) { btn.innerHTML = btn.dataset.busyOrig; delete btn.dataset.busyOrig; }
+    }
+  }
 
   // ---------- Keuangan Tab ----------
 
@@ -41,6 +58,7 @@
       const id = $('trxId').value;
       if (!id) return;
       if (!confirm(`Anda yakin ingin menghapus transaksi ${id}?`)) return;
+      busyBtn($('btnDeleteTrx'), true, 'Menghapus…');
       try {
         const res = await fetch(`/api/keuangan/transaksi/${id}`, { method: 'DELETE' });
         const json = await res.json();
@@ -50,6 +68,8 @@
         renderKeuanganTable();
       } catch(e) {
         alert(`Gagal menghapus: ${e.message}`);
+      } finally {
+        busyBtn($('btnDeleteTrx'), false);
       }
     });
   }
@@ -345,9 +365,7 @@
     const id = $('cekTbId').value.trim().toUpperCase();
     if (!id) { alert('Masukkan ID pendaftaran terlebih dahulu.'); return; }
     const btn = $('btnCekTbCari');
-    btn.disabled = true;
-    const lbl = btn.textContent;
-    btn.textContent = 'Mencari...';
+    busyBtn(btn, true, 'Mencari…');
     $('cekTbResult').innerHTML = '<p class="empty">Memuat...</p>';
     try {
       const res = await fetch('/api/pemohon/' + encodeURIComponent(id) + '/tagihan-berkas');
@@ -361,8 +379,7 @@
     } catch (e) {
       $('cekTbResult').innerHTML = '<p class="empty">Gagal: ' + esc(e.message) + '</p>';
     } finally {
-      btn.disabled = false;
-      btn.textContent = lbl;
+      busyBtn(btn, false);
     }
   }
 
@@ -537,8 +554,7 @@
     e.preventDefault();
 
     const btn = $('btnSaveTrx');
-    btn.disabled = true;
-    btn.textContent = 'Menyimpan...';
+    busyBtn(btn, true, 'Menyimpan…');
 
     try {
       const id = $('trxId').value;
@@ -554,7 +570,7 @@
           throw new Error('Ukuran file bukti melebihi 8 MB.');
         }
         const dataUrl = await readFileAsDataURL(f);
-        btn.textContent = 'Mengunggah bukti...';
+        busyBtn(btn, true, 'Mengunggah bukti…');
         const upRes = await fetch('/api/keuangan/upload-bukti', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -599,8 +615,7 @@
     } catch(e) {
       alert(`Gagal menyimpan transaksi: ${e.message}`);
     } finally {
-      btn.disabled = false;
-      btn.textContent = 'Simpan';
+      busyBtn(btn, false);
     }
   }
 
@@ -843,7 +858,7 @@ hideChangePwMsg();
   async function importFromSheet() {
     if (!confirm('Tarik data dari spreadsheet ke Supabase sekarang? Data akan di-merge (upsert) ke tabel pendaftaran & uploads.')) return;
     const btn = $('btnImportSheet');
-    if (btn) btn.disabled = true;
+    busyBtn(btn, true, 'Mengimpor…');
     try {
       const res = await fetch('/api/import-from-sheet', {
         method: 'POST',
@@ -858,7 +873,7 @@ hideChangePwMsg();
     } catch (e) {
       alert('Import gagal: ' + (e && e.message));
     } finally {
-      if (btn) btn.disabled = false;
+      busyBtn(btn, false);
     }
   }
   window.importFromSheet = importFromSheet;
@@ -867,7 +882,7 @@ hideChangePwMsg();
   async function importKeuanganFromSheet() {
     if (!confirm('Tarik data transaksi keuangan dari spreadsheet sekarang? Data akan di-merge (upsert) ke tabel transaksi_keuangan.')) return;
     const btn = $('btnImportKeuangan');
-    if (btn) btn.disabled = true;
+    busyBtn(btn, true, 'Mengimpor…');
     try {
       const res = await fetch('/api/keuangan/import-from-sheet', {
         method: 'POST',
@@ -882,7 +897,7 @@ hideChangePwMsg();
     } catch (e) {
       alert('Import keuangan gagal: ' + (e && e.message));
     } finally {
-      if (btn) btn.disabled = false;
+      busyBtn(btn, false);
     }
   }
   window.importKeuanganFromSheet = importKeuanganFromSheet;
@@ -922,6 +937,7 @@ hideChangePwMsg();
   }
 
   async function loadData() {
+    busyBtn($('btnRefresh'), true, 'Memuat…');
     try {
       const [resD, resU] = await Promise.all([
         fetch('/api/permohonan'),
@@ -957,6 +973,8 @@ hideChangePwMsg();
       renderCurrent();
     } catch (e) {
       setConn(false, '❌ Gagal ambil data: ' + e.message);
+    } finally {
+      busyBtn($('btnRefresh'), false);
     }
   }
 
@@ -1031,10 +1049,12 @@ hideChangePwMsg();
 
   // Hitung field inti yang masih kosong (dipakai dashboard: "Siap Cetak").
   function sporadikCoreMissing(r, info) {
-    const fill = fillSporadik(r, info);
-    return Object.keys(SPORADIK_CORE)
+    const t = templateForLayanan(r.layanan);
+    const fill = fillForTemplate(t, r, info);
+    const core = TEMPLATE_CORE[t] || {};
+    return Object.keys(core)
       .filter((k) => !String(fill[k] ?? '').trim())
-      .map((k) => SPORADIK_CORE[k]);
+      .map((k) => core[k]);
   }
 
   // Format TTL dari tempat + tanggal lahir ke "Tempat, 12 Januari 1990".
@@ -1165,11 +1185,7 @@ hideChangePwMsg();
 
   // Kunci field-wajib yang diisi dari data_raw (selain isian yang dihitung sendirian).
   function sporadikMissing(info, r) {
-    const fill = fillSporadik(r, info);
-    return Object.keys(SPORADIK_REQUIRED)
-      .map((k) => ({ key: k, label: SPORADIK_REQUIRED[k] }))
-      .filter((f) => !String(fill[f.key] ?? '').trim())
-      .map((f) => f.label);
+    return suratMissingFor(templateForLayanan(r.layanan), r, info);
   }
 
   // Parse data_raw & siapkan string pencarian SEKALI per pemuatan (hemat reflow).
@@ -1248,15 +1264,15 @@ hideChangePwMsg();
       const upCount = uploadMap.get(r.id) || 0;
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><strong>${esc(r.id)}</strong> ${upCount ? `<span class="tag status-s" title="${upCount} upload">📎${upCount}</span>` : ''}</td>
-        <td><span class="tag ${esc(r.layanan)}">${esc(r.layanan)}</span></td>
-        <td><strong>${esc(r.nama)}</strong></td>
-        <td>${esc(formatHp(r.hp))}</td>
-        <td>${esc(r.pembayaran)}</td>
-        <td>${esc(info.jenis_tanah || info.luas_tanah || '')}</td>
-        <td><span class="tag status-s">${esc(r.status_berkas)}</span></td>
-        <td>${esc(info._adminLast)}</td>
-        <td>
+        <td data-label="ID"><strong>${esc(r.id)}</strong> ${upCount ? `<span class="tag status-s" title="${upCount} upload">📎${upCount}</span>` : ''}</td>
+        <td data-label="Layanan"><span class="tag ${esc(r.layanan)}">${esc(r.layanan)}</span></td>
+        <td data-label="Nama"><strong>${esc(r.nama)}</strong></td>
+        <td data-label="HP">${esc(formatHp(r.hp))}</td>
+        <td data-label="Pembayaran">${esc(r.pembayaran)}</td>
+        <td data-label="Jenis Tanah">${esc(info.jenis_tanah || info.luas_tanah || '')}</td>
+        <td data-label="Status"><span class="tag status-s">${esc(r.status_berkas)}</span></td>
+        <td data-label="Last Updated">${esc(info._adminLast)}</td>
+        <td data-label="Aksi">
           <button class="btn" data-action="view" data-id="${esc(r.id)}">👁 Detail</button>
           <button class="btn" data-action="edit" data-id="${esc(r.id)}">✏️ Edit</button>
         </td>`;
@@ -1298,15 +1314,16 @@ hideChangePwMsg();
         : `<span class="tag status-ok" title="Siap dicetak">🟢 Lengkap</span>`;
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><strong>${esc(r.id)}</strong></td>
-        <td><span class="tag ${esc(r.layanan)}">${esc(r.layanan)}</span></td>
-        <td><strong>${esc(r.nama)}</strong></td>
-        <td>${esc(info.jenis_tanah || info.luas_tanah || '')}</td>
-        <td>${badgeHtml}</td>
-        <td>${statusBadge(r.status_berkas)}</td>
-        <td class="sp-catatan">${esc(r.catatan_admin || '')}</td>
-        <td>
-          <button class="btn primary" data-action="surat" data-id="${esc(r.id)}">🖨 SPORADIK</button>
+        <td data-label="ID"><strong>${esc(r.id)}</strong></td>
+        <td data-label="Layanan"><span class="tag ${esc(r.layanan)}">${esc(r.layanan)}</span></td>
+        <td data-label="Nama"><strong>${esc(r.nama)}</strong></td>
+        <td data-label="Jenis Tanah">${esc(info.jenis_tanah || info.luas_tanah || '')}</td>
+        <td data-label="Sporadik">${badgeHtml}</td>
+        <td data-label="Status Berkas">${statusBadge(r.status_berkas)}</td>
+        <td data-label="Catatan Admin" class="sp-catatan">${esc(r.catatan_admin || '')}</td>
+        <td data-label="Aksi">
+          <button class="btn primary" data-action="surat" data-id="${esc(r.id)}">🖨 Surat</button>
+          <button class="btn" data-action="surat-sporadik" data-id="${esc(r.id)}" title="Cetak Surat SPORADIK (Penguasaan Fisik Bidang Tanah)">🖨 SPORADIK</button>
         </td>`;
       frag.appendChild(tr);
     });
@@ -1530,6 +1547,28 @@ hideChangePwMsg();
     $('dbLengkap').textContent = lengkap;
     $('dbKurang').textContent = kurang;
 
+    // Stat tambahan: hari ini / pending / selesai / sudah diukur / sudah cetak.
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayId = new Date().toLocaleDateString('id-ID');
+    let hariIni = 0;
+    allData.forEach((r) => {
+      const d = r.timestamp || r.created_at || '';
+      if (!d) return;
+      const ds = String(d).slice(0, 10);
+      if (ds === todayStr) hariIni++;
+    });
+    if (hariIni === 0) {
+      hariIni = allData.filter((r) => {
+        const ts = r.timestamp || r.created_at || '';
+        return ts && String(ts).includes(todayId.split(',')[0].trim()) && String(ts).includes(new Date().getFullYear());
+      }).length;
+    }
+    $('dbHariIni').textContent = hariIni;
+    $('dbPending').textContent = allData.filter((r) => r.status_berkas === 'PENDING').length;
+    $('dbSelesai').textContent = allData.filter((r) => r.status_berkas === 'SELESAI').length;
+    $('dbDiukur').textContent = allData.filter((r) => r.status_berkas === 'SUDAH_DIUKUR').length;
+    $('dbCetak').textContent = allData.filter((r) => String(r.data_raw && r.data_raw._nomorSuratTercetak || '').trim()).length;
+
     const fLay = freq(allData.map((r) => r.layanan));
     const fSta = freq(allData.map((r) => r.status_berkas));
     const fBay = freq(allData.map((r) => r.pembayaran));
@@ -1553,6 +1592,12 @@ hideChangePwMsg();
     // Grafik pie.
     $('chartPieLayanan').innerHTML = pieChartSVG(fLay);
     $('chartPieStatus').innerHTML = pieChartSVG(fSta);
+
+    // Grafik dusun (dari field dusun pada data sporadik).
+    const fDusun = freq(rowsCache.map((c) => (c.info.dusun || '').trim()).filter(Boolean));
+    $('chartDusun').innerHTML = Object.keys(fDusun).length
+      ? barChartSVG(fDusun)
+      : '<div class="chart-empty">Belum ada data dusun pada pendaftaran.</div>';
 
     // Tabel 1 arah (frekuensi + persen).
     freqTable(fLay, 'Layanan');
@@ -1608,11 +1653,11 @@ hideChangePwMsg();
     shown.forEach((u) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><strong>${esc(u.id_registrasi)}</strong></td>
-        <td><span class="tag status-s">${esc(u.jenis_upload)}</span></td>
-        <td class="wrap">${esc(u.file_name)}</td>
-        <td>${esc(u.timestamp)}</td>
-        <td>
+        <td data-label="ID Registrasi"><strong>${esc(u.id_registrasi)}</strong></td>
+        <td data-label="Jenis"><span class="tag status-s">${esc(u.jenis_upload)}</span></td>
+        <td data-label="Nama File" class="wrap">${esc(u.file_name)}</td>
+        <td data-label="Timestamp">${esc(u.timestamp)}</td>
+        <td data-label="File">
           ${u.file_url ? `<a class="flink" href="${esc(u.file_url)}" target="_blank" rel="noopener">🔗 Buka</a>` : '—'}
           ${u.file_id ? ` <button class="btn" data-del-up="${esc(u.file_id)}">🗑</button>` : ''}
         </td>`;
@@ -1657,13 +1702,155 @@ hideChangePwMsg();
     const r = allData.find((x) => x.id === id);
     if (!r) return;
     currentEditId = r.id;
-    $('editStatus').value = r.status_berkas || '';
-    $('editCatatan').value = r.catatan_admin || '';
-    // Tampilkan file KK/KTP yang sudah ada (dari tabel permohonan_uploads).
-    $('editKkFile').value = '';
-    $('editKtpFile').value = '';
-    renderEditUploadStatus(id);
+    currentEditLayanan = r.layanan || 'HIBAH';
+    const raw = parseRaw(r.data_raw);
+    renderEditBody(r, raw);
     $('editModal').showModal();
+  }
+
+  function parseRaw(data_raw) {
+    try {
+      return typeof data_raw === 'string' ? JSON.parse(data_raw || '{}') : (data_raw || {});
+    } catch (_) { return {}; }
+  }
+
+  // Bangun form edit lengkap (semua field = form Tambah) dengan nilai terisi.
+  function renderEditBody(r, raw) {
+    const p = 'ed_';
+    const secs = (list) => tambahSeksiHtml(list, p, raw);
+    const nomor = String(raw._nomorSuratTercetak || '');
+    const urutMatch = /145-(\d{3})\//.exec(nomor);
+    const tglSurat = toISODate(raw._tglCetakSurat || raw._tglSurat);
+    const html = `
+      <div class="form">
+        <div class="edit-meta">
+          <div class="field"><label>ID Registrasi</label><input id="ed_id" readonly value="${esc(r.id)}"></div>
+          <div class="field"><label>Jenis Surat</label>
+            <select id="ed_layanan">
+              <option value="HIBAH"${currentEditLayanan === 'HIBAH' ? ' selected' : ''}>HIBAH</option>
+              <option value="JUALBELI"${currentEditLayanan === 'JUALBELI' ? ' selected' : ''}>JUAL BELI</option>
+              <option value="AHLIWARIS"${currentEditLayanan === 'AHLIWARIS' ? ' selected' : ''}>AHLI WARIS</option>
+            </select></div>
+          <div class="field"><label>Status Berkas</label>
+            <select id="ed_status">
+              <option value="">— Pilih —</option>
+              <option${String(r.status_berkas || '') === 'PENDING' ? ' selected' : ''}>PENDING</option>
+              <option${String(r.status_berkas || '') === 'PROSES' ? ' selected' : ''}>PROSES</option>
+              <option${String(r.status_berkas || '') === 'DIPROSES' ? ' selected' : ''}>DIPROSES</option>
+              <option${String(r.status_berkas || '') === 'SUDAH_DIUKUR' ? ' selected' : ''}>SUDAH_DIUKUR</option>
+              <option${String(r.status_berkas || '') === 'BELUM_DIUKUR' ? ' selected' : ''}>BELUM_DIUKUR</option>
+              <option${String(r.status_berkas || '') === 'DITOLAK' ? ' selected' : ''}>DITOLAK</option>
+              <option${String(r.status_berkas || '') === 'SELESAI' ? ' selected' : ''}>SELESAI</option>
+            </select></div>
+        </div>
+
+        <div class="form-box form-box-nomor">
+          <h4>📄 Nomor Surat (Otomatis)</h4>
+          <p>Nomor urut diambil dari surat terakhir; bisa diubah manual. Kosongkan jika belum mau dicetak.</p>
+          <div class="tambah-nomor-row">
+            <div class="field"><label>Tanggal Surat</label><input type="text" id="${p}tglSurat" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY" value="${esc(isoToDmy(tglSurat))}"></div>
+            <div class="field"><label>Nomor Urut (3 digit)</label><input type="text" id="${p}noUrut" inputmode="numeric" maxlength="3" value="${esc(urutMatch ? urutMatch[1] : '')}" placeholder="001"></div>
+            <button id="${p}btnNoUrut" class="btn" type="button">🔄 Auto</button>
+          </div>
+          <div class="field"><label>Nomor Surat (hasil)</label>
+            <input type="text" id="${p}nomorSurat" readonly value="${esc(nomor)}"></div>
+        </div>
+
+        <div class="form-box">
+          <div class="field-grid">
+            ${secs(TAMBAH_SECTIONS.pemohon)}
+          </div>
+        </div>
+
+        <div class="form-box">
+          <div class="field-grid">
+            ${secs(TAMBAH_SECTIONS[currentEditLayanan] || [])}
+            <div id="editAnakWrap" class="field full"></div>
+          </div>
+        </div>
+
+        <div class="form-box">
+          <div class="field-grid">
+            ${secs(TAMBAH_SECTIONS.tanah)}
+          </div>
+        </div>
+
+        <div class="form-box">
+          <div class="field-grid">
+            <div class="field full"><label>Catatan Admin</label><textarea id="ed_catatan" rows="3">${esc(r.catatan_admin || '')}</textarea></div>
+          </div>
+        </div>
+
+        <div class="form-box form-box-upload">
+          <h4>📎 Upload Dokumen (KK / KTP)</h4>
+          <p>Pilih file baru untuk mengganti, atau kosongkan jika tidak diubah.</p>
+          <div class="upload-slots">
+            <div class="upload-slot">
+              <span class="slot-label">KK</span>
+              <input type="file" id="editKkFile" accept="image/*,.pdf" />
+              <div id="editKkStatus" class="slot-status"></div>
+            </div>
+            <div class="upload-slot">
+              <span class="slot-label">KTP</span>
+              <input type="file" id="editKtpFile" accept="image/*,.pdf" />
+              <div id="editKtpStatus" class="slot-status"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button id="btnSaveEdit" class="btn primary">💾 Simpan Data</button>
+          <button id="btnDelete" class="btn danger">🗑 Hapus</button>
+        </div>
+      </div>`;
+    $('editBody').innerHTML = html;
+    renderEditUploadStatus(r.id);
+    wireFormSync($('editBody'), p);
+    wireNomorSurat(p, $('editBody'));
+    const nik = $(`${p}nik`);
+    if (nik) nik.addEventListener('input', () => { nik.value = nik.value.replace(/\D/g, '').slice(0, 16); });
+    if (currentEditLayanan === 'AHLIWARIS') {
+      renderEditAnak(raw);
+      $(`${p}jumlah_anak`).addEventListener('input', () => renderEditAnak(collectEditRaw()));
+    }
+    bindTambahUmurHints($('editBody'));
+    $(`${p}layanan`).addEventListener('change', () => {
+      currentEditLayanan = $(`${p}layanan`).value;
+      renderEditBody(r, collectEditRaw());
+    });
+    if (currentEditLayanan === 'JUALBELI') {
+      const h = $(`${p}harga_pembelian`);
+      if (h) h.addEventListener('input', () => { formatHargaInput(h); $(`${p}harga_terbilang`).value = terbilangHarga(h); });
+    }
+    $('btnSaveEdit').addEventListener('click', saveEdit);
+    $('btnDelete').addEventListener('click', deleteRow);
+  }
+
+  // Kumpulkan nilai semua input ed_* (untuk re-render saat layanan berubah).
+  function collectEditRaw() {
+    const raw = {};
+    $('editBody').querySelectorAll('[id^="ed_"]').forEach((el) => {
+      if (el.id === 'ed_id' || el.id === 'ed_status' || el.id === 'ed_catatan' || el.id === 'ed_layanan') return;
+      raw[el.id.slice(3)] = el.value;
+    });
+    return raw;
+  }
+
+  function renderEditAnak(raw) {
+    const wrap = $('editAnakWrap');
+    if (!wrap) return;
+    const n = Math.max(0, Math.min(20, parseInt(raw.jumlah_anak || '0', 10) || 0));
+    const t = $('ed_jumlah_anak_terbilang');
+    if (t) t.value = n > 0 ? terbilang(n) + ' Orang' : '';
+    let html = '';
+    for (let i = 1; i <= n; i++) {
+      html += `<div class="sec-title" style="margin-top:6px;">Anak ke-${i}</div>`;
+      ['nama', 'tempat_lahir', 'tanggal_lahir', 'pekerjaan', 'alamat'].forEach((k) => {
+        html += tambahFieldHtml({ id: `anak_${i}_${k}`, label: k === 'nama' ? 'Nama' : k.replace('_', ' ') }, raw[`anak_${i}_${k}`], 'ed_');
+      });
+    }
+    wrap.innerHTML = html;
+    bindTambahUmurHints(wrap);
   }
 
   function renderEditUploadStatus(id) {
@@ -1686,14 +1873,47 @@ hideChangePwMsg();
   async function saveEdit() {
     if (!currentEditId) return;
     const btn = $('btnSaveEdit');
-    btn.disabled = true;
+    busyBtn(btn, true, 'Menyimpan…');
     try {
+      const p = 'ed_';
+      // Kumpulkan semua field data (pemohon + layanan + tanah + anak).
+      const raw = collectEditRaw();
+      const layanan = $(`${p}layanan`).value;
+      const nomorSurat = $(`${p}nomorSurat`).value.trim();
+      if (nomorSurat) raw._nomorSuratTercetak = nomorSurat;
+      else delete raw._nomorSuratTercetak;
+      const tgl = dmyToIso($(`${p}tglSurat`).value);
+      if (tgl) raw._tglCetakSurat = tgl;
+      else delete raw._tglCetakSurat;
+      if (nomorSurat) {
+        const dupe = nomorSuratTerpakai(nomorSurat, currentEditId);
+        if (dupe) throw new Error('Nomor surat ' + nomorSurat + ' sudah dipakai ' + dupe.r.id + '. Gunakan nomor lain.');
+      }
+      if (raw.harga_pembelian) raw.harga_pembelian = String(raw.harga_pembelian).replace(/\./g, '');
+      if (layanan === 'AHLIWARIS') {
+        const n = parseInt(raw.jumlah_anak || '0', 10) || 0;
+        for (let i = 1; i <= n; i++) {
+          ['nama', 'tempat_lahir', 'tanggal_lahir', 'pekerjaan', 'alamat'].forEach((k) => {
+            const el = $(`${p}anak_${i}_${k}`);
+            if (el) raw[`anak_${i}_${k}`] = el.value.trim();
+          });
+        }
+      }
+      const hp = raw.no_hp || '';
+      if (hp && !/^08\d{8,11}$/.test(hp)) throw new Error('No. HP tidak valid (08…, 10-13 digit).');
+      if (!raw.nama_lengkap) throw new Error('Nama lengkap wajib diisi.');
+      const nik = (raw.nik || '').replace(/\D/g, '');
+      if (nik.length !== 16) throw new Error('NIK wajib diisi tepat 16 digit angka.');
+      raw.nik = nik;
+
       const res = await fetch('/api/permohonan/' + encodeURIComponent(currentEditId), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status_berkas: $('editStatus').value,
-          catatan_admin: $('editCatatan').value
+          layanan,
+          status_berkas: $(`${p}status`).value,
+          catatan_admin: $(`${p}catatan`).value,
+          data_raw: raw
         })
       });
       const json = await res.json();
@@ -1706,7 +1926,7 @@ hideChangePwMsg();
     } catch (e) {
       alert('Simpan gagal: ' + e.message);
     } finally {
-      btn.disabled = false;
+      busyBtn(btn, false);
     }
   }
 
@@ -1727,31 +1947,42 @@ hideChangePwMsg();
   async function deleteRow() {
     if (!currentEditId) return;
     if (!confirm('Hapus pendaftaran ' + currentEditId + ' dari Supabase?')) return;
-    const res = await fetch('/api/permohonan/' + encodeURIComponent(currentEditId), { method: 'DELETE' });
-    const json = await res.json();
-    if (!json.success) {
-      alert('Hapus gagal: ' + (json.error || ''));
-      return;
+    busyBtn($('btnDelete'), true, 'Menghapus…');
+    try {
+      const res = await fetch('/api/permohonan/' + encodeURIComponent(currentEditId), { method: 'DELETE' });
+      const json = await res.json();
+      if (!json.success) {
+        alert('Hapus gagal: ' + (json.error || ''));
+        return;
+      }
+      $('editModal').close();
+      await loadData();
+    } catch (e) {
+      alert('Hapus gagal: ' + e.message);
+    } finally {
+      busyBtn($('btnDelete'), false);
     }
-    $('editModal').close();
-    await loadData();
   }
 
   let currentSurat = null;
+  let currentSuratTemplate = 'SPORADIK';
 
-  async function cetakSporadik(id) {
+  async function cetakSporadik(id, forceTemplate) {
     const c = rowsCache.find((x) => x.r.id === id);
     if (!c) return;
     const { r, info } = c;
+    currentSuratTemplate = forceTemplate || templateForLayanan(r.layanan);
+    const t = currentSuratTemplate;
     currentSurat = {
       r, info,
-      fill: fillSporadik(r, info),
-      missing: sporadikMissing(info, r)
+      fill: fillForTemplate(t, r, info),
+      missing: suratMissingFor(t, r, info)
     };
 
+    setSuratTitle(t);
     $('suratIdLine').innerHTML = 'ID: ' + escFill(id) + ' | Layanan: ' + escFill(r.layanan) + ' | Nama: <b>' + escFill(r.nama || '') + '</b>';
     // Isi kontrol manual tanggal & nomor urut dari data tersimpan bila ada.
-    $('srTgl').value = toISODate(info._tglCetakSurat || info._tglSurat);
+    $('srTgl').value = isoToDmy(info._tglCetakSurat || info._tglSurat);
     $('srNoUrut').value = (String(info._nomorSuratTercetak || '').match(/145-(\d{3})\//) || [])[1] || '001';
     $('srNoSurat').value = '';
 
@@ -1852,7 +2083,10 @@ hideChangePwMsg();
     const st = currentSurat;
     if (!st) return { ok: false, msg: 'Tidak ada dokumen yang dimuat.' };
 
-    if (!skipStatus) {
+    // Batasan status berkas (PENDING tidak boleh cetak) KHUSUS untuk SPORADIK.
+    // Tiga surat keterangan — JUAL BELI, HIBAH, AHLI WARIS — bebas dicetak
+    // apa pun status berkasnya (mis. masih PENDING).
+    if (!skipStatus && activeTemplate() === 'SPORADIK') {
       const stt = String(st.r.status_berkas || '').trim().toUpperCase();
       const allowed = ['SUDAH_DIUKUR', 'SUDAH_UKUR', 'SELESAI'];
       if (!allowed.includes(stt)) {
@@ -1865,7 +2099,8 @@ hideChangePwMsg();
       }
     }
 
-    const reqKeys = Object.keys(SPORADIK_REQUIRED);
+    const req = TEMPLATE_REQUIRED[activeTemplate()] || {};
+    const reqKeys = Object.keys(req);
     const missing = reqKeys.filter((k) => !String(st.fill[k] ?? '').trim());
     if (missing.length) {
       markSuratFieldMarks(missing);
@@ -2137,7 +2372,7 @@ hideChangePwMsg();
   function applyCitizen(inp, roleKey, c) {
     const fieldsEl = $('suratEditFields');
     if (!fieldsEl || !currentSurat) return;
-    const role = AC_ROLES[roleKey] || {};
+    const role = (TEMPLATE_AC[activeTemplate()] || {})[roleKey] || {};
     const set = (fk, value) => {
       const el = fieldsEl.querySelector('[data-fill-key="' + fk + '"]');
       if (!el || el.readOnly) return;
@@ -2265,55 +2500,85 @@ hideChangePwMsg();
     const st = currentSurat;
     const L = String(st.r.layanan || '').toUpperCase();
     const P = suratPartyKeys(L);
-    let editableCount = 0;
-    const rows = SPORADIK_FIELD_LABELS.map(([key, label]) => {
+    const t = activeTemplate();
+    const isSp = t === 'SPORADIK';
+    const fields = TEMPLATE_FIELDS[t] || SPORADIK_FIELD_LABELS;
+    const lockedSet = TEMPLATE_LOCKED[t] || SURAT_LOCKED;
+    const textareas = TEMPLATE_TEXTAREA[t] || [];
+    const dateInputs = TEMPLATE_DATE[t] || [];
+    const autoAgeMap = TEMPLATE_AUTOAAGE[t] || {};
+    const acRoles = TEMPLATE_AC[t] || {};
+
+    const rawKeyFor = (key) => {
+      if (isSp) return SURAT_RAW[key] ? SURAT_RAW[key](P) : key;
+      if (key === 'nama_pemohon') return 'pemohon_nama';
+      return key;
+    };
+    const forceEditable = (key) =>
+      key === 'saksi1_nama' || key === 'saksi2_nama' ||
+      (isSp && (key === 'saksi1_umur' || key === 'saksi2_umur' || key === 'saksi1_tmpl' || key === 'saksi2_tmpl'));
+
+    const rows = fields.map(([key, label]) => {
       if (key === 'tgl_surat') return ''; // diatur lewat kontrol Tanggal Surat.
       const val = String(st.fill[key] ?? '');
-      // Nama & Umur Saksi serta Tempat Lahir selalu bisa diisi/diedit (tidak terkunci).
-      const forceEditable = key === 'saksi1_nama' || key === 'saksi2_nama' ||
-                            key === 'saksi1_umur' || key === 'saksi2_umur' ||
-                            key === 'saksi1_tmpl' || key === 'saksi2_tmpl';
-      const locked = SURAT_LOCKED.has(key) || (!forceEditable && val.trim() !== '');
-      const rawKey = locked ? '' : (SURAT_RAW[key] ? SURAT_RAW[key](P) : key);
-      if (!locked) editableCount++;
-      // Klasifikasi visual field (hanya tampilan — logika & cetak tidak berubah):
-      //  - se-ac    : field nama dengan autocomplete (🔍 Cari Data)
-      //  - se-auto  : field otomatis / auto-fill (⚡ Otomatis)
-      //  - se-manual: field isian manual standar (putih, placeholder bantuan)
-      const isAcName = key === 'nama_pihak_pertama' || key === 'pihak_kedua' ||
-                       key === 'saksi1_nama' || key === 'saksi2_nama';
-      const isAutoField = key === 'saksi1_ttl' || key === 'saksi2_ttl' ||
-                          key === 'saksi1_umur' || key === 'saksi2_umur' ||
-                          key === 'saksi1_tmpl' || key === 'saksi2_tmpl';
-      const isManualField = key === 'pekerjaan_pihak_pertama' || key === 'alamat_pihak_pertama' ||
-                            key === 'saksi1_pekerjaan' || key === 'saksi2_pekerjaan' ||
-                            key === 'saksi1_alamat' || key === 'saksi2_alamat';
-      const variant = isAcName ? 'ac' : (isAutoField ? 'auto' : (isManualField ? 'manual' : ''));
+      const locked = lockedSet.has(key) || (!forceEditable(key) && val.trim() !== '');
+      const rawKey = locked ? '' : rawKeyFor(key);
+      const isDate = dateInputs.includes(key);
+      const isTextarea = textareas.includes(key);
+      const inpVal = isDate ? toBirthISO(val) : val;
+      const isAcName = Object.prototype.hasOwnProperty.call(acRoles, key);
+      const isAutoField = isDate || !!autoAgeMap[key];
+      const isManualField = isSp
+        ? (key === 'pekerjaan_pihak_pertama' || key === 'alamat_pihak_pertama' ||
+           key === 'saksi1_pekerjaan' || key === 'saksi2_pekerjaan' ||
+           key === 'saksi1_alamat' || key === 'saksi2_alamat')
+        : isManualLetter(key);
       const chip = isAcName ? '🔍 Cari Data' : (isAutoField ? '⚡ Otomatis' : '');
       const placeholder = isAcName ? 'Ketik Nama untuk Cari Data Warga...' : (isManualField ? 'Isi manual...' : '');
-      // TTL Saksi diperlakukan sebagai input tanggal agar Umur bisa dihitung otomatis.
-      const isSaksiTtl = key === 'saksi1_ttl' || key === 'saksi2_ttl';
-      const autoAge = key === 'saksi1_ttl' ? 'saksi1_umur' : (key === 'saksi2_ttl' ? 'saksi2_umur' : '');
-      const isAlamatSaksi = key === 'saksi1_alamat' || key === 'saksi2_alamat';
-      const isTextarea = isAlamatSaksi;
+      const variant = isAcName ? 'ac' : (isAutoField ? 'auto' : (isManualField ? 'manual' : ''));
       return `
         <label class="se-field${locked ? ' locked' : ''}${variant ? ' se-' + variant : ''}">
           <span>${chip ? chip + ' · ' : ''}${esc(label)}</span>
           ${isTextarea
-            ? `<textarea data-fill-key="${key}" data-raw-key="${rawKey}" rows="3" ${placeholder && !locked ? 'placeholder="' + placeholder + '"' : ''} ${locked ? 'readonly title="Terkunci (sudah terisi / otomatis)"' : ''}>${esc(val)}</textarea>`
-            : `<input type="${isSaksiTtl ? 'date' : 'text'}" data-fill-key="${key}" data-raw-key="${rawKey}"
-             ${autoAge ? 'data-auto-age="' + autoAge + '"' : ''}
+            ? `<textarea data-fill-key="${key}" data-raw-key="${rawKey}" rows="3" ${placeholder && !locked ? 'placeholder="' + placeholder + '"' : ''} ${locked ? 'readonly title="Terkunci (sudah terisi / otomatis)"' : ''}>${esc(inpVal)}</textarea>`
+            : `<input type="${isDate ? 'date' : 'text'}" data-fill-key="${key}" data-raw-key="${rawKey}"
+             ${autoAgeMap[key] ? 'data-auto-age="' + autoAgeMap[key] + '"' : ''}
              ${placeholder && !locked ? 'placeholder="' + placeholder + '"' : ''}
-             value="${esc(val)}" ${locked ? 'readonly title="Terkunci (sudah terisi / otomatis)"' : ''} />`}
+             value="${esc(inpVal)}" ${locked ? 'readonly title="Terkunci (sudah terisi / otomatis)"' : ''} />`}
         </label>`;
     }).join('');
-    fieldsEl.innerHTML = rows;
+
+    // AHLIWARIS: blok anak / ahli waris (jumlah mengikuti fill.jumlah_anak).
+    let extra = '';
+    if (t === 'AHLIWARIS') {
+      const n = Math.max(0, Math.min(20, parseInt(String(st.fill.jumlah_anak || '0').replace(/\D/g, ''), 10) || 0));
+      const anakRows = [];
+      for (let i = 1; i <= n; i++) {
+        const base = 'anak_' + i;
+        anakRows.push(`
+          <div class="se-anak-title">Anak ${i}</div>
+          <label class="se-field"><span>Nama Anak ${i}</span>
+            <input type="text" data-fill-key="${base}_nama" data-raw-key="${base}_nama" value="${esc(st.fill[base + '_nama'] || '')}" placeholder="Ketik nama..." /></label>
+          <label class="se-field"><span>Tempat Lahir Anak ${i}</span>
+            <input type="text" data-fill-key="${base}_tempat_lahir" data-raw-key="${base}_tempat_lahir" value="${esc(st.fill[base + '_tempat_lahir'] || '')}" placeholder="Isi manual..." /></label>
+          <label class="se-field"><span>Tanggal Lahir Anak ${i}</span>
+            <input type="date" data-fill-key="${base}_tanggal_lahir" data-raw-key="${base}_tanggal_lahir" value="${esc(toBirthISO(st.fill[base + '_tanggal_lahir'] || ''))}" /></label>
+          <label class="se-field"><span>Pekerjaan Anak ${i}</span>
+            <input type="text" data-fill-key="${base}_pekerjaan" data-raw-key="${base}_pekerjaan" value="${esc(st.fill[base + '_pekerjaan'] || '')}" placeholder="Isi manual..." /></label>
+          <label class="se-field"><span>Alamat Anak ${i}</span>
+            <textarea data-fill-key="${base}_alamat" data-raw-key="${base}_alamat" rows="2" placeholder="Isi manual...">${esc(st.fill[base + '_alamat'] || '')}</textarea></label>
+        `);
+      }
+      if (n > 0) extra = `<div class="se-anak-head">👨‍👩‍👧‍👦 Daftar Anak / Ahli Waris (${n})</div>` + anakRows.join('');
+    }
+
+    fieldsEl.innerHTML = rows + extra;
     fieldsEl.querySelectorAll('input, textarea').forEach((inp) => {
       inp.addEventListener('input', () => {
         const fk = inp.dataset.fillKey;
         currentSurat.fill[fk] = inp.value;
         if (inp.dataset.rawKey) currentSurat.info[inp.dataset.rawKey] = inp.value;
-        // Tanggal lahir Saksi terisi → Umur dihitung & diisi otomatis.
+        // Tanggal lahir terisi → Umur dihitung & diisi otomatis.
         const ageKey = inp.dataset.autoAge;
         if (ageKey) {
           const age = umurFromTgl(inp.value);
@@ -2324,28 +2589,34 @@ hideChangePwMsg();
             if (ageInp.dataset.rawKey) currentSurat.info[ageInp.dataset.rawKey] = age;
           }
         }
+        if (fk === 'jumlah_anak') { renderSuratEditor(); renderSurat(); return; }
         renderSurat();
       });
     });
     // Autocomplete Master Warga pada field nama (hanya yang masih bisa diketik).
-    Object.keys(AC_ROLES).forEach((key) => {
+    Object.keys(acRoles).forEach((key) => {
       const nameInp = fieldsEl.querySelector('input[data-fill-key="' + key + '"]');
       if (nameInp) attachCitizenAc(nameInp, key);
     });
-    // Bila TTL Saksi sudah berisi tanggal tapi Umur masih kosong, isi otomatis.
-    ['saksi1', 'saksi2'].forEach((p) => {
-      const ttlInp = fieldsEl.querySelector('input[data-fill-key="' + p + '_ttl"]');
-      const umrInp = fieldsEl.querySelector('input[data-fill-key="' + p + '_umur"]');
+    // Bila tanggal lahir (auto umur) sudah berisi tapi umur masih kosong, isi otomatis.
+    Object.keys(autoAgeMap).forEach((ttlKey) => {
+      const ttlInp = fieldsEl.querySelector('input[data-fill-key="' + ttlKey + '"]');
+      const umrInp = fieldsEl.querySelector('input[data-fill-key="' + autoAgeMap[ttlKey] + '"]');
       if (ttlInp && umrInp && !String(umrInp.value).trim() && umrInp.dataset.rawKey) {
         const age = umurFromTgl(ttlInp.value);
         if (age) {
           umrInp.value = age;
-          currentSurat.fill[p + '_umur'] = age;
+          currentSurat.fill[autoAgeMap[ttlKey]] = age;
           currentSurat.info[umrInp.dataset.rawKey] = age;
         }
       }
     });
-    $('btnSaveSuratEdit').hidden = editableCount === 0;
+    $('btnSaveSuratEdit').hidden = fieldsEl.querySelectorAll('input:not([readonly]), textarea:not([readonly])').length === 0;
+  }
+
+  // Klasifikasi field isian manual pada surat resmi (hanya untuk chip/hint).
+  function isManualLetter(key) {
+    return /(_pekerjaan|_alamat|_tempat_lahir|_tanggal_lahir|_umur|_nama)$/.test(key);
   }
 
   // Simpan perubahan data surat (semua input yang tidak terkunci).
@@ -2353,7 +2624,7 @@ hideChangePwMsg();
     const id = currentSurat && currentSurat.r && currentSurat.r.id;
     if (!id) return;
     const btn = $('btnSaveSuratEdit');
-    btn.disabled = true;
+    busyBtn(btn, true, 'Menyimpan…');
     // Kumpulkan nilai dari semua input editor yang BISA diisi (tidak readonly).
     const raw = {};
     $('suratEditFields').querySelectorAll('input:not([readonly]), textarea:not([readonly])').forEach((inp) => {
@@ -2363,8 +2634,12 @@ hideChangePwMsg();
     // Nomor surat & tanggal ikut tersimpan agar bisa dipulihkan di lain hari.
     const noSurat = $('srNoSurat').value;
     if (noSurat) raw._nomorSuratTercetak = noSurat;
-    const tgl = $('srTgl').value;
+    const tgl = dmyToIso($('srTgl').value);
     if (tgl) raw._tglCetakSurat = tgl;
+    if (noSurat) {
+      const dupe = nomorSuratTerpakai(noSurat, id);
+      if (dupe) throw new Error('Nomor surat ' + noSurat + ' sudah dipakai ' + dupe.r.id + '. Gunakan nomor lain.');
+    }
     try {
       const res = await fetch('/api/permohonan/' + encodeURIComponent(id), {
         method: 'PATCH',
@@ -2374,7 +2649,7 @@ hideChangePwMsg();
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal simpan');
       // Data yang baru disimpan otomatis masuk ke "Master Warga" (dipakai ulang).
-      if (currentSurat && currentSurat.fill) {
+      if (activeTemplate() === 'SPORADIK' && currentSurat && currentSurat.fill) {
         registerCitizens(currentSurat.fill);
         saveManualCitizens();
       }
@@ -2384,10 +2659,10 @@ hideChangePwMsg();
       if (c2) {
         currentSurat = {
           r: c2.r, info: c2.info,
-          fill: fillSporadik(c2.r, c2.info),
-          missing: sporadikMissing(c2.info, c2.r)
+          fill: fillForTemplate(currentSuratTemplate, c2.r, c2.info),
+          missing: suratMissingFor(currentSuratTemplate, c2.r, c2.info)
         };
-        $('srTgl').value = toISODate(c2.info._tglCetakSurat || c2.info._tglSurat);
+        $('srTgl').value = isoToDmy(c2.info._tglCetakSurat || c2.info._tglSurat);
         $('srNoUrut').value = (String(c2.info._nomorSuratTercetak || '').match(/145-(\d{3})\//) || [])[1] || '';
         $('srNoSurat').value = '';
         renderSuratEditor();
@@ -2396,7 +2671,7 @@ hideChangePwMsg();
     } catch (e) {
       alert('Simpan gagal: ' + e.message);
     } finally {
-      btn.disabled = false;
+      busyBtn(btn, false);
     }
   }
 
@@ -2424,6 +2699,45 @@ hideChangePwMsg();
     return todayISO();
   }
 
+  // Konversi format tanggal: ISO (YYYY-MM-DD) <-> tampilan (DD-MM-YYYY).
+  function isoToDmy(v) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v || ''));
+    if (!m) return '';
+    return m[3] + '-' + m[2] + '-' + m[1];
+  }
+
+  function dmyToIso(v) {
+    const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(String(v || '').trim());
+    if (!m) return '';
+    const [, dd, mm, yyyy] = m;
+    const mo = parseInt(mm, 10), day = parseInt(dd, 10);
+    if (mo < 1 || mo > 12 || day < 1 || day > 31) return '';
+    return yyyy + '-' + mm + '-' + dd;
+  }
+
+  // Masking input tanggal tampilan DD-MM-YYYY (isi otomatis strip "-").
+  function maskDmyInput(inp) {
+    if (!inp) return;
+    inp.addEventListener('input', () => {
+      let d = inp.value.replace(/\D/g, '').slice(0, 8);
+      let out = '';
+      if (d.length > 4) out = d.slice(0, 2) + '-' + d.slice(2, 4) + '-' + d.slice(4);
+      else if (d.length > 2) out = d.slice(0, 2) + '-' + d.slice(2);
+      else out = d;
+      inp.value = out;
+    });
+  }
+
+  // Cek apakah nomor surat sudah dipakai record lain (untuk mencegah duplikat).
+  function nomorSuratTerpakai(no, excludeId) {
+    const target = String(no || '').trim().toLowerCase();
+    if (!target) return null;
+    return rowsCache.find((c) => {
+      if (excludeId && c.r.id === excludeId) return false;
+      return String((c.info && c.info._nomorSuratTercetak) || '').trim().toLowerCase() === target;
+    }) || null;
+  }
+
   // Hitung umur (dalam tahun) dari tanggal lahir ISO (YYYY-MM-DD).
   function umurFromTgl(tglISO) {
     if (!tglISO) return '';
@@ -2449,7 +2763,8 @@ hideChangePwMsg();
   function renderSurat() {
     if (!currentSurat) return;
     const st = currentSurat;
-    const tglISO = $('srTgl').value;
+    const t = activeTemplate();
+    const tglISO = dmyToIso($('srTgl').value);
     const urut = ($('srNoUrut').value || '').replace(/\D/g, '').slice(0, 3);
     const f = Object.assign({}, st.fill);
 
@@ -2464,20 +2779,42 @@ hideChangePwMsg();
     $('srNoSurat').value = f.no_surat;
 
     // Sinkronkan nilai semua input grid (mis. no_surat otomatis, dsb.).
-    $('suratEditFields').querySelectorAll('input').forEach((inp) => {
+    $('suratEditFields').querySelectorAll('input, textarea').forEach((inp) => {
       const key = inp.dataset.fillKey;
-      if (key && inp.value !== String(f[key] ?? '')) inp.value = String(f[key] ?? '');
+      if (!key) return;
+      const target = inp.type === 'date' ? toBirthISO(String(f[key] ?? '')) : String(f[key] ?? '');
+      if (inp.value !== target) inp.value = target;
     });
 
-    // Status kelengkapan field wajib.
-    const reqKeys = Object.keys(SPORADIK_REQUIRED);
+    // Status kelengkapan field wajib (per template).
+    const req = TEMPLATE_REQUIRED[t] || {};
+    const reqKeys = Object.keys(req);
     const missing = reqKeys.filter((k) => !String(f[k] ?? '').trim());
     const filledCnt = reqKeys.length - missing.length;
     $('seStatus').textContent = missing.length
       ? `⚠️ ${filledCnt} dari ${reqKeys.length} field wajib terisi. Isi field yang masih kosong di kiri, lalu klik "💾 Simpan Data".`
       : `✅ Semua ${reqKeys.length} field wajib terisi — surat siap dicetak.`;
 
-    renderSporadikPreview(f);
+    // Surat Jual Beli, Hibah & Ahli Waris boleh cetak lebih dari 1 halaman
+    // (jangan dipaksa 1 halaman karena data bisa terpotong/hilang).
+    // SPORADIK tetap terkunci pas 1 halaman (kertas 8.5x13in).
+    document.body.classList.toggle('multi-print', t === 'JUALBELI' || t === 'HIBAH' || t === 'AHLIWARIS');
+    // Ahli Waris memakai halaman bernama 'aw' (margin + footer halaman).
+    // Class dipasang di <html> agar seluruh konten memakai page: aw dan
+    // tidak memicu pecah halaman kosong di awal (beda nama halaman = break paksa).
+    document.documentElement.classList.toggle('aw-print', t === 'AHLIWARIS');
+
+    // Jumlah halaman Ahli Waris berbasis jumlah anak:
+    // <= 4 anak -> mode 1 halaman (spasi dirapatkan, footer "Halaman 1 dari 1").
+    // >= 5 anak -> mode 2 halaman (spasi normal, footer "Halaman 1 dari 2").
+    const nAnakAw = Math.max(0, Math.min(20, parseInt(String(f.jumlah_anak || '0').replace(/\D/g, ''), 10) || 0));
+    document.body.classList.toggle('aw-1pg', t === 'AHLIWARIS' && nAnakAw <= 4);
+    document.body.classList.toggle('aw-2pg', t === 'AHLIWARIS' && nAnakAw >= 5);
+
+    if (t === 'JUALBELI') renderJualBeliPreview(f);
+    else if (t === 'AHLIWARIS') renderAhliWarisPreview(f);
+    else if (t === 'HIBAH') renderHibahPreview(f);
+    else renderSporadikPreview(f);
   }
 
   function escFill(v) {
@@ -2662,6 +2999,677 @@ hideChangePwMsg();
     $('suratBody').appendChild(b);
   }
 
+  // ============================================================
+  // SURAT RESMI (JUAL BELI / AHLI WARIS / HIBAH)
+  // Template 100% mengikuti PDF resmi Desa Batetangnga, termasuk
+  // tanda baca & typo yang memang ada di dokumen cetak.
+  // ============================================================
+  const SURAT_TITLE = {
+    SPORADIK: 'Surat SPORADIK',
+    JUALBELI: 'Surat Jual Beli / Pengoperan Hak',
+    AHLIWARIS: 'Surat Ahli Waris',
+    HIBAH: 'Surat Hibah'
+  };
+
+  // Template WAJIB mengikuti layanan record (AHLIWARIS → hanya Surat Ahli Waris,
+  // JUALBELI → hanya Surat Jual Beli, HIBAH → hanya Surat Hibah, selainnya → SPORADIK).
+  function templateForLayanan(L) {
+    const s = String(L || '').toUpperCase();
+    if (s === 'JUALBELI') return 'JUALBELI';
+    if (s === 'AHLIWARIS') return 'AHLIWARIS';
+    if (s === 'HIBAH') return 'HIBAH';
+    return 'SPORADIK';
+  }
+  function activeTemplate() { return currentSuratTemplate || 'SPORADIK'; }
+
+  function setSuratTitle(t) {
+    const h = $('suratTitle');
+    if (h) h.textContent = SURAT_TITLE[t] || 'Surat';
+  }
+
+  // Format tanggal lahir (ISO / DD-MM-YYYY / Indonesia) → "12 Agustus 1970".
+  function fmtTglDate(v) {
+    const iso = toBirthISO(v);
+    if (!iso) return String(v ?? '').trim();
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    if (!m) return String(v ?? '').trim();
+    const bulan = ['Januari','Februari','Maret','April','Mei','Juni',
+                   'Juli','Agustus','September','Oktober','November','Desember'];
+    return parseInt(m[3], 10) + ' ' + bulan[parseInt(m[2], 10) - 1] + ' ' + m[1];
+  }
+
+  // Format harga rupiah untuk dokumen: angka → "Rp 5.000.000".
+  function fmtHarga(v) {
+    const s = String(v ?? '').trim();
+    if (!s) return '';
+    if (/^[\d\s.,]+$/.test(s)) {
+      const n = Number(String(s).replace(/\./g, '').replace(/\s/g, ''));
+      if (!isNaN(n)) return formatRp(Math.round(n));
+    }
+    return s;
+  }
+
+  function terbilangHargaFromNum(v) {
+    const n = parseInt(String(v || '').replace(/[^\d]/g, ''), 10) || 0;
+    if (!n) return '';
+    return terbilang(n).replace(/\s*Rupiah\s*$/i, '').trim() + ' Rupiah';
+  }
+
+  // ===== Fill per layanan (nilai isian surat) =====
+  function fillJualBeli(r, info) {
+    const raw = info;
+    const upper = (s) => String(s ?? '').toUpperCase();
+    const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const umur = (tanggalKey, umurKey) => umurFromTgl(raw[tanggalKey]) || raw[umurKey] || '';
+    return {
+      no_surat: raw._nomorSuratTercetak || '',
+      tgl_surat: today,
+      penjual_nama: upper(raw.penjual_nama || ''),
+      penjual_umur: umur('penjual_tanggal_lahir', 'penjual_umur'),
+      penjual_pekerjaan: raw.penjual_pekerjaan || '',
+      penjual_alamat: raw.penjual_alamat || '',
+      pembeli_nama: upper(raw.pembeli_nama || raw.nama_lengkap || r.nama || ''),
+      pembeli_umur: umur('pembeli_tanggal_lahir', 'pembeli_umur'),
+      pembeli_pekerjaan: raw.pembeli_pekerjaan || '',
+      pembeli_alamat: raw.pembeli_alamat || raw.alamat || '',
+      jenis_tanah: raw.jenis_tanah || '',
+      luas_tanah: raw.luas_tanah || '',
+      alamat_tanah: raw.alamat_tanah || '',
+      dusun: raw.dusun || '',
+      tahun_pemberian: raw.tahun_pemberian || '',
+      batas_utara: raw.batas_utara || '',
+      batas_timur: raw.batas_timur || '',
+      batas_selatan: raw.batas_selatan || '',
+      batas_barat: raw.batas_barat || '',
+      harga_pembelian: raw.harga_pembelian || '',
+      harga_terbilang: raw.harga_terbilang || terbilangHargaFromNum(raw.harga_pembelian),
+      saksi1_nama: upper(raw.saksi1_nama || ''),
+      saksi2_nama: upper(raw.saksi2_nama || '')
+    };
+  }
+
+  function fillAhliWaris(r, info) {
+    const raw = info;
+    const upper = (s) => String(s ?? '').toUpperCase();
+    const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const n = parseInt(raw.jumlah_anak || '0', 10) || 0;
+    const out = {
+      no_surat: raw._nomorSuratTercetak || '',
+      tgl_surat: today,
+      almarhum_nama: upper(raw.almarhum_nama || ''),
+      pasangan_nama: upper(raw.pasangan_nama || ''),
+      tahun_meninggal: raw.tahun_meninggal || raw.tahun_pemberian || '',
+      jumlah_anak: raw.jumlah_anak || '',
+      jumlah_anak_terbilang: raw.jumlah_anak_terbilang || (n ? terbilang(n) + ' orang' : ''),
+      nama_pemohon: upper(raw.pemohon_nama || raw.nama_lengkap || r.nama || ''),
+      jenis_tanah: raw.jenis_tanah || '',
+      luas_tanah: raw.luas_tanah || '',
+      alamat_tanah: raw.alamat_tanah || '',
+      dusun: raw.dusun || '',
+      batas_utara: raw.batas_utara || '',
+      batas_timur: raw.batas_timur || '',
+      batas_selatan: raw.batas_selatan || '',
+      batas_barat: raw.batas_barat || '',
+      saksi1_nama: upper(raw.saksi1_nama || ''),
+      saksi2_nama: upper(raw.saksi2_nama || '')
+    };
+    for (let i = 1; i <= 20; i++) {
+      out['anak_' + i + '_nama'] = upper(raw['anak_' + i + '_nama'] || '');
+      out['anak_' + i + '_tempat_lahir'] = raw['anak_' + i + '_tempat_lahir'] || '';
+      out['anak_' + i + '_tanggal_lahir'] = raw['anak_' + i + '_tanggal_lahir'] || '';
+      out['anak_' + i + '_pekerjaan'] = raw['anak_' + i + '_pekerjaan'] || '';
+      out['anak_' + i + '_alamat'] = raw['anak_' + i + '_alamat'] || '';
+    }
+    return out;
+  }
+
+  function fillHibah(r, info) {
+    const raw = info;
+    const upper = (s) => String(s ?? '').toUpperCase();
+    const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const umur = (tanggalKey, umurKey) => umurFromTgl(raw[tanggalKey]) || raw[umurKey] || '';
+    return {
+      no_surat: raw._nomorSuratTercetak || '',
+      tgl_surat: today,
+      pemberi_nama: upper(raw.pemberi_nama || ''),
+      pemberi_tempat_lahir: raw.pemberi_tempat_lahir || '',
+      pemberi_tanggal_lahir: raw.pemberi_tanggal_lahir || '',
+      pemberi_umur: umur('pemberi_tanggal_lahir', 'pemberi_umur'),
+      pemberi_pekerjaan: raw.pemberi_pekerjaan || '',
+      pemberi_alamat: raw.pemberi_alamat || '',
+      penerima_nama: upper(raw.penerima_nama || raw.nama_lengkap || r.nama || ''),
+      penerima_tempat_lahir: raw.penerima_tempat_lahir || '',
+      penerima_tanggal_lahir: raw.penerima_tanggal_lahir || '',
+      penerima_umur: umur('penerima_tanggal_lahir', 'penerima_umur'),
+      penerima_pekerjaan: raw.penerima_pekerjaan || '',
+      penerima_alamat: raw.penerima_alamat || raw.alamat || '',
+      jenis_tanah: raw.jenis_tanah || '',
+      luas_tanah: raw.luas_tanah || '',
+      alamat_tanah: raw.alamat_tanah || '',
+      dusun: raw.dusun || '',
+      tahun_pemberian: raw.tahun_pemberian || '',
+      batas_utara: raw.batas_utara || '',
+      batas_timur: raw.batas_timur || '',
+      batas_selatan: raw.batas_selatan || '',
+      batas_barat: raw.batas_barat || '',
+      saksi1_nama: upper(raw.saksi1_nama || ''),
+      saksi2_nama: upper(raw.saksi2_nama || '')
+    };
+  }
+
+  function fillForTemplate(t, r, info) {
+    if (t === 'JUALBELI') return fillJualBeli(r, info);
+    if (t === 'AHLIWARIS') return fillAhliWaris(r, info);
+    if (t === 'HIBAH') return fillHibah(r, info);
+    return fillSporadik(r, info);
+  }
+
+  // ===== Field wajib & inti per template =====
+  const TEMPLATE_REQUIRED = {
+    SPORADIK: SPORADIK_REQUIRED,
+    JUALBELI: {
+      penjual_nama: 'Nama Penjual (Pihak Pertama)',
+      penjual_umur: 'Umur Penjual',
+      penjual_pekerjaan: 'Pekerjaan Penjual',
+      penjual_alamat: 'Alamat Penjual',
+      pembeli_nama: 'Nama Pembeli (Pihak Kedua)',
+      pembeli_umur: 'Umur Pembeli',
+      pembeli_pekerjaan: 'Pekerjaan Pembeli',
+      pembeli_alamat: 'Alamat Pembeli',
+      jenis_tanah: 'Jenis Tanah',
+      luas_tanah: 'Luas Tanah',
+      alamat_tanah: 'Alamat Tanah',
+      dusun: 'Dusun',
+      tahun_pemberian: 'Tahun',
+      batas_utara: 'Batas Utara',
+      batas_timur: 'Batas Timur',
+      batas_selatan: 'Batas Selatan',
+      batas_barat: 'Batas Barat',
+      harga_pembelian: 'Harga Pembelian',
+      harga_terbilang: 'Terbilang Harga',
+      saksi1_nama: 'Nama Saksi 1',
+      saksi2_nama: 'Nama Saksi 2'
+    },
+    AHLIWARIS: {
+      almarhum_nama: 'Nama Almarhum/Almarhumah',
+      pasangan_nama: 'Nama Istri/Suami',
+      tahun_meninggal: 'Tahun Meninggal',
+      jumlah_anak: 'Jumlah Anak',
+      nama_pemohon: 'Nama Pemohon',
+      jenis_tanah: 'Jenis Tanah',
+      luas_tanah: 'Luas Tanah',
+      alamat_tanah: 'Alamat Tanah',
+      dusun: 'Dusun',
+      batas_utara: 'Batas Utara',
+      batas_timur: 'Batas Timur',
+      batas_selatan: 'Batas Selatan',
+      batas_barat: 'Batas Barat',
+      saksi1_nama: 'Nama Saksi 1',
+      saksi2_nama: 'Nama Saksi 2'
+    },
+    HIBAH: {
+      pemberi_nama: 'Nama Pemberi (Pihak Pertama)',
+      pemberi_umur: 'Umur Pemberi',
+      pemberi_pekerjaan: 'Pekerjaan Pemberi',
+      pemberi_alamat: 'Alamat Pemberi',
+      penerima_nama: 'Nama Penerima (Pihak Kedua)',
+      penerima_umur: 'Umur Penerima',
+      penerima_pekerjaan: 'Pekerjaan Penerima',
+      penerima_alamat: 'Alamat Penerima',
+      jenis_tanah: 'Jenis Tanah',
+      luas_tanah: 'Luas Tanah',
+      alamat_tanah: 'Alamat Tanah',
+      dusun: 'Dusun',
+      tahun_pemberian: 'Tahun',
+      batas_utara: 'Batas Utara',
+      batas_timur: 'Batas Timur',
+      batas_selatan: 'Batas Selatan',
+      batas_barat: 'Batas Barat',
+      saksi1_nama: 'Nama Saksi 1',
+      saksi2_nama: 'Nama Saksi 2'
+    }
+  };
+
+  // Subset inti (tanpa saksi) untuk kartu "Siap Cetak" dashboard.
+  const TEMPLATE_CORE = {
+    SPORADIK: SPORADIK_CORE,
+    JUALBELI: {
+      penjual_nama: 'Nama Penjual (Pihak Pertama)',
+      penjual_umur: 'Umur Penjual',
+      penjual_pekerjaan: 'Pekerjaan Penjual',
+      penjual_alamat: 'Alamat Penjual',
+      pembeli_nama: 'Nama Pembeli (Pihak Kedua)',
+      pembeli_umur: 'Umur Pembeli',
+      pembeli_pekerjaan: 'Pekerjaan Pembeli',
+      pembeli_alamat: 'Alamat Pembeli',
+      jenis_tanah: 'Jenis Tanah',
+      luas_tanah: 'Luas Tanah',
+      alamat_tanah: 'Alamat Tanah',
+      dusun: 'Dusun',
+      tahun_pemberian: 'Tahun',
+      batas_utara: 'Batas Utara',
+      batas_timur: 'Batas Timur',
+      batas_selatan: 'Batas Selatan',
+      batas_barat: 'Batas Barat',
+      harga_pembelian: 'Harga Pembelian',
+      harga_terbilang: 'Terbilang Harga'
+    },
+    AHLIWARIS: {
+      almarhum_nama: 'Nama Almarhum/Almarhumah',
+      pasangan_nama: 'Nama Istri/Suami',
+      tahun_meninggal: 'Tahun Meninggal',
+      jumlah_anak: 'Jumlah Anak',
+      nama_pemohon: 'Nama Pemohon',
+      jenis_tanah: 'Jenis Tanah',
+      luas_tanah: 'Luas Tanah',
+      alamat_tanah: 'Alamat Tanah',
+      dusun: 'Dusun',
+      batas_utara: 'Batas Utara',
+      batas_timur: 'Batas Timur',
+      batas_selatan: 'Batas Selatan',
+      batas_barat: 'Batas Barat'
+    },
+    HIBAH: {
+      pemberi_nama: 'Nama Pemberi (Pihak Pertama)',
+      pemberi_umur: 'Umur Pemberi',
+      pemberi_pekerjaan: 'Pekerjaan Pemberi',
+      pemberi_alamat: 'Alamat Pemberi',
+      penerima_nama: 'Nama Penerima (Pihak Kedua)',
+      penerima_umur: 'Umur Penerima',
+      penerima_pekerjaan: 'Pekerjaan Penerima',
+      penerima_alamat: 'Alamat Penerima',
+      jenis_tanah: 'Jenis Tanah',
+      luas_tanah: 'Luas Tanah',
+      alamat_tanah: 'Alamat Tanah',
+      dusun: 'Dusun',
+      tahun_pemberian: 'Tahun',
+      batas_utara: 'Batas Utara',
+      batas_timur: 'Batas Timur',
+      batas_selatan: 'Batas Selatan',
+      batas_barat: 'Batas Barat'
+    }
+  };
+
+  function suratMissingFor(t, r, info) {
+    const fill = fillForTemplate(t, r, info);
+    const req = TEMPLATE_REQUIRED[t] || {};
+    return Object.keys(req)
+      .map((k) => ({ key: k, label: req[k] }))
+      .filter((f) => !String(fill[f.key] ?? '').trim())
+      .map((f) => f.label);
+  }
+
+  // ===== Render: SURAT PERNYATAAN PENGOPERAN/PENGALIAN HAK (JUAL BELI) =====
+  function renderJualBeliPreview(f) {
+    const b = document.createElement('div');
+    b.className = 'surat-sheet';
+
+    const pRow = (label, v, bold) =>
+      `<tr><td class="lbl">${label}</td><td>:</td><td>${bold ? '<b>' : ''}${escFill(v)}${bold ? '</b>' : ''}</td></tr>`;
+
+    const ttd2 = (kiriTitle, kiriNama, kananTitle, kananNama) => `
+      <div class="surat-ttd-row letter-ttd">
+        <div class="surat-ttd surat-ttd-left">
+          <div>${kiriTitle}</div>
+          <div class="surat-ttd-space"></div>
+          <div>( <b>${escFill(kiriNama)}</b> )</div>
+        </div>
+        <div class="surat-ttd surat-ttd-right">
+          <div>${kananTitle}</div>
+          <div class="surat-ttd-space"></div>
+          <div>( <b>${escFill(kananNama)}</b> )</div>
+        </div>
+      </div>`;
+
+    b.innerHTML = `
+      <div class="surat-head">SURAT PERNYATAAN PENGOPERAN/PENGALIAN HAK</div>
+      <p class="surat-p">Yang bertanda tangan dibawah ini :</p>
+      <table class="surat-tb"><tbody>
+        ${pRow('N a m a', f.penjual_nama, true)}
+        ${pRow('Umur', fmtUmur(f.penjual_umur))}
+        ${pRow('Pekerjaan', f.penjual_pekerjaan)}
+        ${pRow('Alamat', f.penjual_alamat)}
+      </tbody></table>
+      <p class="surat-p">Selanjunya disebut <b>Pihak Pertama</b></p>
+      <table class="surat-tb"><tbody>
+        ${pRow('N a m a', f.pembeli_nama, true)}
+        ${pRow('Umur', fmtUmur(f.pembeli_umur))}
+        ${pRow('Pekerjaan', f.pembeli_pekerjaan)}
+        ${pRow('Alamat', f.pembeli_alamat)}
+      </tbody></table>
+      <p class="surat-p">Selanjunya disebut <b>Pihak Kedua</b></p>
+      <p class="surat-p">Pihak Pertama dengan ini menyatakan telah melakukan Pengoperan Hak Atas sebidang tanah <b>${escFill(f.jenis_tanah)}</b> seluas Kurang Lebih <b>${escFill(f.luas_tanah)}</b> Meter Persegi yang terletak di <b>${escFill(f.alamat_tanah)}</b> Dusun <b>${escFill(f.dusun)}</b> Desa Batetangnga Kecamatan Binuang, Kabupaten Polewali Mandar kepada Pihak Kedua pada tahun <b>${escFill(f.tahun_pemberian)}</b> dengan batas-batas sebagai berikut :</p>
+      <table class="surat-tb"><tbody>
+        <tr><td class="lbl">Utara</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_utara)}</b></td></tr>
+        <tr><td class="lbl">Timur</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_timur)}</b></td></tr>
+        <tr><td class="lbl">Selatan</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_selatan)}</b></td></tr>
+        <tr><td class="lbl">Barat</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_barat)}</b></td></tr>
+      </tbody></table>
+      <p class="surat-p">dan Pihak Kedua menerima Pengalihan Hak Milik Tanah tersebut dari Pihak Pertama dengan Senilai <b>${escFill(fmtHarga(f.harga_pembelian))}</b> <b>${escFill(f.harga_terbilang)}</b>, Pihak Kedua telah melunasi Pembelian Tanah tersebut dan Pihak Pertama mengaku telah menerima seluruh biaya Pembelian atas tanah tersebut.</p>
+      <p class="surat-p">Demikian Pernyataan Pengalihan Hak Milik tanah ini kami buat dan kami tanda tangani bersama dihadapan 2 orang Saksi yang tersebut namanya dibawah ini untuk dipergunakan seperlunya dan sebagai bukti dikemudian hari.</p>
+      <p class="surat-p surat-tgl-line">Batetangnga, ${escFill(f.tgl_surat)}</p>
+      ${ttd2('Pihak Kedua<br>Yang Menerima Pengoperan,', f.pembeli_nama, 'Pihak Pertama<br>Yang Melakukan Pengoperan,', f.penjual_nama)}
+      <p class="surat-p surat-saksi-head">Saksi - Saksi :</p>
+      <div class="surat-saksi">
+        <div class="surat-saksi-baris">
+          <div class="surat-saksi-kiri">1 . <b>${escFill(f.saksi1_nama)}</b></div>
+          <div class="surat-saksi-kanan">( ...................................... )</div>
+        </div>
+        <div class="surat-saksi-baris">
+          <div class="surat-saksi-kiri">2 . <b>${escFill(f.saksi2_nama)}</b></div>
+          <div class="surat-saksi-kanan">( ...................................... )</div>
+        </div>
+      </div>
+      <p class="surat-p surat-no-line">Nomor Surat : <b>${escFill(f.no_surat)}</b></p>
+      <div class="surat-ttd-row">
+        <div></div>
+        <div class="surat-ttd">
+          <div>Batetangnga, ${escFill(f.tgl_surat)}</div>
+          <div>Kepala Desa Batetangnga</div>
+          <div class="surat-ttd-space"></div>
+          <div><b>(SUMAILA DAMANG)</b></div>
+        </div>
+      </div>
+      <div class="surat-materai-row">
+        <div class="surat-materai">Materai<br>Rp. 10000,-</div>
+      </div>`;
+
+    $('suratBody').innerHTML = '';
+    $('suratBody').appendChild(b);
+  }
+
+  // ===== Render: SURAT KETERANGAN dan PERNYATAAN AHLI WARIS =====
+  // Tata letak 100% mengikuti dokumen baku (kertas 8.5x13in, PAS 1 HALAMAN).
+  function renderAhliWarisPreview(f) {
+    const b = document.createElement('div');
+    b.className = 'surat-sheet surat-aw';
+
+    const n = Math.max(0, Math.min(20, parseInt(String(f.jumlah_anak || '0').replace(/\D/g, ''), 10) || 0));
+    const anakList = [];
+    const ttdRows = [];
+    for (let i = 1; i <= n; i++) {
+      const nm = f['anak_' + i + '_nama'];
+      const umur = fmtUmur(umurFromTgl(f['anak_' + i + '_tanggal_lahir']));
+      const pek = f['anak_' + i + '_pekerjaan'];
+      const alm = f['anak_' + i + '_alamat'];
+      if (!nm && !umur && !pek && !alm) continue;
+      anakList.push(`
+        <div class="aw-anak">
+          <div class="aw-anak-line"><span class="aw-no">${i}.</span><span class="aw-lbl">Nama</span> : <b>${escFill(nm)}</b></div>
+          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Umur</span> : ${escFill(umur)}</div>
+          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Pekerjaan</span> : ${escFill(pek)}</div>
+          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Alamat</span> : ${escBr(alm)}</div>
+        </div>`);
+      if (nm) {
+        ttdRows.push(`
+          <div class="aw-ttd-row">
+            <span class="aw-ttd-name">${i}. <b>${escFill(nm)}</b></span>
+            <span class="aw-ttd-dots">( ............................ )</span>
+          </div>`);
+      }
+    }
+    const daftar = anakList.length
+      ? `<div class="aw-anak-list">${anakList.join('')}</div>`
+      : '';
+    const ttdBlock = ttdRows.length
+      ? `<div class="aw-ttd-para">Para Ahli Waris,</div>
+         <div class="aw-ttd-rows">${ttdRows.join('')}</div>`
+      : '';
+
+    b.innerHTML = `
+      <div class="surat-head">SURAT KETERANGAN dan PERNYATAAN AHLI WARIS</div>
+      <p class="surat-p aw-intro">Kami yang bertanda tangan dibawah ini adalah para ahli waris dari Almarhum/mah :</p>
+      <p class="surat-p aw-nama">= &nbsp;<b>${escFill(f.almarhum_nama)}</b>&nbsp; =</p>
+      <p class="surat-p aw-jus">menerangkan dengan sesungguhnya dan sanggup diangkat sumpah, bahwa Almarhumah/Mah <b>${escFill(f.almarhum_nama)}</b>, yang telah meninggal dunia di Desa /Kel Batetangnga, pada Tahun <b>${escFill(f.tahun_meninggal)}</b> dari perkawinannya dengan Istri/Suami: <b>${escFill(f.pasangan_nama)}</b> dilahirkan (<b>${escFill(f.jumlah_anak)}</b> (<b>${escFill(f.jumlah_anak_terbilang)}</b>) Orang anak yaitu :</p>
+      ${daftar}
+      <p class="surat-p aw-jus">Demikian kami Anak dengan jumlah <b>${escFill(f.jumlah_anak)}</b> (<b>${escFill(f.jumlah_anak_terbilang)}</b>) anak adalah ahli waris dari mendiang <b>${escFill(f.almarhum_nama)}</b>, telah sepakat untuk membagi harta warisan dengan pembagian sebagai berikut :</p>
+      <p class="surat-p aw-jus">Memberikan kepada ahli waris An. <b>${escFill(f.nama_pemohon)}</b>, atas seluruh harta warisan berupa tanah <b>${escFill(f.jenis_tanah)}</b> seluas ± <b>${escFill(f.luas_tanah)}</b> M² yang terletak di <b>${escFill(f.alamat_tanah)}</b> Dusun <b>${escFill(f.dusun)}</b> Desa Batetangnga, Kecamatan Binuang, Kabupaten Polewali Mandar, dengan batas-batas sbb :</p>
+      <div class="aw-batas">
+        <div><span class="aw-bt-lbl">Sebelah Utara</span>: Berbatasan dengan <b>${escFill(f.batas_utara)}</b></div>
+        <div><span class="aw-bt-lbl">Sebelah Timur</span>: Barbatasan denga <b>${escFill(f.batas_timur)}</b></div>
+        <div><span class="aw-bt-lbl">Sebelah Selatan</span>: Berbatasan dengan <b>${escFill(f.batas_selatan)}</b></div>
+        <div><span class="aw-bt-lbl">Sebelah Barat</span>: Berbatasan dengan <b>${escFill(f.batas_barat)}</b></div>
+      </div>
+      <p class="surat-p aw-jus">Demikian surat keterangan dan pernyataan ahli waris ini kami buat dengan sebenar-benarnya atas dasar kesepakatan dan tanpa ada paksaan atau tekanan baik dari sesama ahli waris maupun dari pihak lain.</p>
+      <div class="aw-sig-block">
+        <p class="surat-p aw-tgl">Batetangnga, ${escFill(f.tgl_surat)}</p>
+        ${ttdBlock}
+        <div class="aw-footer">
+          <div class="aw-footer-left">
+            <div class="aw-saksi-title">Saksi-Saksi :</div>
+            <div class="aw-saksi-space"></div>
+            <div class="aw-saksi-pair">
+              <div class="aw-saksi-satu">1. ( <b>${escFill(f.saksi1_nama)}</b> )</div>
+              <div class="aw-saksi-dua">2. ( <b>${escFill(f.saksi2_nama)}</b> )</div>
+            </div>
+          </div>
+          <div class="aw-footer-right">
+            <div class="aw-nomor-wrap">
+              <div class="aw-nomor"><span class="aw-lbl2">Nomor</span> : <b>${escFill(f.no_surat)}</b></div>
+              <div class="aw-nomor"><span class="aw-lbl2">Tanggal</span> : ${escFill(f.tgl_surat)}</div>
+            </div>
+            <div class="aw-kades">
+              <div>Disaksikan dan Dibenarkan Oleh</div>
+              <div>Kepala Desa Batetangnga</div>
+              <div class="aw-ttd-space"></div>
+              <div><b>SUMAILA DAMANG</b></div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    $('suratBody').innerHTML = '';
+    $('suratBody').appendChild(b);
+  }
+
+  // ===== Render: SURAT PERNYATAAN PEMBERIAN/HIBAH =====
+  function renderHibahPreview(f) {
+    const b = document.createElement('div');
+    b.className = 'surat-sheet';
+
+    const pRow = (label, v, bold) =>
+      `<tr><td class="lbl">${label}</td><td>:</td><td>${bold ? '<b>' : ''}${escFill(v)}${bold ? '</b>' : ''}</td></tr>`;
+
+    const ttd2 = (kiriTitle, kiriNama, kananTitle, kananNama) => `
+      <div class="surat-ttd-row letter-ttd">
+        <div class="surat-ttd surat-ttd-left">
+          <div>${kiriTitle}</div>
+          <div class="surat-ttd-space"></div>
+          <div>( <b>${escFill(kiriNama)}</b> )</div>
+        </div>
+        <div class="surat-ttd surat-ttd-right">
+          <div>${kananTitle}</div>
+          <div class="surat-ttd-space"></div>
+          <div>( <b>${escFill(kananNama)}</b> )</div>
+        </div>
+      </div>`;
+
+    b.innerHTML = `
+      <div class="surat-head">SURAT PERNYATAAN PEMBERIAN/HIBAH</div>
+      <p class="surat-p">Yang bertanda tangan dibawah ini :</p>
+      <table class="surat-tb"><tbody>
+        ${pRow('N a m a', f.pemberi_nama, true)}
+        ${pRow('Tempat/Tanggal Lahir', (f.pemberi_tempat_lahir ? f.pemberi_tempat_lahir + ' / ' : '') + fmtTglDate(f.pemberi_tanggal_lahir))}
+        ${pRow('Umur', fmtUmur(f.pemberi_umur))}
+        ${pRow('Pekerjaan', f.pemberi_pekerjaan)}
+        ${pRow('Alamat', f.pemberi_alamat)}
+      </tbody></table>
+      <p class="surat-p">Selanjutnya disebut <b>PIHAK PERTAMA</b></p>
+      <table class="surat-tb"><tbody>
+        ${pRow('N a m a', f.penerima_nama, true)}
+        ${pRow('Tempat/Tanggal Lahir', (f.penerima_tempat_lahir ? f.penerima_tempat_lahir + ' / ' : '') + fmtTglDate(f.penerima_tanggal_lahir))}
+        ${pRow('Umur', fmtUmur(f.penerima_umur))}
+        ${pRow('Pekerjaan', f.penerima_pekerjaan)}
+        ${pRow('Alamat', f.penerima_alamat)}
+      </tbody></table>
+      <p class="surat-p">Selanjutnya disebut <b>PIHAK KEDUA</b></p>
+      <p class="surat-p">Pihak Pertama dengan ini memberikan/Menghibahkan Sebidang <b>${escFill(f.jenis_tanah)}</b> seluas <b>${escFill(f.luas_tanah)}</b> Meter Persegi yang terletak di <b>${escFill(f.alamat_tanah)}</b> Dusun <b>${escFill(f.dusun)}</b> Desa Batetangnga Kecamatan Binuang Kabupaten Polewali Mandar Kepada Pihak Kedua Pada tahun <b>${escFill(f.tahun_pemberian)}</b> Dengan batas-batas sebagai berikut :</p>
+      <table class="surat-tb"><tbody>
+        <tr><td class="lbl">Utara</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_utara)}</b></td></tr>
+        <tr><td class="lbl">Timur</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_timur)}</b></td></tr>
+        <tr><td class="lbl">Selatan</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_selatan)}</b></td></tr>
+        <tr><td class="lbl">Barat</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_barat)}</b></td></tr>
+      </tbody></table>
+      <p class="surat-p">dan Pihak Kedua menerima pemberian/Hibah atas tanah tersebut. demikian surat pernyataan Pemberian/Hibah ini kami buat dan Kami tanda tangani bersama dihadapan 2 orang saksi yang tersebut namanya dibahwa ini untuk dipergunakan seperlunya dan sebagai bukti dikemudian hari.</p>
+      <p class="surat-p surat-tgl-line">Batetangnga, ${escFill(f.tgl_surat)}</p>
+      ${ttd2('Pihak Kedua<br>Yang Menerima Hibah,', f.penerima_nama, 'Pihak Pertama<br>Yang Memberikan Hibah,', f.pemberi_nama)}
+      <p class="surat-p surat-saksi-head">Saksi - Saksi :</p>
+      <div class="surat-saksi">
+        <div class="surat-saksi-baris">
+          <div class="surat-saksi-kiri">1 . <b>${escFill(f.saksi1_nama)}</b></div>
+          <div class="surat-saksi-kanan">( ...................................... )</div>
+        </div>
+        <div class="surat-saksi-baris">
+          <div class="surat-saksi-kiri">2 . <b>${escFill(f.saksi2_nama)}</b></div>
+          <div class="surat-saksi-kanan">( ...................................... )</div>
+        </div>
+      </div>
+      <p class="surat-p surat-no-line">Nomor : <b>${escFill(f.no_surat)}</b> &nbsp; Tanggal : ${escFill(f.tgl_surat)}</p>
+      <div class="surat-ttd-row">
+        <div></div>
+        <div class="surat-ttd">
+          <div>Diketahui Oleh</div>
+          <div>Kepala DesaBatetangnga</div>
+          <div class="surat-ttd-space"></div>
+          <div><b>(SUMAILA DAMANG)</b></div>
+        </div>
+      </div>
+      <div class="surat-materai-row">
+        <div class="surat-materai">Materai<br>Rp. 10000,-</div>
+      </div>`;
+
+    $('suratBody').innerHTML = '';
+    $('suratBody').appendChild(b);
+  }
+
+  // ===== Konfigurasi editor (field per template) =====
+  const TEMPLATE_FIELDS = {
+    SPORADIK: SPORADIK_FIELD_LABELS,
+    JUALBELI: [
+      ['no_surat', 'Nomor Surat (opsional)'],
+      ['penjual_nama', 'Nama Penjual (Pihak Pertama)'],
+      ['penjual_umur', 'Umur Penjual'],
+      ['penjual_pekerjaan', 'Pekerjaan Penjual'],
+      ['penjual_alamat', 'Alamat Penjual'],
+      ['pembeli_nama', 'Nama Pembeli (Pihak Kedua)'],
+      ['pembeli_umur', 'Umur Pembeli'],
+      ['pembeli_pekerjaan', 'Pekerjaan Pembeli'],
+      ['pembeli_alamat', 'Alamat Pembeli'],
+      ['jenis_tanah', 'Jenis Tanah'],
+      ['luas_tanah', 'Luas Tanah (angka saja)'],
+      ['alamat_tanah', 'Alamat Tanah'],
+      ['dusun', 'Dusun'],
+      ['tahun_pemberian', 'Tahun'],
+      ['batas_utara', 'Batas Utara'],
+      ['batas_timur', 'Batas Timur'],
+      ['batas_selatan', 'Batas Selatan'],
+      ['batas_barat', 'Batas Barat'],
+      ['harga_pembelian', 'Harga Pembelian (Rp)'],
+      ['harga_terbilang', 'Terbilang Harga'],
+      ['saksi1_nama', 'Nama Saksi 1'],
+      ['saksi2_nama', 'Nama Saksi 2'],
+      ['tgl_surat', 'Tanggal Surat (pilih manual)']
+    ],
+    AHLIWARIS: [
+      ['no_surat', 'Nomor Surat (opsional)'],
+      ['almarhum_nama', 'Nama Almarhum/Almarhumah'],
+      ['pasangan_nama', 'Nama Istri/Suami'],
+      ['tahun_meninggal', 'Tahun Meninggal'],
+      ['jumlah_anak', 'Jumlah Anak'],
+      ['jumlah_anak_terbilang', 'Jumlah Anak (terbilang)'],
+      ['nama_pemohon', 'Nama Pemohon (Ahli Waris)'],
+      ['jenis_tanah', 'Jenis Tanah'],
+      ['luas_tanah', 'Luas Tanah (angka saja)'],
+      ['alamat_tanah', 'Alamat Tanah'],
+      ['dusun', 'Dusun'],
+      ['batas_utara', 'Batas Utara'],
+      ['batas_timur', 'Batas Timur'],
+      ['batas_selatan', 'Batas Selatan'],
+      ['batas_barat', 'Batas Barat'],
+      ['saksi1_nama', 'Nama Saksi 1'],
+      ['saksi2_nama', 'Nama Saksi 2'],
+      ['tgl_surat', 'Tanggal Surat (pilih manual)']
+    ],
+    HIBAH: [
+      ['no_surat', 'Nomor Surat (opsional)'],
+      ['pemberi_nama', 'Nama Pemberi (Pihak Pertama)'],
+      ['pemberi_tempat_lahir', 'Tempat Lahir Pemberi'],
+      ['pemberi_tanggal_lahir', 'Tanggal Lahir Pemberi (auto Umur)'],
+      ['pemberi_umur', 'Umur Pemberi'],
+      ['pemberi_pekerjaan', 'Pekerjaan Pemberi'],
+      ['pemberi_alamat', 'Alamat Pemberi'],
+      ['penerima_nama', 'Nama Penerima (Pihak Kedua)'],
+      ['penerima_tempat_lahir', 'Tempat Lahir Penerima'],
+      ['penerima_tanggal_lahir', 'Tanggal Lahir Penerima (auto Umur)'],
+      ['penerima_umur', 'Umur Penerima'],
+      ['penerima_pekerjaan', 'Pekerjaan Penerima'],
+      ['penerima_alamat', 'Alamat Penerima'],
+      ['jenis_tanah', 'Jenis Tanah'],
+      ['luas_tanah', 'Luas Tanah (angka saja)'],
+      ['alamat_tanah', 'Alamat Tanah'],
+      ['dusun', 'Dusun'],
+      ['tahun_pemberian', 'Tahun'],
+      ['batas_utara', 'Batas Utara'],
+      ['batas_timur', 'Batas Timur'],
+      ['batas_selatan', 'Batas Selatan'],
+      ['batas_barat', 'Batas Barat'],
+      ['saksi1_nama', 'Nama Saksi 1'],
+      ['saksi2_nama', 'Nama Saksi 2'],
+      ['tgl_surat', 'Tanggal Surat (pilih manual)']
+    ]
+  };
+
+  const TEMPLATE_LOCKED = {
+    SPORADIK: SURAT_LOCKED,
+    JUALBELI: new Set(['no_surat', 'tgl_surat']),
+    AHLIWARIS: new Set(['no_surat', 'tgl_surat', 'jumlah_anak_terbilang']),
+    HIBAH: new Set(['no_surat', 'tgl_surat'])
+  };
+
+  const TEMPLATE_AC = {
+    SPORADIK: AC_ROLES,
+    JUALBELI: {
+      penjual_nama: {},
+      pembeli_nama: {},
+      saksi1_nama: {},
+      saksi2_nama: {}
+    },
+    AHLIWARIS: {
+      almarhum_nama: {},
+      pasangan_nama: {},
+      nama_pemohon: {},
+      saksi1_nama: {},
+      saksi2_nama: {}
+    },
+    HIBAH: {
+      pemberi_nama: { tmpl: 'pemberi_tempat_lahir', ttl: 'pemberi_tanggal_lahir', umur: 'pemberi_umur', kerja: 'pemberi_pekerjaan', alamat: 'pemberi_alamat' },
+      penerima_nama: { tmpl: 'penerima_tempat_lahir', ttl: 'penerima_tanggal_lahir', umur: 'penerima_umur', kerja: 'penerima_pekerjaan', alamat: 'penerima_alamat' },
+      saksi1_nama: {},
+      saksi2_nama: {}
+    }
+  };
+
+  const TEMPLATE_AUTOAAGE = {
+    SPORADIK: { saksi1_ttl: 'saksi1_umur', saksi2_ttl: 'saksi2_umur' },
+    JUALBELI: {},
+    AHLIWARIS: {},
+    HIBAH: { pemberi_tanggal_lahir: 'pemberi_umur', penerima_tanggal_lahir: 'penerima_umur' }
+  };
+
+  const TEMPLATE_DATE = {
+    SPORADIK: ['saksi1_ttl', 'saksi2_ttl'],
+    JUALBELI: [],
+    AHLIWARIS: [],
+    HIBAH: ['pemberi_tanggal_lahir', 'penerima_tanggal_lahir']
+  };
+
+  const TEMPLATE_TEXTAREA = {
+    SPORADIK: ['saksi1_alamat', 'saksi2_alamat'],
+    JUALBELI: ['penjual_alamat', 'pembeli_alamat', 'alamat_tanah'],
+    AHLIWARIS: ['alamat_tanah'],
+    HIBAH: ['pemberi_alamat', 'penerima_alamat', 'alamat_tanah']
+  };
+
   async function deleteUpload(fileId) {
     if (!confirm('Hapus upload ini?')) return;
     const res = await fetch('/api/uploads/' + encodeURIComponent(fileId), { method: 'DELETE' });
@@ -2705,6 +3713,725 @@ hideChangePwMsg();
             });
         }
     }
+  }
+
+  // ============================================================
+  // TAMBAH DATA — form dinamis 3 jenis surat (Hibah/JualBeli/AhliWaris)
+  // ============================================================
+  const TAMBAH_DUSUN = ['Kanang', 'Kanang Bendungan', 'Kanang Pulao', 'Biru', 'Eran Batu', "Pamu'tu", 'Rappoang', 'Lumalan', 'Saleko', 'Passembarang', 'Baruga', 'Tallang Bulawan', 'Penaniang', 'Tosalama'];
+
+  // Seksi + field form Tambah Data (struktur meniru form Apps Script).
+  const TAMBAH_SECTIONS = {
+    pemohon: [
+      { sec: '📋 Data Diri Pemohon' },
+      { id: 'nama_lengkap', label: 'Nama Lengkap', req: true },
+      { id: 'nik', label: 'NIK (16 digit)', req: true, digits: 16 },
+      { id: 'no_hp', label: 'No HP (opsional)' },
+      { id: 'alamat', label: 'Alamat Pemohon', full: true }
+    ],
+    HIBAH: [
+      { sec: 'A. Pemberi Hibah (Pihak Pertama)' },
+      { id: 'pemberi_nama', label: 'Nama Lengkap', req: true },
+      { id: 'pemberi_tempat_lahir', label: 'Tempat Lahir' },
+      { id: 'pemberi_tanggal_lahir', label: 'Tanggal Lahir', type: 'date' },
+      { id: 'pemberi_pekerjaan', label: 'Pekerjaan' },
+      { id: 'pemberi_alamat', label: 'Alamat', full: true, req: true },
+      { sec: 'B. Penerima Hibah ⚡ (otomatis = Pemohon)' },
+      { id: 'penerima_nama', label: 'Nama Lengkap', req: true, sync: 'nama_lengkap' },
+      { id: 'penerima_tempat_lahir', label: 'Tempat Lahir' },
+      { id: 'penerima_tanggal_lahir', label: 'Tanggal Lahir', type: 'date' },
+      { id: 'penerima_pekerjaan', label: 'Pekerjaan' },
+      { id: 'penerima_alamat', label: 'Alamat', full: true, req: true, sync: 'alamat' }
+    ],
+    JUALBELI: [
+      { sec: '💰 Status Pembayaran' },
+      { id: 'status_bayar', label: 'Status Bayar', select: ['LUNAS', 'BELUM LUNAS'] },
+      { sec: 'A. Penjual (Pihak Pertama)' },
+      { id: 'penjual_nama', label: 'Nama Lengkap', req: true },
+      { id: 'penjual_tempat_lahir', label: 'Tempat Lahir' },
+      { id: 'penjual_tanggal_lahir', label: 'Tanggal Lahir', type: 'date' },
+      { id: 'penjual_pekerjaan', label: 'Pekerjaan' },
+      { id: 'penjual_alamat', label: 'Alamat Lengkap', full: true, req: true },
+      { sec: 'B. Pembeli (Pihak Kedua) ⚡ (otomatis = Pemohon)' },
+      { id: 'pembeli_nama', label: 'Nama Lengkap', req: true, sync: 'nama_lengkap' },
+      { id: 'pembeli_tempat_lahir', label: 'Tempat Lahir' },
+      { id: 'pembeli_tanggal_lahir', label: 'Tanggal Lahir', type: 'date' },
+      { id: 'pembeli_pekerjaan', label: 'Pekerjaan' },
+      { id: 'pembeli_alamat', label: 'Alamat Lengkap', full: true, req: true, sync: 'alamat' },
+      { sec: 'C. Harga Transaksi' },
+      { id: 'harga_pembelian', label: 'Harga Pembelian (Rp)', price: true },
+      { id: 'harga_terbilang', label: 'Terbilang', ro: true }
+    ],
+    AHLIWARIS: [
+      { sec: 'Data Almarhum (Pihak Pertama)' },
+      { id: 'almarhum_nama', label: 'Nama Almarhum', req: true },
+      { id: 'pasangan_nama', label: 'Suami/Istri', req: true },
+      { sec: '👨👩👧 Ahli Waris (Anak)' },
+      { id: 'jumlah_anak', label: 'Jumlah Anak', type: 'number', min: 0, max: 20 },
+      { id: 'jumlah_anak_terbilang', label: 'Terbilang', ro: true }
+    ],
+    tanah: [
+      { sec: '🌍 Data Tanah' },
+      { id: 'jenis_tanah', label: 'Jenis Tanah', select: ['Pekarangan', 'Kebun', 'Sawah'] },
+      { id: 'luas_tanah', label: 'Luas (M²)', type: 'number' },
+      { id: 'alamat_tanah', label: 'Alamat Tanah', full: true },
+      { id: 'dusun', label: 'Dusun', select: TAMBAH_DUSUN },
+      { id: 'tahun_pemberian', label: 'Tahun Pemberian', type: 'number' },
+      { sec: '📐 Batas Tanah' },
+      { id: 'batas_utara', label: 'Utara' },
+      { id: 'batas_timur', label: 'Timur' },
+      { id: 'batas_selatan', label: 'Selatan' },
+      { id: 'batas_barat', label: 'Barat' },
+      { sec: '👥 Saksi' },
+      { id: 'saksi1_nama', label: 'Saksi 1' },
+      { id: 'saksi2_nama', label: 'Saksi 2' }
+    ]
+  };
+
+  // Slot upload per jenis layanan (mirip Apps Script).
+  const TAMBAH_UPLOADS = {
+    HIBAH: [
+      { key: 'KK', label: '1. Kartu Keluarga (KK)' },
+      { key: 'KTP PEMBERI', label: '2. KTP Pemberi Hibah' },
+      { key: 'KTP PENERIMA', label: '3. KTP Penerima Hibah' }
+    ],
+    JUALBELI: [
+      { key: 'KK', label: '1. Kartu Keluarga (KK)' },
+      { key: 'KTP PENJUAL', label: '2. KTP Penjual' },
+      { key: 'KTP PEMBELI', label: '3. KTP Pembeli' },
+      { key: 'BUKTI BAYAR', label: '4. Bukti Bayar/Kwitansi' }
+    ],
+    AHLIWARIS: [
+      { key: 'KK', label: '1. Kartu Keluarga (KK)' },
+      { key: 'KTP AHLI WARIS', label: '2. KTP Ahli Waris' },
+      { key: 'SURAT KEMATIAN', label: '3. Surat Kematian' }
+    ]
+  };
+
+  let tambahLayanan = 'HIBAH';
+  let tambahFilled = {}; // data pemohon yang terisi dari "Cari Pemohon"
+
+  function tambahFieldHtml(f, val, prefix) {
+    const p = prefix || 'tb_';
+    const v = val == null ? '' : String(val);
+    const cls = f.full ? 'field full' : 'field';
+    const synced = f.sync ? ` data-sync="${f.sync}"` : '';
+    const lockHint = f.sync ? '<small class="sync-hint">⚡ Otomatis mengikuti Data Pemohon</small>' : '';
+    let inp;
+    if (f.select) {
+      inp = `<select id="${p}${f.id}"${f.sync ? ' disabled' : ''}><option value="">— Pilih —</option>` +
+        f.select.map((o) => `<option value="${esc(o)}"${o === v ? ' selected' : ''}>${esc(o)}</option>`).join('') + '</select>';
+    } else {
+      const type = f.type || 'text';
+      const umurHint = type === 'date' ? `<span class="umur-hint" id="${p}${f.id}_umur"></span>` : '';
+      const ro = (f.ro || f.sync) ? ' readonly' : '';
+      const maxLen = f.digits ? ` maxlength="${f.digits}"` : '';
+      const inpMode = f.digits ? ' inputmode="numeric"' : '';
+      inp = `<input type="${type}" id="${p}${f.id}" value="${esc(v)}"${f.min != null ? ` min="${f.min}"` : ''}${f.max != null ? ` max="${f.max}"` : ''}${ro}${f.price ? ' data-price="1"' : ''}${maxLen}${inpMode}${f.req ? ' required' : ''}${synced}>${umurHint}`;
+    }
+    return `<div class="${cls}${f.sync ? ' locked' : ''}"><label>${esc(f.label)}${f.req ? ' *' : ''}</label>${inp}${lockHint}</div>`;
+  }
+
+  function tambahSeksiHtml(sections, prefix, raw) {
+    const p = prefix || 'tb_';
+    return sections.map((f) =>
+      f.sec ? `<div class="sec-title">${esc(f.sec)}</div>` : tambahFieldHtml(f, raw ? raw[f.id] : '', p)
+    ).join('');
+  }
+
+  // Perbarui hint "Umur: XX tahun" di bawah tiap input tanggal lahir (seperti SPORADIK).
+  function bindTambahUmurHints(root) {
+    root.querySelectorAll('input[type="date"]').forEach((inp) => {
+      inp.addEventListener('input', () => {
+        const hint = $(`${inp.id}_umur`);
+        if (!hint) return;
+        const age = umurFromTgl(inp.value);
+        hint.textContent = age ? `Umur: ${age} tahun` : '';
+      });
+      if (inp.value) {
+        const age = umurFromTgl(inp.value);
+        const hint = $(`${inp.id}_umur`);
+        if (hint && age) hint.textContent = `Umur: ${age} tahun`;
+      }
+    });
+  }
+
+  // Field bertanda data-sync="<sumber>" otomatis mengikuti nilai Data Diri Pemohon
+  // (nama_lengkap / alamat) dan dikunci (readonly) agar tidak bisa diubah sendiri.
+  function wireTambahSync() { wireFormSync($('tambahBody'), 'tb_'); }
+
+  function wireFormSync(root, prefix) {
+    const syncFrom = (srcId) => {
+      const src = $(`${prefix}${srcId}`);
+      if (!src) return;
+      root.querySelectorAll(`[data-sync="${srcId}"]`).forEach((el) => {
+        el.value = src.value;
+      });
+    };
+    ['nama_lengkap', 'alamat'].forEach((sid) => {
+      const src = $(`${prefix}${sid}`);
+      if (src) src.addEventListener('input', () => syncFrom(sid));
+    });
+    // Terapkan sekali agar nilai awal (mis. dari Cari Pemohon) tersinkron.
+    ['nama_lengkap', 'alamat'].forEach(syncFrom);
+  }
+
+  // Nomor surat otomatis ala SPORADIK: pola 145-{urut}/Des.Bat/560/{bulan}/{tahun}.
+  function wireTambahNomorSurat() { wireNomorSurat('tb_', $('tambahBody')); }
+
+  function wireNomorSurat(prefix, root) {
+    const noUrut = $(`${prefix}noUrut`);
+    const tgl = $(`${prefix}tglSurat`);
+    const hasil = $(`${prefix}nomorSurat`);
+    if (!noUrut || !tgl || !hasil) return;
+    const rebuild = () => { hasil.value = buildNomorSurat(noUrut.value, dmyToIso(tgl.value)); };
+    const nextUrut = () => {
+      let max = 0;
+      rowsCache.forEach((c) => {
+        const m = /145-(\d{3})\//.exec(String((c.info && c.info._nomorSuratTercetak) || ''));
+        if (m) max = Math.max(max, parseInt(m[1], 10) || 0);
+      });
+      return String(max + 1).padStart(3, '0');
+    };
+    if (!tgl.value) tgl.value = isoToDmy(todayISO());
+    if (!noUrut.value) noUrut.value = nextUrut();
+    maskDmyInput(tgl);
+    noUrut.addEventListener('input', rebuild);
+    tgl.addEventListener('input', rebuild);
+    const btn = root.querySelector(`#${prefix}btnNoUrut`);
+    if (btn) btn.addEventListener('click', () => { noUrut.value = nextUrut(); rebuild(); });
+    rebuild();
+  }
+
+  function renderTambahBody() {
+    const html = `
+      <div class="form">
+        <label>Jenis Surat <select id="tb_layanan">
+          <option value="HIBAH"${tambahLayanan === 'HIBAH' ? ' selected' : ''}>HIBAH</option>
+          <option value="JUALBELI"${tambahLayanan === 'JUALBELI' ? ' selected' : ''}>JUAL BELI</option>
+          <option value="AHLIWARIS"${tambahLayanan === 'AHLIWARIS' ? ' selected' : ''}>AHLI WARIS</option>
+        </select></label>
+
+        <div class="form-box form-box-search">
+          <h4>⚡ Cari Pemohon Sebelumnya</h4>
+          <p>Ketik nama dan klik CARI untuk mengisi otomatis.</p>
+          <div class="tambah-search-row">
+            <input type="text" id="tb_cari" placeholder="🔍 Ketik nama pemohon…" autocomplete="off">
+            <button id="tb_btnCari" class="btn" type="button">CARI</button>
+          </div>
+          <div id="tb_hasilCari" class="tambah-hasil"></div>
+        </div>
+
+        <div class="form-box form-box-nomor">
+          <h4>📄 Nomor Surat (Otomatis)</h4>
+          <p>Nomor urut diambil dari surat terakhir; bisa diubah manual. Kosongkan jika belum mau dicetak.</p>
+          <div class="tambah-nomor-row">
+            <div class="field"><label>Tanggal Surat</label><input type="text" id="tb_tglSurat" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY"></div>
+            <div class="field"><label>Nomor Urut (3 digit)</label><input type="text" id="tb_noUrut" inputmode="numeric" maxlength="3" placeholder="001"></div>
+            <button id="tb_btnNoUrut" class="btn" type="button">🔄 Auto</button>
+          </div>
+          <div class="field"><label>Nomor Surat (hasil)</label>
+            <input type="text" id="tb_nomorSurat" readonly></div>
+        </div>
+
+        <div class="form-box">
+          <div class="field-grid">
+            ${tambahSeksiHtml(TAMBAH_SECTIONS.pemohon)}
+          </div>
+        </div>
+
+        <div class="form-box">
+          <div class="field-grid">
+            ${tambahSeksiHtml(TAMBAH_SECTIONS[tambahLayanan] || [])}
+            <div id="tambahAnakWrap" class="field full"></div>
+          </div>
+        </div>
+
+        <div class="form-box">
+          <div class="field-grid">
+            ${tambahSeksiHtml(TAMBAH_SECTIONS.tanah)}
+          </div>
+        </div>
+
+        <div class="form-box form-box-upload">
+          <h4>📎 Upload Dokumen (PDF / Gambar)</h4>
+          <p>Maks 8 MB per file. Kosongkan jika belum ada.</p>
+          ${(TAMBAH_UPLOADS[tambahLayanan] || []).map((s) =>
+            `<div class="field full"><label>${esc(s.label)}</label><input type="file" data-jenis="${esc(s.key)}" accept="image/*,.pdf"></div>`
+          ).join('')}
+          <div class="field full"><label>Dokumen Tambahan (boleh lebih dari satu)</label><input type="file" data-jenis="DOKUMEN LAIN" accept="image/*,.pdf" multiple></div>
+        </div>
+
+        <div class="form-actions">
+          <button id="btnSaveTambah" class="btn primary">💾 Simpan Data</button>
+          <button id="btnBatalTambah" class="btn" type="button">Batal</button>
+        </div>
+      </div>`;
+    $('tambahBody').innerHTML = html;
+    tambahFilled = {};
+    $('tb_layanan').addEventListener('change', () => { tambahLayanan = $('tb_layanan').value; renderTambahBody(); });
+    $('tb_btnCari').addEventListener('click', cariPemohonTambah);
+    $('tb_cari').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); cariPemohonTambah(); } });
+    wireTambahSync();
+    wireTambahNomorSurat();
+    // NIK: hanya angka & maksimal 16 digit.
+    const nik = $('tb_nik');
+    if (nik) nik.addEventListener('input', () => { nik.value = nik.value.replace(/\D/g, '').slice(0, 16); });
+    if (tambahLayanan === 'AHLIWARIS') {
+      renderTambahAnak();
+      $('tb_jumlah_anak').addEventListener('input', renderTambahAnak);
+    }
+    bindTambahUmurHints($('tambahBody'));
+    if (tambahLayanan === 'JUALBELI') {
+      const h = $('tb_harga_pembelian');
+      if (h) h.addEventListener('input', () => { formatHargaInput(h); $('tb_harga_terbilang').value = terbilangHarga(h); });
+    }
+    $('btnSaveTambah').addEventListener('click', saveTambahData);
+    $('btnBatalTambah').addEventListener('click', () => $('tambahModal').close());
+  }
+
+  function renderTambahAnak() {
+    const wrap = $('tambahAnakWrap');
+    if (!wrap) return;
+    const n = Math.max(0, Math.min(20, parseInt($('tb_jumlah_anak')?.value || '0', 10) || 0));
+    const t = $('tb_jumlah_anak_terbilang');
+    if (t) t.value = n > 0 ? terbilang(n) + ' Orang' : '';
+    let html = '';
+    for (let i = 1; i <= n; i++) {
+      html += `<div class="sec-title" style="margin-top:6px;">Anak ke-${i}</div>`;
+      html += tambahFieldHtml({ id: `anak_${i}_nama`, label: 'Nama' });
+      html += tambahFieldHtml({ id: `anak_${i}_tempat_lahir`, label: 'Tempat Lahir' });
+      html += tambahFieldHtml({ id: `anak_${i}_tanggal_lahir`, label: 'Tanggal Lahir', type: 'date' });
+      html += tambahFieldHtml({ id: `anak_${i}_pekerjaan`, label: 'Pekerjaan' });
+      html += tambahFieldHtml({ id: `anak_${i}_alamat`, label: 'Alamat', full: true });
+    }
+    wrap.innerHTML = html;
+    bindTambahUmurHints(wrap);
+  }
+
+  // ---- Cari Pemohon sebelumnya (dari rowsCache) ----
+  function cariPemohonTambah() {
+    const q = ($('tb_cari').value || '').trim().toLowerCase();
+    const box = $('tb_hasilCari');
+    if (q.length < 2) { box.innerHTML = '<p class="muted-line">Minimal 2 karakter.</p>'; return; }
+    const hasil = rowsCache
+      .map((e) => ({ r: e.r, info: e.info }))
+      .filter((e) => {
+        const nama = String(e.r.nama || '').toLowerCase();
+        const hp = String(e.r.hp || '').toLowerCase();
+        const nik = String(e.info.nik || '').toLowerCase();
+        return nama.includes(q) || hp.includes(q) || nik.includes(q);
+      })
+      .slice(0, 8);
+    if (!hasil.length) { box.innerHTML = '<p class="muted-line">Tidak ditemukan.</p>'; return; }
+    box.innerHTML = hasil.map((e) => `
+      <div class="tambah-item" data-id="${esc(e.r.id)}">
+        <strong>${esc(e.r.nama)}</strong> — ${esc(layananLabel(e.r.layanan))}
+        <small>${esc(e.r.id)} · 📱 ${esc(e.r.hp || '-')}${e.info.nik ? ' · 🆔 ' + esc(e.info.nik) : ''}</small>
+      </div>`).join('');
+    box.querySelectorAll('.tambah-item').forEach((el) =>
+      el.addEventListener('click', () => isiDariPemohonTambah(el.dataset.id))
+    );
+  }
+
+  function isiDariPemohonTambah(id) {
+    const found = rowsCache.find((e) => e.r.id === id);
+    if (!found) return;
+    const info = found.info;
+    // HANYA data pribadi Pemohon yang diisi ulang (Data Diri Pemohon).
+    // Data tanah, saksi, dan pihak-pihak lain TIDAK ikut diisi agar tidak
+    // merusak/campur data dari pendaftaran lama.
+    tambahFilled = {
+      nama_lengkap: info.nama_lengkap || found.r.nama,
+      nik: info.nik || '',
+      no_hp: info.no_hp || found.r.hp || '',
+      alamat: info.alamat || ''
+    };
+    const set = (fid, val) => { const el = $('tb_' + fid); if (el && val != null && val !== '') el.value = val; };
+    set('nama_lengkap', tambahFilled.nama_lengkap);
+    set('nik', tambahFilled.nik);
+    set('no_hp', tambahFilled.no_hp);
+    set('alamat', tambahFilled.alamat);
+    // Sinkronkan field kunci yang mengikuti Pemohon (Penerima/Penjual).
+    ['nama_lengkap', 'alamat'].forEach((sid) => {
+      const src = $('tb_' + sid);
+      const body = $('tambahBody');
+      if (src && body) body.querySelectorAll(`[data-sync="${sid}"]`).forEach((el) => { el.value = src.value; });
+    });
+    $('tb_hasilCari').innerHTML = `<p class="muted-line">✅ Data pribadi dari ${esc(id)} diisi. Lengkapi data lainnya.</p>`;
+  }
+
+  // ---- Format rupiah + terbilang harga ----
+  function formatHargaInput(el) {
+    let v = String(el.value || '').replace(/[^\d]/g, '');
+    if (v) v = parseInt(v, 10).toLocaleString('id-ID');
+    el.value = v;
+  }
+  function terbilangHarga(el) {
+    const n = parseInt(String(el.value || '').replace(/\./g, ''), 10) || 0;
+    if (!n) return '';
+    return terbilang(n).replace(/\s*Rupiah\s*$/i, '').trim() + ' Rupiah';
+  }
+
+  async function saveTambahData() {
+    const btn = $('btnSaveTambah');
+    busyBtn(btn, true, 'Menyimpan…');
+    try {
+      const layanan = $('tb_layanan').value;
+      const raw = {};
+
+      const collect = (sections) => {
+        sections.forEach((f) => {
+          if (f.sec) return;
+          const el = $(`tb_${f.id}`);
+          if (el) raw[f.id] = el.value.trim();
+        });
+      };
+
+      collect(TAMBAH_SECTIONS.pemohon);
+      collect(TAMBAH_SECTIONS[layanan] || []);
+      collect(TAMBAH_SECTIONS.tanah);
+      const nomorSurat = $('tb_nomorSurat').value.trim();
+      if (nomorSurat) {
+        raw._nomorSuratTercetak = nomorSurat;
+        const dupe = nomorSuratTerpakai(nomorSurat, null);
+        if (dupe) throw new Error('Nomor surat ' + nomorSurat + ' sudah dipakai ' + dupe.r.id + '. Gunakan nomor lain.');
+      }
+
+      // Harga: simpan angka murni (tanpa titik ribuan).
+      if (raw.harga_pembelian) raw.harga_pembelian = String(raw.harga_pembelian).replace(/\./g, '');
+
+      if (layanan === 'AHLIWARIS') {
+        const n = parseInt(raw.jumlah_anak || '0', 10) || 0;
+        for (let i = 1; i <= n; i++) {
+          ['nama', 'tempat_lahir', 'tanggal_lahir', 'pekerjaan', 'alamat'].forEach((k) => {
+            const el = $(`tb_anak_${i}_${k}`);
+            if (el) raw[`anak_${i}_${k}`] = el.value.trim();
+          });
+        }
+      }
+
+      const hp = raw.no_hp || '';
+      if (hp && !/^08\d{8,11}$/.test(hp)) throw new Error('No. HP tidak valid (08…, 10-13 digit).');
+      if (!raw.nama_lengkap) throw new Error('Nama lengkap wajib diisi.');
+      const nik = (raw.nik || '').replace(/\D/g, '');
+      if (nik.length !== 16) throw new Error('NIK wajib diisi tepat 16 digit angka.');
+      raw.nik = nik;
+
+      const nama = raw.nama_lengkap;
+      const res = await fetch('/api/permohonan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          layanan,
+          nama,
+          hp,
+          pembayaran: raw.status_bayar || 'N/A',
+          data_raw: raw,
+          catatan_admin: ''
+        })
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal menyimpan');
+
+      const newId = json.data && json.data.id;
+      // Upload lampiran per slot (jenis_upload = data-jenis).
+      if (newId) {
+        const slots = $('tambahBody').querySelectorAll('input[type="file"][data-jenis]');
+        for (const inp of slots) {
+          const jenis = inp.dataset.jenis;
+          for (const f of inp.files) {
+            if (f.size > 8 * 1024 * 1024) continue;
+            const dataUrl = await readFileAsDataURL(f);
+            await fetch(`/api/permohonan/${encodeURIComponent(newId)}/upload`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jenis_upload: jenis, fileName: f.name, fileData: dataUrl })
+            });
+          }
+        }
+      }
+
+      $('tambahModal').close();
+      await loadData();
+      if (newId) switchTab('pendaftaran');
+      alert('Pendaftaran berhasil disimpan. ID: ' + newId);
+    } catch (e) {
+      alert('Simpan gagal: ' + e.message);
+    } finally {
+      busyBtn(btn, false);
+    }
+  }
+
+  function openTambahData() {
+    tambahLayanan = 'HIBAH';
+    renderTambahBody();
+    $('tambahModal').showModal();
+  }
+
+  // ---- Laporan: Rekap Alamat (per dusun), Tabel Kosong, Group by NIK/Nama ----
+  let rekapMode = 'alamat';
+  let rekapItems = [];
+
+  const REKAP_STATUS_LABEL = {
+    PENDING: '⏳ Pending',
+    DIPROSES: '🔄 Proses',
+    SELESAI: '✅ Selesai',
+    DITOLAK: '❌ Tolak',
+    TMS: '🚫 TMS',
+    SUDAH_DIUKUR: '📏 Diukur'
+  };
+  const REKAP_LAYANAN_LABEL = {
+    HIBAH: 'Hibah',
+    JUALBELI: 'Jual Beli',
+    AHLIWARIS: 'Ahli Waris'
+  };
+
+  function rekapItem(r, info) {
+    const dr = info;
+    const dusun = (dr.dusun || '').trim() || 'Tidak Diketahui';
+    const alamatTanah = dr.alamat_tanah || '-';
+    const nik = dr.nik || dr.pemohon_nik || dr.nik_pihak_pertama || '-';
+    const alamatPemohon = dr.alamat || dr.pemohon_alamat || dr.penerima_alamat || dr.pembeli_alamat || '-';
+    const jenisTanah = dr.jenis_tanah || '-';
+    const pihakPertama = dr.nama_pemberi || dr.nama_penjual || dr.almarhum_nama || dr.nama_pihak_pertama || '-';
+    return {
+      id: r.id,
+      nama: r.nama,
+      hp: r.hp,
+      layanan: r.layanan,
+      status: r.status_berkas,
+      dusun,
+      alamatTanah,
+      nik,
+      alamatPemohon,
+      jenisTanah,
+      pihakPertama
+    };
+  }
+
+  function rekapSnapshot() {
+    rekapItems = rowsCache.map((c) => rekapItem(c.r, c.info));
+  }
+
+  function rekapSelectDusun(selectEl, key) {
+    const set = new Set();
+    rekapItems.forEach((it) => set.add(it.dusun));
+    const list = Array.from(set).sort();
+    const opts = list.map((d) => `<option value="${esc(d)}">📍 ${esc(d)}</option>`).join('');
+    selectEl.innerHTML = `<option value="all">📋 Semua Dusun</option>${opts}`;
+    selectEl.addEventListener('change', () => { renderRekap(); });
+  }
+
+  function rekapFiltered() {
+    const q = (($('rekapSearch') || {}).value || '').toLowerCase().trim();
+    const dusun = (($('rekapFilterDusun') || {}).value || 'all');
+    const jenis = (($('rekapFilterJenis') || {}).value || 'all');
+    const status = (($('rekapFilterStatus') || {}).value || 'all');
+    return rekapItems.filter((it) => {
+      if (dusun !== 'all' && it.dusun !== dusun) return false;
+      if (jenis !== 'all' && it.layanan !== jenis) return false;
+      if (status !== 'all' && it.status !== status) return false;
+      if (q) {
+        const hay = (it.id + ' ' + it.nama + ' ' + it.hp + ' ' + it.alamatTanah + ' ' + it.alamatPemohon + ' ' + it.nik).toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  function statusTag(s) {
+    return REKAP_STATUS_LABEL[s] || esc(s);
+  }
+
+  // Rekap Alamat: dikelompokkan per dusun (urutan terbanyak).
+  function renderRekapAlamat(data) {
+    const grouped = {};
+    data.forEach((it) => {
+      (grouped[it.dusun] = grouped[it.dusun] || []).push(it);
+    });
+    const sorted = Object.keys(grouped).sort((a, b) => grouped[b].length - grouped[a].length);
+    const rows = sorted.map((dusun) => {
+      const items = grouped[dusun];
+      const rowsHtml = items.map((it, i) => `
+        <tr${it.status === 'SUDAH_DIUKUR' ? ' class="rk-diukur"' : ''}>
+          <td class="rk-no">${i + 1}</td>
+          <td class="rk-mono"><strong>${esc(it.id)}</strong><br><small>${esc(formatHp(it.hp))}</small></td>
+          <td><strong>${esc(it.nama)}</strong></td>
+          <td>${esc(REKAP_LAYANAN_LABEL[it.layanan] || it.layanan)}</td>
+          <td class="rk-small">${esc(it.alamatTanah)}</td>
+          <td class="rk-small">${esc(it.alamatPemohon)}</td>
+          <td class="rk-center">${statusTag(it.status)}</td>
+        </tr>`).join('');
+      return `
+        <tr class="rk-group"><td colspan="7">📍 Dusun: ${esc(dusun)} (${items.length} data)</td></tr>
+        ${rowsHtml}`;
+    }).join('');
+    $('rekapTotal').textContent = `${data.length} data • ${sorted.length} dusun`;
+    return `
+      <table class="rk-table">
+        <thead><tr>
+          <th class="rk-no">No</th><th>ID / HP</th><th>Nama Pemohon</th><th>Jenis</th>
+          <th>Alamat Tanah</th><th>Alamat Pemohon</th><th class="rk-center">Status</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  // Tabel Kosong: daftar lengkap untuk pengukuran (tanpa pengelompokan).
+  function renderTabelKosong(data) {
+    const utama = [];
+    const diukur = [];
+    const ditolak = [];
+    data.forEach((it) => {
+      if (it.status === 'DITOLAK') ditolak.push(it);
+      else if (it.status === 'SUDAH_DIUKUR') diukur.push(it);
+      else utama.push(it);
+    });
+    const block = (items, title) => {
+      if (!items.length) return '';
+      const rowsHtml = items.map((it, i) => `
+        <tr${it.status === 'SUDAH_DIUKUR' ? ' class="rk-diukur"' : it.status === 'DITOLAK' ? ' class="rk-tolak"' : ''}>
+          <td class="rk-no">${i + 1}</td>
+          <td class="rk-mono">${esc(it.id)}</td>
+          <td>${esc(it.nama)}</td>
+          <td>${esc(formatHp(it.hp))}</td>
+          <td>${esc(it.pihakPertama)}</td>
+          <td class="rk-small">${esc(it.alamatTanah)}</td>
+          <td class="rk-mono">${esc(it.nik)}</td>
+          <td class="rk-small">${esc(it.alamatPemohon)}</td>
+          <td>${esc(it.jenisTanah)}</td>
+          <td>${esc(REKAP_LAYANAN_LABEL[it.layanan] || it.layanan)}</td>
+          <td class="rk-center">${statusTag(it.status)}</td>
+        </tr>`).join('');
+      return `<h4 class="rk-sub">${title}</h4>
+        <table class="rk-table">
+          <thead><tr>
+            <th class="rk-no">No.</th><th>REG/ID</th><th>Nama</th><th>No. HP</th><th>Pihak Pertama</th>
+            <th>Alamat Tanah</th><th>No. KTP</th><th>Alamat Pemohon</th><th>Jenis Tanah</th><th>Jenis Surat</th><th class="rk-center">Keterangan</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>`;
+    };
+    $('rekapTotal').textContent = `${data.length} data`;
+    return block(utama, '📋 Data Aktif (Pending / Proses / Selesai)') +
+           block(diukur, '📏 Sudah Diukur') +
+           block(ditolak, '❌ Ditolak');
+  }
+
+  // Group by NIK/Nama: dikelompokkan berdasarkan NIK (atau nama) lalu alamat.
+  function renderGroupBy(data, byNik) {
+    const grouped = {};
+    data.forEach((it) => {
+      const key = byNik ? (it.nik && it.nik !== '-' ? it.nik : '(tanpa NIK)') : it.nama;
+      (grouped[key] = grouped[key] || []).push(it);
+    });
+    const sortedKeys = Object.keys(grouped).sort();
+    const rows = sortedKeys.map((key) => {
+      const items = grouped[key];
+      const rowsHtml = items.map((it, i) => `
+        <tr${it.status === 'SUDAH_DIUKUR' ? ' class="rk-diukur"' : it.status === 'DITOLAK' ? ' class="rk-tolak"' : ''}>
+          <td class="rk-no">${i + 1}</td>
+          <td class="rk-mono">${esc(it.id)}</td>
+          <td>${esc(it.nama)}</td>
+          <td>${esc(formatHp(it.hp))}</td>
+          <td class="rk-small">${esc(it.alamatTanah)}</td>
+          <td class="rk-mono">${esc(it.nik)}</td>
+          <td class="rk-small">${esc(it.alamatPemohon)}</td>
+          <td>${esc(REKAP_LAYANAN_LABEL[it.layanan] || it.layanan)}</td>
+          <td class="rk-center">${statusTag(it.status)}</td>
+        </tr>`).join('');
+      return `
+        <tr class="rk-group"><td colspan="9">${byNik ? '🆔' : '🔤'} ${esc(key)} — ${items.length} data</td></tr>
+        ${rowsHtml}`;
+    }).join('');
+    $('rekapTotal').textContent = `${data.length} data • ${sortedKeys.length} grup`;
+    return `
+      <table class="rk-table">
+        <thead><tr>
+          <th class="rk-no">No</th><th>REG/ID</th><th>Nama</th><th>No. HP</th><th>Alamat Tanah</th>
+          <th>No. KTP</th><th>Alamat Pemohon</th><th>Jenis Surat</th><th class="rk-center">Status</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  function renderRekap() {
+    const data = rekapFiltered();
+    const mode = rekapMode;
+    if (!data.length) {
+      $('rekapContent').innerHTML = '<p class="empty">Tidak ada data.</p>';
+      $('rekapTotal').textContent = '0 data';
+      return;
+    }
+    let html;
+    if (mode === 'alamat') html = renderRekapAlamat(data);
+    else if (mode === 'tabelKosong') html = renderTabelKosong(data);
+    else html = renderGroupBy(data, mode === 'nik');
+    $('rekapContent').innerHTML = html;
+  }
+
+  function buildRekapToolbar() {
+    const t = $('rekapToolbar');
+    const search = `<div class="rk-search"><i data-lucide="search" class="search-icon-inside"></i><input id="rekapSearch" type="search" placeholder="Cari nama / ID / alamat…" /></div>`;
+    const dusunSel = `<select id="rekapFilterDusun"><option value="all">📋 Semua Dusun</option></select>`;
+    const jenisSel = `<select id="rekapFilterJenis">
+      <option value="all">Semua Jenis</option>
+      <option value="HIBAH">Hibah</option>
+      <option value="JUALBELI">Jual Beli</option>
+      <option value="AHLIWARIS">Ahli Waris</option>
+    </select>`;
+    const statusSel = `<select id="rekapFilterStatus">
+      <option value="all">Semua Status</option>
+      ${Object.entries(REKAP_STATUS_LABEL).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}
+    </select>`;
+    t.innerHTML = `${search}${dusunSel}${jenisSel}${statusSel}`;
+    rekapSelectDusun($('rekapFilterDusun'));
+    $('rekapSearch').addEventListener('input', renderRekap);
+    $('rekapFilterJenis').addEventListener('change', renderRekap);
+    $('rekapFilterStatus').addEventListener('change', renderRekap);
+  }
+
+  function openRekap(mode, title) {
+    rekapMode = mode;
+    $('rekapTitle').textContent = title;
+    buildRekapToolbar();
+    rekapSnapshot();
+    renderRekap();
+    $('rekapModal').showModal();
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function cetakRekap() {
+    const content = $('rekapContent').innerHTML;
+    const title = $('rekapTitle').textContent;
+    const now = new Date().toLocaleString('id-ID');
+    const w = window.open('', '_blank', 'width=1000,height=700');
+    if (!w) { alert('Pop-up diblokir. Izinkan pop-up lalu coba lagi.'); return; }
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
+      <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #0f172a; }
+        h2 { font-size: 18px; margin: 0 0 4px; }
+        .rk-sub { font-size: 13px; margin: 16px 0 6px; }
+        .rk-meta { font-size: 11px; color: #64748b; margin-bottom: 14px; }
+        table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 12px; }
+        th { background: #1e293b; color: #fff; padding: 7px 6px; text-align: left; border: 1px solid #334155; }
+        td { padding: 6px; border: 1px solid #cbd5e1; vertical-align: top; }
+        .rk-no { width: 34px; text-align: center; }
+        .rk-center { text-align: center; }
+        .rk-mono { font-family: Consolas, monospace; font-size: 10.5px; }
+        .rk-small { font-size: 10px; }
+        tr.rk-group td { background: #eef2ff; font-weight: 700; color: #4338ca; font-size: 11.5px; }
+        tr.rk-diukur td { background: #d1fae5; }
+        tr.rk-tolak td { background: #fee2e2; }
+        @media print { body { padding: 12px; } }
+      </style></head><body>
+      <h2>${esc(title)}</h2>
+      <div class="rk-meta">Desa Batetangnga, Kec. Binuang, Kab. Polewali Mandar — Dicetak: ${esc(now)} · Total: ${$('rekapTotal').textContent}</div>
+      ${content}
+      </body></html>`);
+    w.document.close();
+    setTimeout(() => { w.focus(); w.print(); }, 300);
   }
 
   $('btnRefresh').addEventListener('click', loadData);
@@ -2761,23 +4488,33 @@ hideChangePwMsg();
     const action = btn.dataset.action;
     const id = btn.dataset.id;
     if (action === 'surat') cetakSporadik(id);
+    else if (action === 'surat-sporadik') cetakSporadik(id, 'SPORADIK');
   });
   $('uploadBody').addEventListener('click', (e) => {
     const del = e.target.closest('[data-del-up]');
     if (del) deleteUpload(del.dataset.delUp);
   });
-  $('btnSaveEdit').addEventListener('click', saveEdit);
-  $('btnDelete').addEventListener('click', deleteRow);
   $('btnCloseModal').addEventListener('click', () => $('detailModal').close());
   $('btnCloseEdit').addEventListener('click', () => $('editModal').close());
+  $('btnTambahData').addEventListener('click', openTambahData);
+  $('btnCloseTambah').addEventListener('click', () => $('tambahModal').close());
+  $('btnRekapAlamat').addEventListener('click', () => openRekap('alamat', 'REKAP DATA BERDASARKAN DUSUN'));
+  $('btnTabelKosong').addEventListener('click', () => openRekap('tabelKosong', 'TABEL KOSONG / DAFTAR PENGUKURAN'));
+  $('btnGroupByNIK').addEventListener('click', () => openRekap('nik', 'GROUP BY NIK / NAMA'));
+  $('btnCloseRekap').addEventListener('click', () => $('rekapModal').close());
+  $('btnCetakRekap').addEventListener('click', cetakRekap);
   $('btnBackSurat').addEventListener('click', backToSporadik);
   $('btnPrintSurat').addEventListener('click', handleCetak);
   $('btnSaveSuratEdit').addEventListener('click', handleSimpan);
   $('srTgl').addEventListener('input', renderSurat);
+  maskDmyInput($('srTgl'));
   $('srNoUrut').addEventListener('input', renderSurat);
   document.querySelectorAll('dialog').forEach((d) => d.addEventListener('click', (e) => {
-    if (e.target === d) d.close();
+    if (e.target === d && d.id !== 'tambahModal') d.close();
   }));
+  // Kunci pop-up Tambah Baru agar tidak tertutup oleh klik luar / tombol Esc
+  // (hanya tombol Batal / ✕ yang boleh menutupnya).
+  $('tambahModal').addEventListener('cancel', (e) => e.preventDefault());
 
   // Tutup semua dropdown autocomplete saat klik di luar field autocomplete.
   // Satu listener GLOBAL (bukan per-instance) agar tidak bocor saat editor

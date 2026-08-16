@@ -400,6 +400,8 @@ dialog {
   animation: modalIn 0.22s ease;
 }
 dialog[open] { display: flex; flex-direction: column; }
+#editModal { width: min(1100px, 96vw); max-width: 96vw; }
+#editModal[open] { max-height: 92vh; overflow-y: auto; }
 dialog::backdrop {
   background: rgba(4, 8, 16, 0.62);
   backdrop-filter: blur(6px);
@@ -447,11 +449,38 @@ dialog::backdrop {
 .form textarea { resize: vertical; }
 .form input[readonly] { background: var(--panel2); color: var(--muted); cursor: not-allowed; opacity: 0.8; }
 .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+
+/* ===== Indikator "sedang bekerja" pada tombol ===== */
+.btn.is-busy, .tb-icon.is-busy, button.is-busy {
+  opacity: 0.7;
+  cursor: wait;
+  pointer-events: none;
+}
+.spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: -2px;
+  margin-right: 6px;
+}
+.btn.danger.is-busy .spinner, .tb-icon .spinner { border-color: rgba(0,0,0,0.15); border-top-color: currentColor; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media screen and (max-width: 480px) {
+  .form-actions { flex-wrap: wrap; }
+  .form-actions .btn { flex: 1 1 45%; }
+  .form-actions .btn.danger { order: 3; flex: 1 1 100%; }
+}
 .upload-slots { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
 .upload-slot {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px 10px;
   padding: 10px 12px;
   border: 1px dashed var(--border);
   border-radius: 10px;
@@ -464,10 +493,124 @@ dialog::backdrop {
   color: var(--accent);
 }
 .upload-slot input[type="file"] { flex: 1; min-width: 0; }
-.upload-slot .slot-status { flex: 1 1 100%; width: 100%; font-size: 12px; color: var(--muted); }
+.upload-slot .slot-status {
+  flex: 1 1 100%;
+  width: 100%;
+  font-size: 12px;
+  color: var(--muted);
+  padding-left: 50px;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
 .upload-slot .slot-status a { color: var(--accent); text-decoration: underline; }
 
 .muted-line { color: var(--muted); font-size: 13px; }
+.edit-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.edit-meta .field { margin: 0; flex: 1; min-width: 180px; }
+/* ===== Form "Tambah Data": grid 2 kolom responsif ===== */
+.field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px 14px; margin-bottom: 6px; }
+.field-grid .sec-title { grid-column: 1 / -1; }
+.field { display: flex; flex-direction: column; }
+.field.full { grid-column: 1 / -1; }
+.field label {
+  display: block; margin-bottom: 4px; font-size: 12px; color: var(--muted); letter-spacing: 0.2px;
+}
+.field input, .field select {
+  width: 100%; padding: 9px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.field input:focus, .field select:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+.field .sec-title { margin: 6px 0 0; }
+@media screen and (max-width: 640px) { .field-grid { grid-template-columns: 1fr; } }
+#tambahModal { width: min(1200px, 96vw); max-width: 96vw; }
+#tambahModal[open] { max-height: 92vh; overflow-y: auto; }
+.umur-hint {
+  display: block; font-size: 11px; font-weight: 700; color: var(--accent); margin-top: 4px;
+}
+.field.locked input, .field.locked select {
+  background: #f1f5f9; border-color: #cbd5e1; color: #334155;
+}
+.field.locked input[readonly] { cursor: not-allowed; opacity: 0.85; }
+.sync-hint { display: block; font-size: 10.5px; font-weight: 700; color: #0d9488; margin-top: 3px; }
+.form-box {
+  background: var(--panel2, #f8fafc);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.form-box h4 { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.form-box p { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+.form-box-search { background: #fffbeb; border: 1px solid #fcd34d; }
+.form-box-search h4 { color: #b45309; }
+.form-box-nomor { background: #f5f3ff; border-left: 4px solid #8b5cf6; }
+.form-box-nomor h4 { color: #7c3aed; }
+.tambah-nomor-row { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 8px; flex-wrap: wrap; }
+.tambah-nomor-row .field { margin: 0; min-width: 180px; }
+.tambah-nomor-row .btn { padding: 10px 14px; border-radius: 10px; background: #8b5cf6; color: #fff; border: none; font-weight: 700; cursor: pointer; }
+.form-box-upload { background: #fdf2f8; border-left: 4px solid #ec4899; }
+.form-box-upload h4 { color: #db2777; }
+.tambah-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.tambah-search-row input { flex: 1; padding: 9px 12px; border-radius: 10px; border: 1px solid #fcd34d; font-size: 13px; }
+.tambah-search-row .btn { padding: 9px 16px; border-radius: 10px; background: #f59e0b; color: #fff; border: none; font-weight: 700; cursor: pointer; }
+.tambah-hasil { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.tambah-item {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff;
+  cursor: pointer; display: flex; flex-direction: column; gap: 2px; transition: background 0.15s;
+}
+.tambah-item:hover { background: #fef3c7; border-color: #fcd34d; }
+.tambah-item small { font-size: 10px; color: var(--muted); }
+.tambah-autofill {
+  display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600;
+  margin-bottom: 12px; padding: 10px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0; cursor: pointer;
+}
+.tambah-autofill input { width: 18px; height: 18px; cursor: pointer; }
+.rekap-modal { width: min(1120px, 96vw); }
+.rekap-modal[open] { display: flex; flex-direction: column; }
+.rekap-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 12px;
+}
+.rekap-head h3 { font-size: 15px; font-weight: 800; letter-spacing: 0.3px; margin: 0; }
+.rekap-head .btn { font-size: 16px; padding: 6px 12px; }
+.rekap-toolbar {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;
+}
+.rekap-toolbar .rk-search { position: relative; flex: 1 1 220px; }
+.rekap-toolbar .rk-search input {
+  width: 100%; padding: 9px 12px 9px 34px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;
+}
+.rekap-toolbar .rk-search .search-icon-inside {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); pointer-events: none;
+}
+.rekap-toolbar select {
+  padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); font-size: 13px;
+}
+.rekap-info { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.rekap-content { max-height: 62vh; overflow-y: auto; border: 1px solid var(--border-soft); border-radius: 10px; }
+.rekap-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 12px; gap: 10px;
+}
+.rekap-foot span { font-size: 12px; font-weight: 700; color: var(--muted); }
+.rk-sub { font-size: 13px; font-weight: 800; margin: 14px 8px 6px; }
+.rk-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.rk-table th {
+  background: var(--panel-soft); color: var(--muted); text-align: left;
+  padding: 8px 8px; border-bottom: 2px solid var(--border-soft); position: sticky; top: 0;
+  font-size: 10.5px; letter-spacing: 0.4px; text-transform: uppercase;
+}
+.rk-table td { padding: 7px 8px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+.rk-table tr.rk-group td { background: #eef2ff; font-weight: 700; color: #4338ca; font-size: 11.5px; }
+.rk-table tr.rk-diukur td { background: #d1fae5; }
+.rk-table tr.rk-tolak td { background: #fee2e2; }
+.rk-table .rk-no { width: 34px; text-align: center; color: var(--muted); }
+.rk-table .rk-center { text-align: center; }
+.rk-table .rk-mono { font-family: Consolas, monospace; font-size: 10.5px; white-space: nowrap; }
+.rk-table .rk-small { font-size: 10px; color: #334155; }
 .sec-title {
   font-size: 13px;
   margin: 18px 0 10px;
@@ -615,6 +758,87 @@ dialog::backdrop {
 .surat-reg + .surat-ttd-row { margin-top: 4px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 
+.surat-tgl-line { text-align: right; }
+.surat-no-line { text-align: left; }
+.letter-ttd { justify-content: space-between !important; }
+.surat-ttd-left, .surat-ttd-right { min-width: 220px; text-align: center; }
+.surat-ttd-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 48px; margin-top: 16px; }
+/* Tabel daftar ahli waris — BAKU: border hitam rapi, header tengah, font 10.5pt. */
+.surat-anak-tb { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 10.5pt; table-layout: fixed; }
+.surat-anak-tb th, .surat-anak-tb td { border: 1px solid #000; padding: 4px; vertical-align: top; text-align: left; line-height: 1.45; overflow-wrap: break-word; word-break: break-word; }
+.surat-anak-tb th { background: #f8fafc; font-weight: 700; text-align: center; }
+.surat-anak-tb th:first-child, .surat-anak-tb td:first-child { text-align: center; width: 35px; }
+.surat-anak-tb th:nth-child(2), .surat-anak-tb td:nth-child(2) { width: 22%; }
+.surat-anak-tb th:nth-child(3), .surat-anak-tb td:nth-child(3) { width: 30%; }
+.se-anak-head { font-weight: 700; font-size: 12px; margin: 8px 0 2px; letter-spacing: 0.3px; }
+.se-anak-title { font-weight: 700; font-size: 11px; margin: 4px 0 0; color: var(--accent); }
+
+/* ===== Surat AHLI WARIS — tata letak baku (8.5x13in, pas 1 halaman) ===== */
+.surat-sheet.surat-aw { box-sizing: border-box; min-height: calc(13in - 2cm); display: flex; flex-direction: column; font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.5; }
+.surat-sheet.surat-aw .surat-head { font-size: 16pt; margin-bottom: 12px; line-height: 1.3; }
+.surat-sheet.surat-aw .surat-p { margin: 7px 0; }
+.surat-aw .aw-intro { text-align: left; }
+.surat-aw .aw-nama { text-align: center; font-size: 13pt; }
+.surat-aw .aw-jus { text-align: justify; text-justify: inter-word; }
+.surat-sheet.surat-aw .aw-tgl { text-align: right; }
+.surat-sheet.surat-aw .aw-sig-block { margin-top: auto; page-break-inside: avoid; break-inside: avoid; }
+.surat-aw .aw-batas { margin: 6px 0; }
+.surat-aw .aw-batas div { line-height: 1.55; }
+.surat-aw .aw-batas .aw-bt-lbl { display: inline-block; width: 175px; }
+.surat-aw .aw-ttd-para { text-align: center; margin: 12px 0 4px; }
+.surat-aw .aw-ttd-rows { margin: 0; }
+.surat-aw .aw-ttd-row { display: flex; justify-content: space-between; align-items: baseline; line-height: 1.7; }
+.surat-aw .aw-ttd-name { white-space: nowrap; }
+.surat-aw .aw-ttd-dots { white-space: nowrap; }
+/* Daftar ahli waris — BUKAN tabel: 2 kolom kiri-kanan (1,2 sejajar; 3 di bawah 1, dst).
+   min-width:0 + overflow-wrap agar teks panjang tidak pernah keluar jalur kolom. */
+.surat-aw .aw-anak-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 28px;
+  row-gap: 8px;
+  align-items: start;
+  margin: 6px 0;
+  min-width: 0;
+}
+.surat-aw .aw-anak-list .aw-anak { margin: 0; }
+.surat-aw .aw-anak {
+  min-width: 0;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.surat-aw .aw-anak-line { font-weight: 600; }
+.surat-aw .aw-anak .aw-no { display: inline-block; width: 22px; }
+.surat-aw .aw-anak .aw-lbl { display: inline-block; width: 74px; }
+.surat-aw .aw-anak-sub { display: block; }
+.surat-aw .aw-footer { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: start; margin-top: 14px; }
+.surat-aw .aw-footer-left { grid-column: 1 / -1; grid-row: 1; text-align: left; line-height: 1.45; }
+.surat-aw .aw-footer-right { grid-column: 2; grid-row: 2; text-align: center; line-height: 1.4; }
+.surat-aw .aw-saksi-title { text-align: center; margin-bottom: 4px; }
+.surat-aw .aw-saksi-space { height: 55px; }
+.surat-aw .aw-saksi-pair { display: flex; justify-content: space-between; }
+.surat-aw .aw-saksi-satu { text-align: left; }
+.surat-aw .aw-saksi-dua { text-align: right; }
+.surat-aw .aw-nomor { }
+.surat-aw .aw-nomor-wrap { display: inline-block; text-align: left; }
+.surat-aw .aw-nomor .aw-lbl2 { display: inline-block; width: 64px; text-align: right; }
+
+/* ===== Ahli Waris: jumlah halaman berbasis jumlah anak =====
+   body.aw-1pg (<= 4 anak): spasi dirapatkan agar PASTI muat 1 halaman
+   (footer otomatis "Halaman 1 dari 1").
+   body.aw-2pg (>= 5 anak): spasi normal, isi mengalir ke 2 halaman
+   (footer otomatis "Halaman 1 dari 2" / "Halaman 2 dari 2"). */
+body.aw-1pg .surat-sheet.surat-aw .surat-p { margin: 4px 0; }
+body.aw-1pg .surat-sheet.surat-aw .surat-head { margin-bottom: 10px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-anak-list { margin: 4px 0; row-gap: 4px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-anak { line-height: 1.3; }
+body.aw-1pg .surat-sheet.surat-aw .aw-ttd-para { margin: 8px 0 4px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-footer { margin-top: 10px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-saksi-space { height: 40px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-ttd-space { height: 40px; }
+.surat-aw .aw-ttd-space { height: 55px; }
+
 /* ===== Kontrol manual tanggal & nomor surat (layar saja) ===== */
 .surat-controls {
   display: grid;
@@ -629,7 +853,8 @@ dialog::backdrop {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 .surat-controls label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.3px; text-transform: uppercase; }
-.surat-controls input {
+.surat-controls input,
+.surat-controls select {
   padding: 9px 12px;
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -641,6 +866,7 @@ dialog::backdrop {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .surat-controls input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+.surat-controls select:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
 .surat-controls input[readonly] {
   background: var(--panel);
   color: var(--accent);
@@ -850,12 +1076,103 @@ dialog::backdrop {
   .print-hide { display: none !important; }
 
   /* ---- Kompakkan 2-3px (hanya cetak/PDF) agar muat 1 halaman ---- */
-  .surat-sheet { line-height: 1.4; }
+.surat-sheet { line-height: 1.4; }
   .surat-sheet .surat-head { margin-bottom: 15px; line-height: 1.2; font-size: 16pt; }
   .surat-sheet .surat-p { margin: 5px 0; }
   .surat-tb { margin: 1px 0; }
   .surat-tdd-space { height: 48px; }
   .surat-saksi-baris { margin-bottom: 15px; }
+}
+
+/* ===== Cetak AHLI WARIS: TERKUNCI pas 1 halaman (kertas 8.5x13in/F4)
+   Margin setara @page { margin: 1cm 1.8cm 1cm 1.8cm } — dipakai sebagai
+   padding sheet karena @page margin global = 0 (SPORADIK butuh padding 2.4cm).
+   Aturan ini ditulis SETELAH blok @media print utama sehingga menang. */
+@media print {
+  .surat-sheet.surat-aw {
+    page: aw;
+    padding: 0 !important;
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 12pt;
+    line-height: 1.45;
+  }
+  /* Margin 1cm atas/bawah & 1.8cm samping via @page, bukan padding sheet:
+     jarak halaman 2 (dan seterusnya) otomatis SAMA dengan halaman 1. */
+  @page aw {
+    size: 8.5in 13in portrait;
+    margin: 1cm 1.8cm;
+    @bottom-center {
+      content: "Halaman " counter(page) " dari " counter(pages);
+      font-family: "Times New Roman", Times, serif;
+      font-size: 10pt;
+      color: #000;
+    }
+  }
+  /* Nama halaman 'aw' mulai dari <html> agar konten Ahli Waris mulai di
+     halaman 1 (beda nama halaman antara sheet & induknya = pecah halaman
+     kosong di awal, lalu isi terdorong ke halaman 2 & terpotong). */
+  html.aw-print, html.aw-print body { page: aw; }
+  .surat-sheet.surat-aw .surat-head { font-size: 16pt; margin-bottom: 12px; }
+  .surat-sheet.surat-aw .surat-p { margin: 6px 0; }
+  .surat-sheet.surat-aw .surat-anak-tb { margin: 4px 0; font-size: 10pt; }
+  .surat-sheet.surat-aw .surat-anak-tb th,
+  .surat-sheet.surat-aw .surat-anak-tb td { padding: 2px 4px; }
+  .surat-sheet.surat-aw .aw-batas div { line-height: 1.45; }
+  .surat-sheet.surat-aw .aw-ttd-para { margin: 10px 0 6px; }
+  .surat-sheet.surat-aw .aw-footer { margin-top: 12px; }
+  .surat-sheet.surat-aw .aw-saksi-space { height: 45px; }
+  .surat-sheet.surat-aw .aw-ttd-space { height: 45px; }
+  .surat-sheet.surat-aw .aw-anak-list { margin: 6px 0; column-gap: 24px; row-gap: 8px; }
+  .surat-sheet.surat-aw .aw-anak { line-height: 1.4; page-break-inside: avoid; break-inside: avoid; }
+  .surat-sheet.surat-aw .aw-anak .aw-no { width: 20px; }
+  .surat-sheet.surat-aw .aw-anak .aw-lbl { width: 70px; }
+  .surat-sheet.surat-aw .aw-ttd-rows, .surat-sheet.surat-aw .aw-footer,
+  .surat-sheet.surat-aw .surat-anak-tb { page-break-inside: avoid; break-inside: avoid; }
+  /* body.aw-2pg (>= 5 anak): LEPASKAN kunci 1 halaman agar isi benar-benar
+     mengalir ke halaman 2 (footer "Halaman 1 dari 2" / "Halaman 2 dari 2").
+     Tanpa aturan ini konten tetap terpotong di 1 halaman (overflow hidden). */
+  html:has(body.aw-2pg), body.aw-2pg {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  body.aw-2pg #suratBody,
+  body.aw-2pg .surat-preview-col #suratBody {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  body.aw-2pg .surat-sheet.surat-aw {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+}
+
+/* ===== Cetak multi-halaman (surat JUAL BELI / HIBAH yang panjang) =====
+   Aturan ini ditulis SETELAH blok @media print utama sehingga menang saat
+   body diberi kelas .multi-print (di-set JS saat template JUALBELI/HIBAH aktif). */
+@media print {
+  html:has(body.multi-print), body.multi-print {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  body.multi-print #suratBody,
+  body.multi-print .surat-preview-col #suratBody {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  body.multi-print .surat-sheet {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    page-break-inside: auto;
+    break-inside: auto;
+  }
 }
 
 /* =============================================================
@@ -1640,12 +1957,33 @@ dialog::backdrop {
     box-shadow: 0 4px 12px var(--primary-glow);
     transition: all 0.2s ease;
   }
-  .btn-action-primary:hover, .btn.primary:hover {
+.btn-action-primary:hover, .btn.primary:hover {
     background: var(--primary-hover);
     transform: translateY(-1px);
     box-shadow: 0 8px 18px var(--primary-glow);
   }
   .btn.primary:disabled { opacity: 0.55; box-shadow: none; transform: none; }
+
+  /* Tombol aksi sekunder (laporan) */
+  .btn-action-secondary {
+    background: var(--panel-soft);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-action-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--bg);
+  }
 
   /* Responsif */
   @media (max-width: 900px) {
@@ -1732,6 +2070,56 @@ dialog::backdrop {
 @media (max-width: 520px) {
   .login-modal-card { padding: 24px 20px 22px; }
 }
+
+/* ===== Responsif HP & tablet: tabel -> kartu per baris (tidak terpotong) ===== */
+@media screen and (max-width: 760px) {
+  .toolbar input, .toolbar select { min-width: 0; width: 100%; box-sizing: border-box; }
+  .toolbar .search-input-group { flex: 1 1 100%; max-width: none; }
+  .toolbar-container { gap: 10px; padding: 12px; }
+  .table-wrap { overflow: visible; border: none; background: transparent; box-shadow: none; }
+  #dataTable thead, #sporadikTable thead, #uploadTable thead { display: none; }
+  #dataTable, #sporadikTable, #uploadTable { display: block; }
+  #dataTable tbody, #sporadikTable tbody, #uploadTable tbody { display: block; }
+  #dataTable tr, #sporadikTable tr, #uploadTable tr {
+    display: block;
+    background: var(--panel);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 6px 14px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+  }
+  #dataTable td, #sporadikTable td, #uploadTable td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-soft);
+    white-space: normal;
+    text-align: right;
+    font-size: 13px;
+  }
+  #dataTable td:last-child, #sporadikTable td:last-child, #uploadTable td:last-child { border-bottom: none; }
+  #dataTable td::before, #sporadikTable td::before, #uploadTable td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding-right: 10px;
+  }
+  #dataTable td.wrap, #uploadTable td.wrap { max-width: none; overflow-wrap: anywhere; }
+  #dataTable td:last-child { justify-content: flex-start; flex-wrap: wrap; }
+  dialog { min-width: 0; width: 94vw; max-width: 94vw; max-height: 92vh; padding: 16px; overflow-y: auto; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .modal-head { flex-wrap: wrap; gap: 8px; }
+  .raw-json { max-height: 40vh; overflow: auto; font-size: 11px; }
+}
+
 
 body.guest-mode .auth-data { display: none !important; }
 

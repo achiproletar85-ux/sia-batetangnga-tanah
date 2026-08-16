@@ -70,7 +70,12 @@ function uploadBukti(body) {
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     return respond(200, { success: true, url: file.getUrl() });
   } catch (err) {
-    return respond(500, { success: false, error: err.toString() });
+    var diag = '';
+    try {
+      var eff = Session.getEffectiveUser() ? Session.getEffectiveUser().getEmail() : '(kosong)';
+      diag = ' | effectiveUser=' + eff;
+    } catch (e) { diag = ' | Session.getEffectiveUser error: ' + e.toString(); }
+    return respond(500, { success: false, error: err.toString() + diag });
   }
 }
 

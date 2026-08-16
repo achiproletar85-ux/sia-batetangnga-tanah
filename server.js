@@ -255,12 +255,98 @@ app.get('/api/permohonan/:id', requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/permohonan -> Tambah pendaftaran baru langsung dari web (migrasi dari Apps Script).
+// ID otomatis REG-XXXXXX (mengikuti urutan max yang ada), status awal PENDING.
+app.post('/api/permohonan', requireAuth, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const layanan = clean(String(body.layanan || '').toUpperCase());
+    const nama = clean(body.nama);
+    const hp = clean(body.hp);
+    const pembayaran = clean(body.pembayaran) || 'N/A';
+    const data_raw = (body.data_raw && typeof body.data_raw === 'object') ? body.data_raw : {};
+    const catatan_admin = clean(body.catatan_admin) || '';
+
+    const ALLOWED = ['HIBAH', 'JUALBELI', 'AHLIWARIS'];
+    if (!ALLOWED.includes(layanan)) {
+      return res.status(400).json({ success: false, error: 'Layanan tidak valid. Pilih HIBAH, JUALBELI, atau AHLIWARIS.' });
+    }
+    if (!nama) return res.status(400).json({ success: false, error: 'Nama wajib diisi.' });
+    if (hp && !/^08\d{8,11}$/.test(hp)) {
+      return res.status(400).json({ success: false, error: 'Nomor HP tidak valid (harus 08..., 10-13 digit).' });
+    }
+    const nik = clean(data_raw.nik || '').replace(/\D/g, '');
+    if (nik.length !== 16) {
+      return res.status(400).json({ success: false, error: 'NIK wajib diisi tepat 16 digit angka.' });
+    }
+    data_raw.nik = nik;
+    if (!data_raw.nama_lengkap) data_raw.nama_lengkap = nama;
+
+    // Buat ID REG-XXXXXX: urutan lanjutan dari ID tertinggi yang ada di Supabase.
+    const { data: existing, error: exErr } = await supabase
+      .from(TABLE_DB)
+      .select('id');
+    if (exErr) throw exErr;
+    let maxNum = 0;
+    (existing || []).forEach((r) => {
+      const m = /^REG-(\d+)$/.exec(String(r.id || '').trim());
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > maxNum) maxNum = n;
+      }
+    });
+    let newId = 'REG-' + (maxNum + 1);
+    let guard = 0;
+    let conflict = true;
+    while (conflict && guard < 20) {
+      const { data: chk } = await supabase.from(TABLE_DB).select('id').eq('id', newId).maybeSingle();
+      if (chk) {
+        newId = 'REG-' + (++maxNum + 1);
+        guard++;
+      } else {
+        conflict = false;
+      }
+    }
+    if (conflict) return res.status(500).json({ success: false, error: 'Gagal menghasilkan ID unik.' });
+
+    const now = new Date().toISOString();
+    const rec = {
+      id: newId,
+      timestamp: body.timestamp || now,
+      layanan,
+      nama,
+      hp,
+      pembayaran,
+      data_raw: JSON.stringify(data_raw),
+      status_berkas: clean(body.status_berkas) || 'PENDING',
+      catatan_admin,
+      last_updated: now,
+      updated_at: now,
+      synced_at: now
+    };
+
+    const { data, error } = await supabase.from(TABLE_DB).insert(rec).select().single();
+    if (error) throw error;
+
+    res.json({ success: true, data: data || rec });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.patch('/api/permohonan/:id', requireAuth, async (req, res) => {
   try {
-    const { status_berkas, catatan_admin, data_raw } = req.body || {};
+    const { status_berkas, catatan_admin, layanan, data_raw } = req.body || {};
     const payload = { updated_at: new Date().toISOString() };
     if (status_berkas !== undefined) payload.status_berkas = status_berkas;
     if (catatan_admin !== undefined) payload.catatan_admin = catatan_admin;
+    if (layanan !== undefined) {
+      const l = clean(String(layanan).toUpperCase());
+      if (!['HIBAH', 'JUALBELI', 'AHLIWARIS'].includes(l)) {
+        return res.status(400).json({ success: false, error: 'Layanan tidak valid.' });
+      }
+      payload.layanan = l;
+    }
 
     // Merge data_raw: ambil yang sudah ada lalu gabung field baru yang dikirim.
     if (data_raw && typeof data_raw === 'object') {

@@ -381,7 +381,7 @@ footer { text-align: center; margin-top: 22px; font-size: 12px; color: var(--mut
       <div class="form-block">
         <div class="block-grid">
           <div class="field f-manual"><label>No Surat</label><input id="noSurat" type="text" placeholder="590/…/SPOR/2026" /></div>
-          <div class="field f-manual"><label>Tanggal Surat</label><input id="tglSurat" type="date" /></div>
+          <div class="field f-manual"><label>Tanggal Surat</label><input id="tglSurat" type="text" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY" /></div>
           <div class="field f-manual"><label>Layanan</label>
             <select id="layanan"><option value="">— Pilih —</option><option>HIBAH</option><option>JUAL BELI</option><option>AHLI WARIS</option><option>PENGGANTIAN HAK</option></select>
           </div>
@@ -625,7 +625,12 @@ let currentRecord = null;
 /* ================= HELPERS ================= */
 const $ = (id) => document.getElementById(id);
 const val = (id) => ($(id).value || "").trim();
-const setVal = (id, v) => { $(id).value = (v == null ? "" : String(v)); };
+const setVal = (id, v) => {
+  const el = $(id);
+  if (!el) return;
+  if (id === "tglSurat") el.value = fmtDate(v);
+  else el.value = (v == null ? "" : String(v));
+};
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 function fmtDate(d) {
@@ -634,6 +639,25 @@ function fmtDate(d) {
   if (p.length !== 3) return d;
   return p[2] + "-" + p[1] + "-" + p[0];
 }
+function dmyToIso(v) {
+  const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(String(v || "").trim());
+  if (!m) return "";
+  const mo = parseInt(m[2], 10), day = parseInt(m[1], 10);
+  if (mo < 1 || mo > 12 || day < 1 || day > 31) return "";
+  return m[3] + "-" + m[2] + "-" + m[1];
+}
+function maskDmy(inp) {
+  if (!inp) return;
+  inp.addEventListener("input", () => {
+    let d = inp.value.replace(/\D/g, "").slice(0, 8);
+    let out = "";
+    if (d.length > 4) out = d.slice(0, 2) + "-" + d.slice(2, 4) + "-" + d.slice(4);
+    else if (d.length > 2) out = d.slice(0, 2) + "-" + d.slice(2);
+    else out = d;
+    inp.value = out;
+  });
+}
+maskDmy($("tglSurat"));
 function calcAge(lahir) {
   if (!lahir) return "";
   const b = new Date(lahir);
@@ -836,7 +860,7 @@ function buildSurat() {
     boxes.push('<span class="nib-box">' + (ch ? esc(ch) : "&nbsp;") + "</span>");
     if (i === 1 || i === 3 || i === 5 || i === 7) boxes.push('<span class="nib-sep">.</span>');
   }
-  const tglS = v("tglSurat") || new Date().toISOString().slice(0, 10);
+  const tglS = dmyToIso(v("tglSurat")) || new Date().toISOString().slice(0, 10);
   const tglBaca = new Date(tglS + "T00:00:00");
   const tglTampil = isNaN(tglBaca) ? "" : tglBaca.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
   const tempatTgl = "Batetangnga, " + tglTampil;

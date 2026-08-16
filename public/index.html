@@ -131,6 +131,13 @@
         <div class="dash-card ok"><div class="dash-ic">🖨</div><div><div class="dash-val" id="dbLengkap">0</div><div class="dash-lb">Siap Cetak SPORADIK</div></div></div>
         <div class="dash-card ko"><div class="dash-ic">⚠️</div><div><div class="dash-val" id="dbKurang">0</div><div class="dash-lb">Perlu Lengkapi Data</div></div></div>
       </div>
+      <div class="dash-grid">
+        <div class="dash-card"><div class="dash-ic">📅</div><div><div class="dash-val" id="dbHariIni">0</div><div class="dash-lb">Pendaftaran Hari Ini</div></div></div>
+        <div class="dash-card"><div class="dash-ic">⏳</div><div><div class="dash-val" id="dbPending">0</div><div class="dash-lb">Pending</div></div></div>
+        <div class="dash-card"><div class="dash-ic">✅</div><div><div class="dash-val" id="dbSelesai">0</div><div class="dash-lb">Selesai</div></div></div>
+        <div class="dash-card"><div class="dash-ic">📏</div><div><div class="dash-val" id="dbDiukur">0</div><div class="dash-lb">Sudah Diukur</div></div></div>
+        <div class="dash-card"><div class="dash-ic">🖨️</div><div><div class="dash-val" id="dbCetak">0</div><div class="dash-lb">Sudah Cetak</div></div></div>
+      </div>
 
       <div class="dash-sec-title">Grafik</div>
 
@@ -154,6 +161,10 @@
         <div class="dash-block">
           <h3 class="panel-title">🥧 Grafik Pie — Status Berkas</h3>
           <div class="dash-body chart-pie" id="chartPieStatus"></div>
+        </div>
+        <div class="dash-block wide">
+          <h3 class="panel-title">📍 Distribusi Berdasarkan Dusun</h3>
+          <div class="dash-body" id="chartDusun"></div>
         </div>
       </div>
 
@@ -211,6 +222,18 @@
         <select id="filterStatus">
           <option value="">Semua Status</option>
         </select>
+        <button id="btnTambahData" class="btn primary btn-action-primary" title="Tambah pendaftaran baru">
+          <i data-lucide="plus-circle" style="width:16px; height:16px;"></i> Tambah Data
+        </button>
+        <button id="btnRekapAlamat" class="btn btn-action-secondary" title="Rekap data berdasarkan dusun">
+          <i data-lucide="clipboard-list" style="width:16px; height:16px;"></i> Rekap Alamat
+        </button>
+        <button id="btnTabelKosong" class="btn btn-action-secondary" title="Daftar lengkap untuk pengukuran">
+          <i data-lucide="table" style="width:16px; height:16px;"></i> Tabel Kosong
+        </button>
+        <button id="btnGroupByNIK" class="btn btn-action-secondary" title="Kelompokkan berdasarkan NIK/Nama">
+          <i data-lucide="users" style="width:16px; height:16px;"></i> Group by NIK/Nama
+        </button>
       </div>
 
       <div class="table-wrap">
@@ -288,7 +311,7 @@
       <div id="suratView" hidden>
         <div class="surat-view-head print-hide">
           <div>
-            <h2>Surat SPORADIK</h2>
+            <h2 id="suratTitle">Surat SPORADIK</h2>
             <p id="suratIdLine" class="muted-line"></p>
           </div>
           <div class="modal-actions" style="margin-top:0">
@@ -299,7 +322,7 @@
         </div>
 
         <div class="surat-controls print-hide">
-          <label>Tanggal Surat <input id="srTgl" type="date" /></label>
+          <label>Tanggal Surat <input id="srTgl" type="text" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY" /></label>
           <label>Nomor Urut <input id="srNoUrut" type="text" inputmode="numeric" maxlength="3" placeholder="001" /></label>
           <label>Nomor Surat <input id="srNoSurat" readonly /></label>
         </div>
@@ -435,35 +458,33 @@
 
   <dialog id="editModal">
     <div class="modal-head">
-      <h2>Edit Berkas</h2>
+      <h2>✏️ Edit Data</h2>
       <button id="btnCloseEdit" class="btn-ghost">✕</button>
     </div>
-    <div class="form">
-      <label>Status Berkas <input id="editStatus" list="statusList" /></label>
-      <datalist id="statusList">
-        <option>SUDAH_DIUKUR</option>
-        <option>BELUM_DIUKUR</option>
-        <option>PROSES</option>
-        <option>DITOLAK</option>
-        <option>SELESAI</option>
-      </datalist>
-      <label>Catatan Admin <textarea id="editCatatan" rows="4"></textarea></label>
-      <div class="upload-slots">
-        <div class="upload-slot">
-          <span class="slot-label">KK</span>
-          <input type="file" id="editKkFile" accept="image/*,.pdf" />
-          <div id="editKkStatus" class="slot-status"></div>
-        </div>
-        <div class="upload-slot">
-          <span class="slot-label">KTP</span>
-          <input type="file" id="editKtpFile" accept="image/*,.pdf" />
-          <div id="editKtpStatus" class="slot-status"></div>
-        </div>
-      </div>
-      <div class="form-actions">
-        <button id="btnSaveEdit" class="btn primary">Simpan</button>
-        <button id="btnDelete" class="btn danger">Hapus</button>
-      </div>
+    <div id="editBody"></div>
+  </dialog>
+
+  <dialog id="tambahModal">
+    <div class="modal-head">
+      <h2>Tambah Pendaftaran</h2>
+      <button id="btnCloseTambah" class="btn-ghost">✕</button>
+    </div>
+    <div id="tambahBody"></div>
+  </dialog>
+
+  <dialog id="rekapModal" class="rekap-modal">
+    <div class="rekap-head">
+      <h3 id="rekapTitle">Rekap Data</h3>
+      <button id="btnCloseRekap" class="btn" title="Tutup">&times;</button>
+    </div>
+    <div id="rekapToolbar" class="rekap-toolbar"></div>
+    <div id="rekapInfo" class="rekap-info"></div>
+    <div id="rekapContent" class="rekap-content"></div>
+    <div class="rekap-foot">
+      <span id="rekapTotal"></span>
+      <button id="btnCetakRekap" class="btn primary" title="Cetak / Simpan PDF">
+        <i data-lucide="printer" style="width:16px; height:16px;"></i> Cetak / PDF
+      </button>
     </div>
   </dialog>
 
