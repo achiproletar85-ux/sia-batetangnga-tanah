@@ -4278,6 +4278,8 @@ hideChangePwMsg();
 
     const n = Math.max(0, Math.min(20, parseInt(String(f.jumlah_anak || '0').replace(/\D/g, ''), 10) || 0));
     const tableRows = [];
+    const anakList = [];
+    const ttdRows = [];
     for (let i = 1; i <= n; i++) {
       const nm = f['anak_' + i + '_nama'];
       const tmpl = f['anak_' + i + '_tempat_lahir'] || '';
