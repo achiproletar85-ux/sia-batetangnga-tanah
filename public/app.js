@@ -246,6 +246,10 @@
 
   // ===== CETAK LAPORAN REKAPITULASI KEUANGAN & KAS DESA (HEMAT TINTA & ALAMAT) =====
   function cetakLaporanKeuangan() {
+    if (!isBendahara()) {
+      alert('Akses Ditolak: Cetak Laporan Keuangan hanya dapat diakses oleh Bendahara atau Admin Desa.');
+      return;
+    }
     if (!keuState || !keuState.length) {
       alert('Belum ada data transaksi keuangan yang dapat dicetak.');
       return;
@@ -544,6 +548,10 @@
   }
 
   function cetakLaporanKeuanganBulan(targetMonth, targetYear) {
+    if (!isBendahara()) {
+      alert('Akses Ditolak: Cetak Laporan Keuangan hanya dapat diakses oleh Bendahara atau Admin Desa.');
+      return;
+    }
     const bulanNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
     const namaBulan = bulanNames[targetMonth - 1];
 
@@ -1480,9 +1488,10 @@
       const el = document.getElementById(id);
       if (el) el.style.display = show ? '' : 'none';
     };
-    // Hanya Bendahara (atau Admin) yang boleh meng-input & mengimpor data transaksi keuangan baru.
+    // Hanya Bendahara (atau Admin) yang boleh meng-input, mencetak laporan, & mengimpor data transaksi keuangan.
     setVisible('btnTambahTransaksi', canInput);
     setVisible('btnImportKeuangan', canInput);
+    setVisible('btnCetakKeuangan', canInput);
     // Tabel data & ringkasan saldo selalu dibaca & ditampilkan dari Supabase.
     setVisible('keuRingkasan', true);
     setVisible('keuSearchInput', true);
