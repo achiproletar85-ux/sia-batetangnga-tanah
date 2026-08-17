@@ -1,4 +1,5 @@
 (() => {
+  var nm = '';
   let allData = [];
   let uploads = [];
   let keuState = [];
