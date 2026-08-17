@@ -4878,7 +4878,24 @@ hideChangePwMsg();
     else if (mq.addListener) mq.addListener(handler);
   })();
 
+  window.$ = $;
+
   // ===== FIELD TOOLS (FAB MENU) — SENSUS EKONOMI / SURVEY APP TOOLS =====
+  window.closeGpsModal = function() {
+    const m = document.getElementById('gpsModal');
+    if (m && typeof m.close === 'function') m.close();
+  };
+
+  window.closeMemoModal = function() {
+    const m = document.getElementById('memoModal');
+    if (m && typeof m.close === 'function') m.close();
+  };
+
+  window.closeCalcModal = function() {
+    const m = document.getElementById('calcModal');
+    if (m && typeof m.close === 'function') m.close();
+  };
+
   window.fieldToolGPS = function() {
     const fab = $('fabMenu');
     if (fab) fab.hidden = true;
