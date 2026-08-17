@@ -4281,6 +4281,7 @@ hideChangePwMsg();
     const anakList = [];
     const ttdRows = [];
     for (let i = 1; i <= n; i++) {
+      const nm = f['anak_' + i + '_nama'];
       const tmpl = f['anak_' + i + '_tempat_lahir'] || '';
       const tgl = fmtTglDate(f['anak_' + i + '_tanggal_lahir']);
       const ttl = (tmpl && tgl) ? `${tmpl}, ${tgl}` : (tmpl || tgl || fmtUmur(f['anak_' + i + '_umur']) || fmtUmur(umurFromTgl(f['anak_' + i + '_tanggal_lahir'])));
