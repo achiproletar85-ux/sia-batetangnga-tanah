@@ -860,12 +860,16 @@ dialog::backdrop {
 /* Daftar ahli waris — BUKAN tabel: 2 kolom kiri-kanan (1,2 sejajar; 3 di bawah 1, dst).
    min-width:0 + overflow-wrap agar teks panjang tidak pernah keluar jalur kolom. */
 .surat-aw .aw-anak-list {
-  display: block !important;
-  margin: 8px 0;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  column-gap: 36px !important;
+  row-gap: 10px !important;
+  margin: 10px 0 !important;
+  align-items: start !important;
   min-width: 0;
 }
 .surat-aw .aw-anak-list .aw-anak {
-  margin-bottom: 8px !important;
+  margin-bottom: 0 !important;
 }
 .surat-aw .aw-anak {
   min-width: 0;

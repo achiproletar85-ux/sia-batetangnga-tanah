@@ -4281,15 +4281,17 @@ hideChangePwMsg();
     const anakList = [];
     const ttdRows = [];
     for (let i = 1; i <= n; i++) {
-      const nm = f['anak_' + i + '_nama'];
-      const umur = fmtUmur(umurFromTgl(f['anak_' + i + '_tanggal_lahir']));
+      const tmpl = f['anak_' + i + '_tempat_lahir'] || '';
+      const tgl = fmtTglDate(f['anak_' + i + '_tanggal_lahir']);
+      const ttl = (tmpl && tgl) ? `${tmpl}, ${tgl}` : (tmpl || tgl || fmtUmur(f['anak_' + i + '_umur']) || fmtUmur(umurFromTgl(f['anak_' + i + '_tanggal_lahir'])));
+      const lblTtl = (tmpl || tgl) ? 'TTL' : 'Umur';
       const pek = f['anak_' + i + '_pekerjaan'];
       const alm = f['anak_' + i + '_alamat'];
-      if (!nm && !umur && !pek && !alm) continue;
+      if (!nm && !ttl && !pek && !alm) continue;
       anakList.push(`
         <div class="aw-anak">
           <div class="aw-anak-line"><span class="aw-no">${i}.</span><span class="aw-lbl">Nama</span> : <b>${escFill(nm)}</b></div>
-          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Umur</span> : ${escFill(umur)}</div>
+          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">${lblTtl}</span> : ${escFill(ttl)}</div>
           <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Pekerjaan</span> : ${escFill(pek)}</div>
           <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Alamat</span> : ${escBr(alm)}</div>
         </div>`);
