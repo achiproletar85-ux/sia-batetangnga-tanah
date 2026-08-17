@@ -1468,7 +1468,8 @@
     return currentRole() === 'admin';
   }
   function isBendahara() {
-    return true;
+    const r = currentRole();
+    return r === 'bendahara' || r === 'admin';
   }
   function isUserOnly() {
     return currentRole() === 'user';
@@ -1479,30 +1480,16 @@
       const el = document.getElementById(id);
       if (el) el.style.display = show ? '' : 'none';
     };
-    // Hanya Bendahara (atau Admin) yang boleh meng-input & melihat tabel/ringkasan keuangan.
+    // Hanya Bendahara (atau Admin) yang boleh meng-input & mengimpor data transaksi keuangan baru.
     setVisible('btnTambahTransaksi', canInput);
     setVisible('btnImportKeuangan', canInput);
-    setVisible('keuRingkasan', canInput);
-    setVisible('keuSearchInput', canInput);
-    setVisible('keuTableWrap', canInput);
-    setVisible('keuEmpty', canInput);
-    setVisible('pagerKeuangan', canInput);
-    // Cek Tagihan & Berkas tetap tersedia untuk semua user.
+    // Tabel data & ringkasan saldo selalu dibaca & ditampilkan dari Supabase.
+    setVisible('keuRingkasan', true);
+    setVisible('keuSearchInput', true);
+    setVisible('keuTableWrap', true);
+    setVisible('keuEmpty', true);
+    setVisible('pagerKeuangan', true);
     setVisible('btnCekTagihanBerkas', true);
-    // Kolom "Aksi" di tabel hanya relevan untuk Bendahara/Admin.
-    const tbl = document.getElementById('keuTable');
-    if (tbl) {
-      const head = tbl.querySelector('thead tr');
-      if (head) {
-        const thAksi = head.querySelector('th:last-child');
-        if (thAksi) thAksi.style.display = canInput ? '' : 'none';
-      }
-    }
-    // Jika bukan Bendahara, isi tabel dikosongkan agar tidak menampilkan data.
-    if (!canInput) {
-      const body = document.getElementById('keuBody');
-      if (body) body.innerHTML = '';
-    }
   }
 
   // Sisipkan token Bearer ke setiap panggilan /api/* secara otomatis.
@@ -4603,13 +4590,10 @@ hideChangePwMsg();
     }
     else if (activeTab === 'uploads') showTab('uploads', renderUploads);
     else if (activeTab === 'keuangan') {
-        // Hanya Bendahara yang melihat ringkasan/tabel; user biasa hanya Cek Tagihan & Berkas.
         updateKeuPermissions();
-        if (isBendahara()) {
-            Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]).then(() => {
-                renderKeuanganTable();
-            });
-        }
+        Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]).then(() => {
+            renderKeuanganTable();
+        });
     }
   }
 
