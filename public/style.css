@@ -2723,3 +2723,69 @@ header, .app-header, .modal-head {
   color: #F57F17 !important;
   border: 1px solid #FBC02D !important;
 }
+
+/* ==================================================
+   PERBAIKAN TOTAL UI/UX - KONTRAS WARNA & LAYOUT NAVBAR
+   ================================================== */
+
+/* 1. Header Topbar Spacing & Loose Layout */
+header, .app-header {
+  padding: 16px 28px !important;
+  gap: 16px !important;
+  background: linear-gradient(135deg, #E53935, #C62828) !important;
+  border-bottom: 4px solid #FBC02D !important;
+}
+header h1, .app-title {
+  color: #FFFFFF !important;
+  font-weight: 800 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+header p, .app-subtitle {
+  color: #FFF9C4 !important;
+  font-weight: 600 !important;
+  opacity: 0.95 !important;
+}
+
+/* 2. Stat Cards & High Contrast Numbers (#111827) */
+.dash-card, .card-stat {
+  background: #FFFFFF !important;
+  border: 1px solid #E5E7EB !important;
+  border-radius: 14px !important;
+  padding: 20px 22px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+}
+.dash-val, .dash-card .dash-val {
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  color: #111827 !important;
+  line-height: 1.1 !important;
+}
+.dash-lb, .dash-card .dash-lb {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #4B5563 !important;
+  margin-top: 4px !important;
+}
+
+/* 3. Text Contrast in Light Backgrounds (#F8F9FA) */
+body, main, .main-card, .workspace-card {
+  background-color: #F8F9FA !important;
+  color: #111827 !important;
+}
+
+/* 4. Table Header Contrast */
+table thead th, .table-master thead th {
+  background-color: #E53935 !important;
+  color: #FFFFFF !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.3px !important;
+  padding: 12px 14px !important;
+}
+
+/* 5. Responsive Canvas & Charts */
+canvas, #chartDusun, #chartLayanan {
+  max-width: 100% !important;
+  width: 100% !important;
+  height: auto !important;
+  box-sizing: border-box !important;
+}
