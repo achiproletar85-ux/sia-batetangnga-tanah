@@ -42,6 +42,9 @@
     $('btnCekTagihanBerkas').addEventListener('click', () => { openCekTbPanel(); });
     $('btnCloseCekTb').addEventListener('click', () => { $('cekTbPanel').style.display = 'none'; });
     $('btnCekTbCari').addEventListener('click', () => cekTagihanBerkas());
+    if ($('btnCetakKeuangan')) {
+      $('btnCetakKeuangan').addEventListener('click', cetakLaporanKeuangan);
+    }
     $('cekTbId').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); cekTagihanBerkas(); } });
     $('trxJenis').addEventListener('change', (e) => {
       $('trxPemohonLabel').style.display = e.target.value === 'Pemasukan Cicilan' ? 'block' : 'none';
@@ -238,6 +241,194 @@
     if (typeof v === 'object') return v;
     try { return JSON.parse(String(v)); } catch (_) { return null; }
   }
+  // ===== CETAK LAPORAN REKAPITULASI KEUANGAN & KAS DESA =====
+  function cetakLaporanKeuangan() {
+    if (!keuState || !keuState.length) {
+      alert('Belum ada data transaksi keuangan yang dapat dicetak.');
+      return;
+    }
+
+    const searchVal = String($('keuSearchInput') ? $('keuSearchInput').value : '').trim().toLowerCase();
+    let rows = keuState;
+    if (searchVal) {
+      rows = keuState.filter(t => 
+        String(t.keterangan || '').toLowerCase().includes(searchVal) ||
+        String(t.id_pendaftaran || '').toLowerCase().includes(searchVal) ||
+        String(t.jenis || '').toLowerCase().includes(searchVal) ||
+        String(t.nama_pemohon || '').toLowerCase().includes(searchVal)
+      );
+    }
+
+    if (!rows.length) {
+      alert('Tidak ada transaksi yang cocok dengan kriteria pencarian untuk dicetak.');
+      return;
+    }
+
+    const sorted = [...rows].sort((a, b) => new Date(a.tanggal || 0) - new Date(b.tanggal || 0));
+
+    let totalPemasukan = 0;
+    let totalPengeluaran = 0;
+
+    const tableTrs = sorted.map((t, idx) => {
+      const isMasuk = String(t.jenis || '').toLowerCase().includes('pemasukan');
+      const nom = Number(t.nominal || 0);
+      if (isMasuk) totalPemasukan += nom;
+      else totalPengeluaran += nom;
+
+      const tgl = fmtTglDate(t.tanggal) || '-';
+      const subjek = t.nama_pemohon ? `<b>${escFill(t.nama_pemohon)}</b> (${escFill(t.id_pendaftaran)})` : (t.id_pendaftaran ? escFill(t.id_pendaftaran) : '-');
+      const masukStr = isMasuk ? formatRp(nom) : '-';
+      const keluarStr = !isMasuk ? formatRp(nom) : '-';
+
+      return `
+        <tr>
+          <td style="text-align:center; font-weight:600;">${idx + 1}</td>
+          <td style="text-align:center;">${tgl}</td>
+          <td><span class="${isMasuk ? 'type-in' : 'type-out'}">${escFill(t.jenis || 'Transaksi')}</span></td>
+          <td>${subjek}</td>
+          <td>${escBr(t.keterangan || '-')}</td>
+          <td class="num-col" style="color:#2E7D32;">${masukStr}</td>
+          <td class="num-col" style="color:#c62828;">${keluarStr}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const saldoAkhir = totalPemasukan - totalPengeluaran;
+    const nowTgl = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Laporan Keuangan Kas Desa Batetangnga</title>
+  <style>
+    @page { size: 8.5in 13in portrait; margin: 1cm 1.5cm; }
+    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #111; margin: 0; padding: 10px; }
+    .kop-wrap { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px; }
+    .kop-logo { width: 55px; height: 55px; object-fit: contain; }
+    .kop-text { text-align: center; flex: 1; margin: 0 10px; }
+    .kop-text h4 { margin: 0; font-size: 10pt; text-transform: uppercase; font-weight: 700; }
+    .kop-text h3 { margin: 2px 0; font-size: 11.5pt; text-transform: uppercase; font-weight: 800; color: #2E7D32; }
+    .kop-text p { margin: 0; font-size: 8.5pt; font-style: italic; color: #333; }
+    
+    .doc-head { text-align: center; margin: 14px 0 16px 0; }
+    .doc-head h2 { margin: 0; font-size: 12pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; color: #E53935; }
+    .doc-head p { margin: 3px 0 0 0; font-size: 9pt; font-weight: 600; color: #444; }
+    
+    .sum-grid { display: flex; gap: 10px; margin-bottom: 16px; }
+    .sum-card { flex: 1; border: 1px solid #000; padding: 8px; border-radius: 6px; text-align: center; }
+    .sum-card.in { background: #e8f5e9; }
+    .sum-card.out { background: #ffebee; }
+    .sum-card.bal { background: #fffde7; }
+    .sum-lbl { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #333; }
+    .sum-val { font-size: 11pt; font-weight: 800; margin-top: 2px; }
+    
+    table.rpt-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 9pt; }
+    table.rpt-table th { background: #f1f5f9; color: #000; border: 1px solid #000; padding: 6px 4px; text-align: center; font-weight: 700; }
+    table.rpt-table td { border: 1px solid #000; padding: 5px 6px; vertical-align: top; }
+    .num-col { text-align: right; font-weight: 600; white-space: nowrap; }
+    .type-in { color: #2E7D32; font-weight: 700; }
+    .type-out { color: #c62828; font-weight: 700; }
+    
+    .tfoot-total { background: #e2e8f0; font-weight: 800; }
+    
+    .sig-row { display: flex; justify-content: space-between; margin-top: 28px; page-break-inside: avoid; }
+    .sig-box { text-align: center; width: 42%; }
+    .sig-date { margin-bottom: 50px; font-size: 9.5pt; }
+    .sig-name { font-weight: 800; text-decoration: underline; font-size: 10pt; }
+    .sig-title { font-size: 9pt; }
+  </style>
+</head>
+<body>
+  <div class="kop-wrap">
+    <img src="logo-desa.png" class="kop-logo" alt="Logo Desa">
+    <div class="kop-text">
+      <h4>PEMERINTAH KABUPATEN POLEWALI MANDAR</h4>
+      <h4>KECAMATAN BINUANG</h4>
+      <h3>DESA BATETANGNGA</h3>
+      <p>Alamat: Jl. Poros Batetangnga No. 01, Desa Batetangnga, Kec. Binuang, Polman</p>
+    </div>
+    <img src="logo.bmp" class="kop-logo" alt="Logo Polman">
+  </div>
+
+  <div class="doc-head">
+    <h2>LAPORAN REKAPITULASI KEUANGAN &amp; KAS DESA</h2>
+    <p>Rekap Seluruh Data Pemasukan dan Pengeluaran Transaksi</p>
+  </div>
+
+  <div class="sum-grid">
+    <div class="sum-card in">
+      <div class="sum-lbl">Total Pemasukan</div>
+      <div class="sum-val" style="color:#2E7D32;">${formatRp(totalPemasukan)}</div>
+    </div>
+    <div class="sum-card out">
+      <div class="sum-lbl">Total Pengeluaran</div>
+      <div class="sum-val" style="color:#c62828;">${formatRp(totalPengeluaran)}</div>
+    </div>
+    <div class="sum-card bal">
+      <div class="sum-lbl">Saldo Akhir Kas</div>
+      <div class="sum-val" style="color:#1b5e20;">${formatRp(saldoAkhir)}</div>
+    </div>
+  </div>
+
+  <table class="rpt-table">
+    <thead>
+      <tr>
+        <th style="width:30px;">NO</th>
+        <th style="width:85px;">TANGGAL</th>
+        <th style="width:110px;">TIPE / JENIS</th>
+        <th style="width:150px;">PEMOHON / SUBJEK</th>
+        <th>KETERANGAN TRANSAKSI</th>
+        <th style="width:110px;">PEMASUKAN (Rp)</th>
+        <th style="width:110px;">PENGELUARAN (Rp)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${tableTrs}
+    </tbody>
+    <tfoot>
+      <tr class="tfoot-total">
+        <td colspan="5" style="text-align:right; padding:6px 8px;">TOTAL REKAPITULASI :</td>
+        <td class="num-col" style="color:#2E7D32;">${formatRp(totalPemasukan)}</td>
+        <td class="num-col" style="color:#c62828;">${formatRp(totalPengeluaran)}</td>
+      </tr>
+      <tr class="tfoot-total" style="background:#fef08a;">
+        <td colspan="5" style="text-align:right; padding:6px 8px;">SALDO AKHIR KAS BERSIH :</td>
+        <td colspan="2" class="num-col" style="text-align:center; color:#1b5e20; font-size:10.5pt;">${formatRp(saldoAkhir)}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="sig-row">
+    <div class="sig-box">
+      <div class="sig-date">&nbsp;<br>Pengelola Keuangan / Bendahara,</div>
+      <div class="sig-name">( ............................................ )</div>
+      <div class="sig-title">NIP. ........................................</div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-date">Batetangnga, ${nowTgl}<br>Kepala Desa Batetangnga,</div>
+      <div class="sig-name">SUMAILA DAMANG</div>
+      <div class="sig-title">Kepala Desa</div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      window.print();
+    };
+  </script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(htmlContent);
+      win.document.close();
+    } else {
+      alert('Popup terblokir browser. Harap izinkan popup untuk mencetak laporan.');
+    }
+  }
+
   // Field data_raw yang dianggap penting untuk ditampilkan di panel Cek.
   // Hanya ±10 kolom kunci agar tampilan tidak membludak dengan semua isian.
   const DATA_RAW_PRIORITY = [

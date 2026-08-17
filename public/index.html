@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=88" />
+  <link rel="stylesheet" href="style.css?v=89" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) { window.lucide.createIcons(); } });</script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -31,7 +31,7 @@
           <span id="connStatus" class="badge">⏳ Menghubungkan…</span>
           <span id="countBadge" class="badge">0 baris</span>
           <span id="spSummary" class="badge"></span>
-          <span id="appVersion" class="badge" title="Versi aplikasi yang sedang berjalan">v88</span>
+          <span id="appVersion" class="badge" title="Versi aplikasi yang sedang berjalan">v89</span>
         </div>
         <span id="tbTitle" class="tb-title auth-data">Dashboard</span>
         <input id="topSearch" type="search" class="tb-search auth-data" placeholder="Cari di tab aktif…" autocomplete="off" />
@@ -408,6 +408,9 @@
             <button id="btnImportKeuangan" onclick="importKeuanganFromSheet()" title="Tarik data transaksi dari spreadsheet ke Supabase (manual)" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;">
                 <i data-lucide="download" style="width: 14px; height: 14px;"></i> Tarik dari Sheet
             </button>
+            <button id="btnCetakKeuangan" class="btn" style="background: #2E7D32; border: 1px solid #FBC02D; color: #ffffff; display:flex; align-items: center; gap: 6px; font-weight: 700;" title="Cetak Laporan Rekapitulasi Keuangan (Pemasukan & Pengeluaran Kas Desa)">
+                <i data-lucide="printer" style="width:16px; height:16px;"></i> Cetak Laporan Keuangan
+            </button>
             <button id="btnCekTagihanBerkas" class="btn btn-action-primary" style="display:flex; align-items: center; gap: 6px;" title="Cek tagihan dan berkas berdasarkan ID pendaftaran">
                 <i data-lucide="search-check" style="width:16px; height:16px;"></i> Cek Tagihan & Berkas
             </button>
@@ -696,6 +699,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=88"></script>
+  <script src="app.js?v=89"></script>
 </body>
 </html>
