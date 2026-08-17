@@ -4315,23 +4315,8 @@ hideChangePwMsg();
           </div>`);
       }
     }
-    const daftar = tableRows.length
-      ? `<div class="aw-table-wrap" style="width:100%; margin:10px 0; page-break-inside:avoid; break-inside:avoid;">
-          <table class="aw-table" style="width:100%; border-collapse:collapse; font-size:11pt;">
-            <thead>
-              <tr style="background:#f1f5f9; text-align:center; font-weight:bold;">
-                <th style="border:1px solid #000; padding:5px 4px; width:35px;">NO</th>
-                <th style="border:1px solid #000; padding:5px 6px;">NAMA</th>
-                <th style="border:1px solid #000; padding:5px 6px;">TEMPAT / TANGGAL LAHIR</th>
-                <th style="border:1px solid #000; padding:5px 6px;">PEKERJAAN</th>
-                <th style="border:1px solid #000; padding:5px 6px;">ALAMAT</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tableRows.join('')}
-            </tbody>
-          </table>
-        </div>`
+    const daftar = anakList.length
+      ? `<div class="aw-children">${anakList.join('')}</div>`
       : '';
     const ttdBlock = ttdRows.length
       ? `<div class="aw-ttd-para">Para Ahli Waris,</div>
