@@ -243,7 +243,7 @@
     try { return JSON.parse(String(v)); } catch (_) { return null; }
   }
 
-  // ===== CETAK LAPORAN REKAPITULASI KEUANGAN & KAS DESA =====
+  // ===== CETAK LAPORAN REKAPITULASI KEUANGAN & KAS DESA (HEMAT TINTA & ALAMAT) =====
   function cetakLaporanKeuangan() {
     if (!keuState || !keuState.length) {
       alert('Belum ada data transaksi keuangan yang dapat dicetak.');
@@ -289,36 +289,47 @@
 
       const tgl = fmtTglDate(t.tanggal) || '-';
 
+      // Lookup Nama Pemohon & Alamat dari Supabase permohonan_surat_tanah
       let namaPemohon = '';
-      if (t.nama_pemohon) {
-        namaPemohon = t.nama_pemohon;
-      } else if (t.permohonan_surat_tanah) {
+      let alamatPemohon = '';
+
+      if (t.nama_pemohon) namaPemohon = t.nama_pemohon;
+      if (t.alamat) alamatPemohon = t.alamat;
+
+      if (t.permohonan_surat_tanah) {
         if (typeof t.permohonan_surat_tanah === 'object') {
-          namaPemohon = t.permohonan_surat_tanah.nama || t.permohonan_surat_tanah.nama_pemohon || '';
+          if (!namaPemohon) namaPemohon = t.permohonan_surat_tanah.nama || t.permohonan_surat_tanah.nama_pemohon || '';
+          if (!alamatPemohon) alamatPemohon = t.permohonan_surat_tanah.alamat || t.permohonan_surat_tanah.alamat_tanah || (t.permohonan_surat_tanah.dusun ? `Dusun ${t.permohonan_surat_tanah.dusun}` : '');
         } else if (typeof t.permohonan_surat_tanah === 'string') {
-          namaPemohon = t.permohonan_surat_tanah;
+          if (!namaPemohon) namaPemohon = t.permohonan_surat_tanah;
         }
       }
 
-      if (!namaPemohon && t.id_permohonan && state.data && Array.isArray(state.data)) {
+      if ((!namaPemohon || !alamatPemohon) && t.id_permohonan && state.data && Array.isArray(state.data)) {
         const p = state.data.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
-        if (p) namaPemohon = p.nama_pemohon || p.nama || p.id_pendaftaran || '';
+        if (p) {
+          if (!namaPemohon) namaPemohon = p.nama_pemohon || p.nama || p.id_pendaftaran || '';
+          if (!alamatPemohon) alamatPemohon = p.alamat || p.alamat_tanah || (p.dusun ? `Dusun ${p.dusun}, Batetangnga` : '');
+        }
       }
+
+      if (!alamatPemohon) alamatPemohon = 'Desa Batetangnga';
 
       const idReg = t.id_permohonan || t.id_pendaftaran || '';
       let subjek = '-';
       if (namaPemohon && namaPemohon !== '-') {
-        subjek = `<b>${escFill(namaPemohon)}</b>${idReg ? `<br><span style="color:#666; font-size:8pt;">(${escFill(idReg)})</span>` : ''}`;
+        subjek = `<b>${escFill(namaPemohon)}</b>${idReg ? `<br><span style="color:#444; font-size:8pt;">(${escFill(idReg)})</span>` : ''}`;
       } else if (idReg) {
         subjek = `<b>${escFill(idReg)}</b>`;
       }
 
+      // Eco Ink-Saving Badge
       const badgeJenis = isMasuk 
-        ? `<span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:3px 8px; border-radius:4px; font-weight:800; font-size:8.5pt; display:inline-block;">PEMASUKAN</span>`
-        : `<span style="background:#ffebee; color:#b71c1c; border:1px solid #ef9a9a; padding:3px 8px; border-radius:4px; font-weight:800; font-size:8.5pt; display:inline-block;">PENGELUARAN</span>`;
+        ? `<span style="border:1px solid #1b5e20; color:#1b5e20; padding:1px 5px; font-weight:bold; font-size:8pt;">PEMASUKAN</span>`
+        : `<span style="border:1px solid #b71c1c; color:#b71c1c; padding:1px 5px; font-weight:bold; font-size:8pt;">PENGELUARAN</span>`;
 
-      const masukStr = isMasuk ? `<strong style="color:#1b5e20;">+ ${formatRp(nom)}</strong>` : '-';
-      const keluarStr = !isMasuk ? `<strong style="color:#b71c1c;">- ${formatRp(nom)}</strong>` : '-';
+      const masukStr = isMasuk ? `+ ${formatRp(nom)}` : '-';
+      const keluarStr = !isMasuk ? `- ${formatRp(nom)}` : '-';
 
       return `
         <tr>
@@ -326,9 +337,10 @@
           <td style="text-align:center;">${tgl}</td>
           <td style="text-align:center;">${badgeJenis}</td>
           <td>${subjek}</td>
+          <td>${escFill(alamatPemohon)}</td>
           <td>${escBr(t.keterangan || '-')}</td>
-          <td class="num-col" style="background:${isMasuk ? '#f1f8e9' : 'transparent'};">${masukStr}</td>
-          <td class="num-col" style="background:${!isMasuk ? '#fff5f5' : 'transparent'};">${keluarStr}</td>
+          <td class="num-col">${masukStr}</td>
+          <td class="num-col">${keluarStr}</td>
         </tr>
       `;
     }).join('');
@@ -342,39 +354,36 @@
   <meta charset="UTF-8">
   <title>Laporan Keuangan Kas Desa Batetangnga</title>
   <style>
-    @page { size: 8.5in 13in portrait; margin: 1cm 1.5cm; }
-    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #111; margin: 0; padding: 10px; }
-    .kop-wrap { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px; }
-    .kop-logo { width: 55px; height: 55px; object-fit: contain; }
+    @page { size: 8.5in 13in portrait; margin: 0.8cm 1.2cm; }
+    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 9.5pt; color: #000; background: #fff; margin: 0; padding: 10px; }
+    .kop-wrap { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 12px; }
+    .kop-logo { width: 50px; height: 50px; object-fit: contain; }
     .kop-text { text-align: center; flex: 1; margin: 0 10px; }
-    .kop-text h4 { margin: 0; font-size: 10pt; text-transform: uppercase; font-weight: 700; }
-    .kop-text h3 { margin: 2px 0; font-size: 11.5pt; text-transform: uppercase; font-weight: 800; color: #2E7D32; }
-    .kop-text p { margin: 0; font-size: 8.5pt; font-style: italic; color: #333; }
+    .kop-text h4 { margin: 0; font-size: 9.5pt; text-transform: uppercase; font-weight: 700; }
+    .kop-text h3 { margin: 2px 0; font-size: 11pt; text-transform: uppercase; font-weight: 800; }
+    .kop-text p { margin: 0; font-size: 8.5pt; font-style: italic; }
     
-    .doc-head { text-align: center; margin: 14px 0 16px 0; }
-    .doc-head h2 { margin: 0; font-size: 12pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; color: #E53935; }
-    .doc-head p { margin: 3px 0 0 0; font-size: 9pt; font-weight: 600; color: #444; }
+    .doc-head { text-align: center; margin: 10px 0 14px 0; }
+    .doc-head h2 { margin: 0; font-size: 11.5pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; }
+    .doc-head p { margin: 2px 0 0 0; font-size: 8.5pt; font-weight: 600; }
     
-    .sum-grid { display: flex; gap: 10px; margin-bottom: 16px; }
-    .sum-card { flex: 1; border: 1px solid #000; padding: 8px; border-radius: 6px; text-align: center; }
-    .sum-card.in { background: #e8f5e9; }
-    .sum-card.out { background: #ffebee; }
-    .sum-card.bal { background: #fffde7; }
-    .sum-lbl { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #333; }
-    .sum-val { font-size: 11pt; font-weight: 800; margin-top: 2px; }
+    .sum-grid { display: flex; gap: 8px; margin-bottom: 14px; }
+    .sum-card { flex: 1; border: 1px solid #000; padding: 6px 8px; border-radius: 4px; text-align: center; background: #fff; }
+    .sum-lbl { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; }
+    .sum-val { font-size: 10.5pt; font-weight: 800; margin-top: 2px; }
     
-    table.rpt-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 9pt; }
-    table.rpt-table th { background: #f1f5f9; color: #000; border: 1px solid #000; padding: 6px 4px; text-align: center; font-weight: 700; }
+    table.rpt-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 8.5pt; }
+    table.rpt-table th { background: #fff; color: #000; border: 1px solid #000; padding: 5px 4px; text-align: center; font-weight: 700; text-transform: uppercase; }
     table.rpt-table td { border: 1px solid #000; padding: 5px 6px; vertical-align: top; }
     .num-col { text-align: right; font-weight: 600; white-space: nowrap; }
     
-    .tfoot-total { background: #e2e8f0; font-weight: 800; }
+    .tfoot-total { background: #fff; font-weight: 800; }
     
-    .sig-row { display: flex; justify-content: space-between; margin-top: 28px; page-break-inside: avoid; }
+    .sig-row { display: flex; justify-content: space-between; margin-top: 24px; page-break-inside: avoid; }
     .sig-box { text-align: center; width: 42%; }
-    .sig-date { margin-bottom: 50px; font-size: 9.5pt; }
-    .sig-name { font-weight: 800; text-decoration: underline; font-size: 10pt; }
-    .sig-title { font-size: 9pt; }
+    .sig-date { margin-bottom: 45px; font-size: 9pt; }
+    .sig-name { font-weight: 800; text-decoration: underline; font-size: 9.5pt; }
+    .sig-title { font-size: 8.5pt; }
   </style>
 </head>
 <body>
@@ -395,30 +404,31 @@
   </div>
 
   <div class="sum-grid">
-    <div class="sum-card in">
+    <div class="sum-card">
       <div class="sum-lbl">Total Pemasukan</div>
-      <div class="sum-val" style="color:#2E7D32;">${formatRp(totalPemasukan)}</div>
+      <div class="sum-val">${formatRp(totalPemasukan)}</div>
     </div>
-    <div class="sum-card out">
+    <div class="sum-card">
       <div class="sum-lbl">Total Pengeluaran</div>
-      <div class="sum-val" style="color:#c62828;">${formatRp(totalPengeluaran)}</div>
+      <div class="sum-val">${formatRp(totalPengeluaran)}</div>
     </div>
-    <div class="sum-card bal">
+    <div class="sum-card">
       <div class="sum-lbl">Saldo Akhir Kas</div>
-      <div class="sum-val" style="color:#1b5e20;">${formatRp(saldoAkhir)}</div>
+      <div class="sum-val">${formatRp(saldoAkhir)}</div>
     </div>
   </div>
 
   <table class="rpt-table">
     <thead>
       <tr>
-        <th style="width:30px;">NO</th>
-        <th style="width:85px;">TANGGAL</th>
-        <th style="width:110px;">TIPE / JENIS</th>
-        <th style="width:150px;">PEMOHON / SUBJEK</th>
+        <th style="width:25px;">NO</th>
+        <th style="width:75px;">TANGGAL</th>
+        <th style="width:95px;">JENIS</th>
+        <th style="width:130px;">PEMOHON (SUBJEK)</th>
+        <th style="width:130px;">ALAMAT</th>
         <th>KETERANGAN TRANSAKSI</th>
-        <th style="width:110px;">PEMASUKAN (Rp)</th>
-        <th style="width:110px;">PENGELUARAN (Rp)</th>
+        <th style="width:105px;">PEMASUKAN (Rp)</th>
+        <th style="width:105px;">PENGELUARAN (Rp)</th>
       </tr>
     </thead>
     <tbody>
@@ -426,13 +436,13 @@
     </tbody>
     <tfoot>
       <tr class="tfoot-total">
-        <td colspan="5" style="text-align:right; padding:6px 8px;">TOTAL REKAPITULASI :</td>
-        <td class="num-col" style="color:#2E7D32;">${formatRp(totalPemasukan)}</td>
-        <td class="num-col" style="color:#c62828;">${formatRp(totalPengeluaran)}</td>
+        <td colspan="6" style="text-align:right; padding:5px 8px;">TOTAL REKAPITULASI :</td>
+        <td class="num-col">${formatRp(totalPemasukan)}</td>
+        <td class="num-col">${formatRp(totalPengeluaran)}</td>
       </tr>
-      <tr class="tfoot-total" style="background:#fef08a;">
-        <td colspan="5" style="text-align:right; padding:6px 8px;">SALDO AKHIR KAS BERSIH :</td>
-        <td colspan="2" class="num-col" style="text-align:center; color:#1b5e20; font-size:10.5pt;">${formatRp(saldoAkhir)}</td>
+      <tr class="tfoot-total">
+        <td colspan="6" style="text-align:right; padding:5px 8px;">SALDO AKHIR KAS BERSIH :</td>
+        <td colspan="2" class="num-col" style="text-align:center; font-size:10pt;">${formatRp(saldoAkhir)}</td>
       </tr>
     </tfoot>
   </table>
@@ -464,6 +474,8 @@
       alert('Pop-up terblokir oleh browser. Harap izinkan pop-up untuk mencetak laporan.');
     }
   }
+
+  window.cetakLaporanKeuangan = cetakLaporanKeuangan;
 
   // ===== HELPER TERBILANG BAHASA INDONESIA UNTUK KWITANSI =====
   function terbilang(n) {
