@@ -4006,11 +4006,12 @@ hideChangePwMsg();
       saksi2_nama: upper(raw.saksi2_nama || '')
     };
     for (let i = 1; i <= 20; i++) {
-      out['anak_' + i + '_nama'] = upper(raw['anak_' + i + '_nama'] || '');
-      out['anak_' + i + '_tempat_lahir'] = raw['anak_' + i + '_tempat_lahir'] || '';
-      out['anak_' + i + '_tanggal_lahir'] = raw['anak_' + i + '_tanggal_lahir'] || '';
-      out['anak_' + i + '_pekerjaan'] = raw['anak_' + i + '_pekerjaan'] || '';
-      out['anak_' + i + '_alamat'] = raw['anak_' + i + '_alamat'] || '';
+      out['anak_' + i + '_nama'] = upper(raw['anak_' + i + '_nama'] || raw['anak' + i + '_nama'] || raw['nama_anak_' + i] || raw['anak' + i] || '');
+      out['anak_' + i + '_tempat_lahir'] = raw['anak_' + i + '_tempat_lahir'] || raw['anak' + i + '_tempat_lahir'] || raw['tempat_lahir_anak_' + i] || '';
+      out['anak_' + i + '_tanggal_lahir'] = raw['anak_' + i + '_tanggal_lahir'] || raw['anak' + i + '_tanggal_lahir'] || raw['tanggal_lahir_anak_' + i] || '';
+      out['anak_' + i + '_umur'] = raw['anak_' + i + '_umur'] || raw['anak' + i + '_umur'] || raw['umur_anak_' + i] || '';
+      out['anak_' + i + '_pekerjaan'] = raw['anak_' + i + '_pekerjaan'] || raw['anak' + i + '_pekerjaan'] || raw['pekerjaan_anak_' + i] || '';
+      out['anak_' + i + '_alamat'] = raw['anak_' + i + '_alamat'] || raw['anak' + i + '_alamat'] || raw['alamat_anak_' + i] || '';
     }
     return out;
   }
@@ -4291,15 +4292,15 @@ hideChangePwMsg();
       if (!nm && !ttl && !pek && !alm) continue;
       anakList.push(`
         <div class="aw-anak">
-          <div class="aw-anak-line"><span class="aw-no">${i}.</span><span class="aw-lbl">Nama</span> : <b>${escFill(nm)}</b></div>
-          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">${lblTtl}</span> : ${escFill(ttl)}</div>
-          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Pekerjaan</span> : ${escFill(pek)}</div>
-          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Alamat</span> : ${escBr(alm)}</div>
+          <div class="aw-anak-line"><span class="aw-no">${i}.</span><span class="aw-lbl">Nama</span> : <b>${escFill(nm) || '..............................'}</b></div>
+          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">${lblTtl}</span> : ${escFill(ttl) || '..............................'}</div>
+          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Pekerjaan</span> : ${escFill(pek) || '..............................'}</div>
+          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Alamat</span> : ${escBr(alm) || '..............................'}</div>
         </div>`);
-      if (nm) {
+      if (nm || ttl || pek || alm) {
         ttdRows.push(`
           <div class="aw-ttd-row">
-            <span class="aw-ttd-name">${i}. <b>${escFill(nm)}</b></span>
+            <span class="aw-ttd-name">${i}. <b>${escFill(nm) || '..............................'}</b></span>
             <span class="aw-ttd-dots">( ............................ )</span>
           </div>`);
       }
