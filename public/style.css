@@ -860,15 +860,13 @@ dialog::backdrop {
 /* Daftar ahli waris — BUKAN tabel: 2 kolom kiri-kanan (1,2 sejajar; 3 di bawah 1, dst).
    min-width:0 + overflow-wrap agar teks panjang tidak pernah keluar jalur kolom. */
 .surat-aw .aw-anak-list {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 28px;
-  row-gap: 8px;
-  align-items: start;
-  margin: 6px 0;
+  display: block !important;
+  margin: 8px 0;
   min-width: 0;
 }
-.surat-aw .aw-anak-list .aw-anak { margin: 0; }
+.surat-aw .aw-anak-list .aw-anak {
+  margin-bottom: 8px !important;
+}
 .surat-aw .aw-anak {
   min-width: 0;
   line-height: 1.4;
@@ -2823,14 +2821,22 @@ body, main, .main-card, .workspace-card {
   color: #111827 !important;
 }
 
-/* 4. Table Header Red Contrast (#E53935) */
-table thead th, .table-master thead th, #dataTable thead th, #keuTable thead th {
+/* 4. Table Header Red Contrast (#E53935) - Exclude Letter Preview & Print Sheets */
+.table-master thead th, #dataTable thead th, #keuTable thead th, .main-card table thead th {
   background-color: #E53935 !important;
   background-image: none !important;
   color: #FFFFFF !important;
   font-weight: 800 !important;
   letter-spacing: 0.3px !important;
   padding: 12px 14px !important;
+}
+
+.surat-sheet table thead th,
+.surat-sheet th,
+.rpt-table thead th,
+.aw-table thead th {
+  background-color: #ffffff !important;
+  color: #000000 !important;
 }
 
 /* 5. Responsive Canvas & Charts */
