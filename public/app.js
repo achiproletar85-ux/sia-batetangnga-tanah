@@ -4278,35 +4278,21 @@ hideChangePwMsg();
     b.className = 'surat-sheet surat-aw';
 
     const n = Math.max(0, Math.min(20, parseInt(String(f.jumlah_anak || '0').replace(/\D/g, ''), 10) || 0));
-    const tableRows = [];
     const anakList = [];
     const ttdRows = [];
     for (let i = 1; i <= n; i++) {
       const nm = f['anak_' + i + '_nama'];
-      const tmpl = f['anak_' + i + '_tempat_lahir'] || '';
-      const tgl = fmtTglDate(f['anak_' + i + '_tanggal_lahir']);
-      const ttl = (tmpl && tgl) ? `${tmpl}, ${tgl}` : (tmpl || tgl || fmtUmur(f['anak_' + i + '_umur']));
+      const umur = fmtUmur(umurFromTgl(f['anak_' + i + '_tanggal_lahir']));
       const pek = f['anak_' + i + '_pekerjaan'];
       const alm = f['anak_' + i + '_alamat'];
-      if (!nm && !ttl && !pek && !alm) continue;
-
+      if (!nm && !umur && !pek && !alm) continue;
       anakList.push(`
         <div class="aw-anak">
           <div class="aw-anak-line"><span class="aw-no">${i}.</span><span class="aw-lbl">Nama</span> : <b>${escFill(nm)}</b></div>
-          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">TTL/Umur</span> : ${escFill(ttl)}</div>
+          <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Umur</span> : ${escFill(umur)}</div>
           <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Pekerjaan</span> : ${escFill(pek)}</div>
           <div class="aw-anak-sub"><span class="aw-no"></span><span class="aw-lbl">Alamat</span> : ${escBr(alm)}</div>
         </div>`);
-
-      tableRows.push(`
-        <tr>
-          <td style="text-align:center; font-weight:600;">${i}</td>
-          <td><b>${escFill(nm)}</b></td>
-          <td>${escFill(ttl)}</td>
-          <td>${escFill(pek)}</td>
-          <td>${escBr(alm)}</td>
-        </tr>`);
-
       if (nm) {
         ttdRows.push(`
           <div class="aw-ttd-row">
@@ -4316,7 +4302,7 @@ hideChangePwMsg();
       }
     }
     const daftar = anakList.length
-      ? `<div class="aw-children">${anakList.join('')}</div>`
+      ? `<div class="aw-anak-list">${anakList.join('')}</div>`
       : '';
     const ttdBlock = ttdRows.length
       ? `<div class="aw-ttd-para">Para Ahli Waris,</div>
