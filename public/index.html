@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=95" />
+  <link rel="stylesheet" href="style.css?v=99" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) { window.lucide.createIcons(); } });</script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -31,7 +31,7 @@
           <span id="connStatus" class="badge">⏳ Menghubungkan…</span>
           <span id="countBadge" class="badge">0 baris</span>
           <span id="spSummary" class="badge"></span>
-          <span id="appVersion" class="badge" title="Versi aplikasi yang sedang berjalan">v95</span>
+          <span id="appVersion" class="badge" title="Versi aplikasi yang sedang berjalan">v99</span>
         </div>
         <span id="tbTitle" class="tb-title auth-data">Dashboard</span>
         <input id="topSearch" type="search" class="tb-search auth-data" placeholder="Cari di tab aktif…" autocomplete="off" />
@@ -606,99 +606,6 @@
     </form>
   </dialog>
 
-  <!-- Floating Action Menu (Field Tools Lapangan Sensus Ekonomi 2026 Style) -->
-  <div class="fab-container print-hide">
-    <div id="fabMenu" class="fab-menu" hidden>
-      <button type="button" class="fab-item" onclick="fieldToolGPS()" title="Geotagging / Lokasi GPS">
-        <i data-lucide="map-pin" style="width:16px; height:16px; color:#ea580c;"></i> <span>Lokasi GPS</span>
-      </button>
-      <button type="button" class="fab-item" onclick="fieldToolMemo()" title="Catatan Lapangan">
-        <i data-lucide="file-text" style="width:16px; height:16px; color:#ea580c;"></i> <span>Catatan Lapangan</span>
-      </button>
-      <button type="button" class="fab-item" onclick="fieldToolCalc()" title="Kalkulator Hitung Cepat">
-        <i data-lucide="calculator" style="width:16px; height:16px; color:#ea580c;"></i> <span>Kalkulator</span>
-      </button>
-    </div>
-    <button type="button" id="btnFabToggle" class="fab-main-btn" title="Alat Bantu Lapangan (Field Tools)">
-      <i data-lucide="wrench" style="width:18px; height:18px;"></i>
-      <span>Tools Lapangan</span>
-    </button>
-  </div>
-
-  <!-- Modal Tool: GPS Geotagging -->
-  <dialog id="gpsModal" class="card-modal" style="max-width:440px; width:92vw;">
-    <div class="modal-head">
-      <h2 style="font-size:16px; font-weight:700;">📍 Geotagging / Lokasi GPS</h2>
-      <button type="button" onclick="document.getElementById('gpsModal').close()" class="btn-ghost" title="Tutup Modal">✕</button>
-    </div>
-    <div style="padding:16px;">
-      <p style="font-size:13px; color:var(--muted); margin:0 0 12px 0;">Ambil titik koordinat GPS posisi tanah / pemohon secara presisi:</p>
-      <div id="gpsStatus" style="padding:12px; background:var(--panel2); border:1px solid var(--border); border-radius:10px; font-size:13px; font-weight:600; font-family:monospace; margin-bottom:14px; word-break:break-all;">
-        Klik tombol "Dapatkan Koordinat" untuk mulai...
-      </div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button type="button" onclick="getGPSLocation()" class="btn primary" style="display:flex; align-items:center; gap:6px;">
-          <i data-lucide="crosshair" style="width:16px; height:16px;"></i> Dapatkan Koordinat
-        </button>
-        <button type="button" id="btnCopyGps" onclick="copyGPSLocation()" class="btn" style="display:flex; align-items:center; gap:6px;" disabled>
-          <i data-lucide="copy" style="width:16px; height:16px;"></i> Salin Koordinat
-        </button>
-      </div>
-    </div>
-  </dialog>
-
-  <!-- Modal Tool: Catatan Lapangan -->
-  <dialog id="memoModal" class="card-modal" style="max-width:460px; width:92vw;">
-    <div class="modal-head">
-      <h2 style="font-size:16px; font-weight:700;">📝 Catatan Lapangan / Memo</h2>
-      <button type="button" onclick="document.getElementById('memoModal').close()" class="btn-ghost" title="Tutup Modal">✕</button>
-    </div>
-    <div style="padding:16px;">
-      <p style="font-size:13px; color:var(--muted); margin:0 0 8px 0;">Catatan tersimpan otomatis di perangkat Anda:</p>
-      <textarea id="memoInput" rows="7" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:10px; font-size:13px; font-family:inherit; resize:vertical;" placeholder="Ketik catatan survey / info khusus responden..."></textarea>
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
-        <span id="memoSavedHint" style="font-size:12px; color:var(--green); font-weight:600; opacity:0; transition:opacity .3s;">Tersimpan!</span>
-        <button type="button" onclick="saveMemo()" class="btn primary">Simpan Catatan</button>
-      </div>
-    </div>
-  </dialog>
-
-  <!-- Modal Tool: Kalkulator -->
-  <dialog id="calcModal" class="card-modal" style="max-width:340px; width:90vw;">
-    <div class="modal-head">
-      <h2 style="font-size:16px; font-weight:700;">🧮 Kalkulator Lapangan</h2>
-      <button type="button" onclick="document.getElementById('calcModal').close()" class="btn-ghost" title="Tutup Modal">✕</button>
-    </div>
-    <div style="padding:16px;">
-      <div id="calcDisplay" style="background:#0f172a; color:#f8fafc; font-family:monospace; font-size:22px; font-weight:700; text-align:right; padding:12px 16px; border-radius:10px; margin-bottom:14px; min-height:48px; word-break:break-all;">0</div>
-      <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;">
-        <button type="button" onclick="calcInput('C')" class="btn danger" style="font-weight:700;">C</button>
-        <button type="button" onclick="calcInput('(')" class="btn">(</button>
-        <button type="button" onclick="calcInput(')')" class="btn">)</button>
-        <button type="button" onclick="calcInput('/')" class="btn primary" style="font-weight:700;">÷</button>
-        
-        <button type="button" onclick="calcInput('7')" class="btn">7</button>
-        <button type="button" onclick="calcInput('8')" class="btn">8</button>
-        <button type="button" onclick="calcInput('9')" class="btn">9</button>
-        <button type="button" onclick="calcInput('*')" class="btn primary" style="font-weight:700;">×</button>
-        
-        <button type="button" onclick="calcInput('4')" class="btn">4</button>
-        <button type="button" onclick="calcInput('5')" class="btn">5</button>
-        <button type="button" onclick="calcInput('6')" class="btn">6</button>
-        <button type="button" onclick="calcInput('-')" class="btn primary" style="font-weight:700;">-</button>
-        
-        <button type="button" onclick="calcInput('1')" class="btn">1</button>
-        <button type="button" onclick="calcInput('2')" class="btn">2</button>
-        <button type="button" onclick="calcInput('3')" class="btn">3</button>
-        <button type="button" onclick="calcInput('+')" class="btn primary" style="font-weight:700;">+</button>
-        
-        <button type="button" onclick="calcInput('0')" class="btn" style="grid-column:span 2;">0</button>
-        <button type="button" onclick="calcInput('.')" class="btn">.</button>
-        <button type="button" onclick="calcEval()" class="btn primary" style="background:var(--green); font-weight:700; color:#fff;">=</button>
-      </div>
-    </div>
-  </dialog>
-
-  <script src="app.js?v=95"></script>
+  <script src="app.js?v=99"></script>
 </body>
 </html>

@@ -2,6 +2,7 @@
   let allData = [];
   let uploads = [];
   let keuState = [];
+  let payStatus = {};
   let pemohonCache = [];
   let currentEditId = null;
   let currentEditLayanan = 'HIBAH';
@@ -251,12 +252,17 @@
     const searchVal = String($('keuSearchInput') ? $('keuSearchInput').value : '').trim().toLowerCase();
     let rows = keuState;
     if (searchVal) {
-      rows = keuState.filter(t => 
-        String(t.keterangan || '').toLowerCase().includes(searchVal) ||
-        String(t.id_pendaftaran || '').toLowerCase().includes(searchVal) ||
-        String(t.jenis || '').toLowerCase().includes(searchVal) ||
-        String(t.nama_pemohon || '').toLowerCase().includes(searchVal)
-      );
+      rows = keuState.filter(t => {
+        const jenisStr = String(t.jenis_transaksi || t.jenis || t.tipe || '').toLowerCase();
+        const pNama = t.permohonan_surat_tanah ? String(t.permohonan_surat_tanah.nama || '').toLowerCase() : '';
+        return (
+          String(t.keterangan || '').toLowerCase().includes(searchVal) ||
+          String(t.id_pendaftaran || t.id_permohonan || '').toLowerCase().includes(searchVal) ||
+          jenisStr.includes(searchVal) ||
+          String(t.nama_pemohon || '').toLowerCase().includes(searchVal) ||
+          pNama.includes(searchVal)
+        );
+      });
     }
 
     if (!rows.length) {
@@ -270,25 +276,61 @@
     let totalPengeluaran = 0;
 
     const tableTrs = sorted.map((t, idx) => {
-      const isMasuk = String(t.jenis || '').toLowerCase().includes('pemasukan');
-      const nom = Number(t.nominal || 0);
-      if (isMasuk) totalPemasukan += nom;
-      else totalPengeluaran += nom;
+      // 1. Perhitungan jenis transaksi yang akurat
+      const jenisStr = String(t.jenis_transaksi || t.jenis || t.tipe || '').trim();
+      const isMasuk = jenisStr.toLowerCase().includes('pemasukan');
+      const nom = Math.abs(Number(t.nominal || 0));
+      
+      if (isMasuk) {
+        totalPemasukan += nom;
+      } else {
+        totalPengeluaran += nom;
+      }
 
       const tgl = fmtTglDate(t.tanggal) || '-';
-      const subjek = t.nama_pemohon ? `<b>${escFill(t.nama_pemohon)}</b> (${escFill(t.id_pendaftaran)})` : (t.id_pendaftaran ? escFill(t.id_pendaftaran) : '-');
-      const masukStr = isMasuk ? formatRp(nom) : '-';
-      const keluarStr = !isMasuk ? formatRp(nom) : '-';
+
+      // 2. Isi Nama Pemohon dari Supabase permohonan_surat_tanah
+      let namaPemohon = '';
+      if (t.nama_pemohon) {
+        namaPemohon = t.nama_pemohon;
+      } else if (t.permohonan_surat_tanah) {
+        if (typeof t.permohonan_surat_tanah === 'object') {
+          namaPemohon = t.permohonan_surat_tanah.nama || t.permohonan_surat_tanah.nama_pemohon || '';
+        } else if (typeof t.permohonan_surat_tanah === 'string') {
+          namaPemohon = t.permohonan_surat_tanah;
+        }
+      }
+
+      if (!namaPemohon && t.id_permohonan && state.data && Array.isArray(state.data)) {
+        const p = state.data.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
+        if (p) namaPemohon = p.nama_pemohon || p.nama || p.id_pendaftaran || '';
+      }
+
+      const idReg = t.id_permohonan || t.id_pendaftaran || '';
+      let subjek = '-';
+      if (namaPemohon && namaPemohon !== '-') {
+        subjek = `<b>${escFill(namaPemohon)}</b>${idReg ? `<br><span style="color:#666; font-size:8pt;">(${escFill(idReg)})</span>` : ''}`;
+      } else if (idReg) {
+        subjek = `<b>${escFill(idReg)}</b>`;
+      }
+
+      // 3. Bedakan Pemasukan & Pengeluaran dengan Badge Warna & Kolom Rp
+      const badgeJenis = isMasuk 
+        ? `<span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:3px 8px; border-radius:4px; font-weight:800; font-size:8.5pt; display:inline-block;">PEMASUKAN</span>`
+        : `<span style="background:#ffebee; color:#b71c1c; border:1px solid #ef9a9a; padding:3px 8px; border-radius:4px; font-weight:800; font-size:8.5pt; display:inline-block;">PENGELUARAN</span>`;
+
+      const masukStr = isMasuk ? `<strong style="color:#1b5e20;">+ ${formatRp(nom)}</strong>` : '-';
+      const keluarStr = !isMasuk ? `<strong style="color:#b71c1c;">- ${formatRp(nom)}</strong>` : '-';
 
       return `
         <tr>
           <td style="text-align:center; font-weight:600;">${idx + 1}</td>
           <td style="text-align:center;">${tgl}</td>
-          <td><span class="${isMasuk ? 'type-in' : 'type-out'}">${escFill(t.jenis || 'Transaksi')}</span></td>
+          <td style="text-align:center;">${badgeJenis}</td>
           <td>${subjek}</td>
           <td>${escBr(t.keterangan || '-')}</td>
-          <td class="num-col" style="color:#2E7D32;">${masukStr}</td>
-          <td class="num-col" style="color:#c62828;">${keluarStr}</td>
+          <td class="num-col" style="background:${isMasuk ? '#f1f8e9' : 'transparent'};">${masukStr}</td>
+          <td class="num-col" style="background:${!isMasuk ? '#fff5f5' : 'transparent'};">${keluarStr}</td>
         </tr>
       `;
     }).join('');
@@ -346,7 +388,7 @@
       <h4>PEMERINTAH KABUPATEN POLEWALI MANDAR</h4>
       <h4>KECAMATAN BINUANG</h4>
       <h3>DESA BATETANGNGA</h3>
-      <p>Alamat: Jl. Poros Batetangnga No. 01, Desa Batetangnga, Kec. Binuang, Polman</p>
+      <p>Alamat: Jl. Tanai Kanang, Desa Batetangnga, Kec. Binuang, Polman</p>
     </div>
     <img src="logo.bmp" class="kop-logo" alt="Logo Polman">
   </div>
@@ -1144,15 +1186,17 @@ hideChangePwMsg();
   async function loadData() {
     busyBtn($('btnRefresh'), true, 'Memuat…');
     try {
-      const [resD, resU] = await Promise.all([
+      const [resD, resU, resP] = await Promise.all([
         fetch('/api/permohonan'),
-        fetch('/api/uploads')
+        fetch('/api/uploads'),
+        fetch('/api/keuangan/status-semua')
       ]);
-      const [jsonD, jsonU] = await Promise.all([resD.json(), resU.json()]);
+      const [jsonD, jsonU, jsonP] = await Promise.all([resD.json(), resU.json(), resP.json()]);
       if (!jsonD.success) throw new Error(jsonD.error || 'Gagal memuat daftar');
       if (!jsonU.success) throw new Error(jsonU.error || 'Gagal memuat uploads');
       allData = jsonD.data || [];
       uploads = jsonU.data || [];
+      payStatus = (jsonP && jsonP.success && jsonP.data) ? jsonP.data : {};
       countBadge.textContent = allData.length + ' pendaftaran, ' + uploads.length + ' upload';
       setConn(true, '✅ Terhubung ke Supabase');
       buildCache();
@@ -1576,10 +1620,19 @@ hideChangePwMsg();
   }
 
   // Tabulasi silang 2 arah: {keysA, keysB, grid}.
+  // Status pembayaran diambil DARI DATA KEUANGAN (transaksi_keuangan), bukan dari
+  // kolom `pembayaran` spreadsheet. Hasil endpoint /api/keuangan/status-semua
+  // dihitung server dari Pemasukan Cicilan dibanding biaya_total_sertifikat.
+  function payLabel(r) {
+    const st = payStatus[r.id];
+    if (st) return st.status;
+    return 'BELUM BAYAR';
+  }
+
   function cross2(keyA, keyB) {
     const mk = (r) => ({
       a: (r[keyA] === null || r[keyA] === undefined || r[keyA] === '') ? '(kosong)' : String(r[keyA]),
-      b: (r[keyB] === null || r[keyB] === undefined || r[keyB] === '') ? '(kosong)' : String(r[keyB])
+      b: (typeof keyB === 'function' ? keyB(r) : (r[keyB] === null || r[keyB] === undefined || r[keyB] === '') ? '(kosong)' : String(r[keyB]))
     });
     const keysA = [...new Set(allData.map(mk).map((x) => x.a))].sort();
     const keysB = [...new Set(allData.map(mk).map((x) => x.b))].sort();
@@ -1599,7 +1652,7 @@ hideChangePwMsg();
     $('t2' + elId).innerHTML = `
       <table class="dt c2">
         <thead>
-          <tr><th>${esc(keyA)} ↓ / ${esc(keyB)} →</th>
+          <tr><th>${esc(keyA)} ↓ / ${esc(typeof keyB === 'function' ? 'pembayaran' : keyB)} →</th>
           ${keysB.map((b) => `<th>${esc(b)}</th>`).join('')}<th>Total</th></tr>
         </thead>
         <tbody>
@@ -1617,7 +1670,7 @@ hideChangePwMsg();
   function cross3(elId) {
     const set3 = (r) => {
       const g = (k) => (r[k] === null || r[k] === undefined || r[k] === '') ? '(kosong)' : String(r[k]);
-      return { a: g('layanan'), b: g('status_berkas'), c: g('pembayaran') };
+      return { a: g('layanan'), b: g('status_berkas'), c: payLabel(r) };
     };
     const dim = [...new Set(allData.map(set3).map((x) => x.a))].sort();
     const cols = [...new Set(allData.map(set3).map((x) => x.b))].sort();
@@ -1779,7 +1832,7 @@ hideChangePwMsg();
 
     const fLay = freq(allData.map((r) => r.layanan));
     const fSta = freq(allData.map((r) => r.status_berkas));
-    const fBay = freq(allData.map((r) => r.pembayaran));
+    const fBay = freq(allData.map((r) => payLabel(r)));
     const fTan = freq(rowsCache.map((c) => c.info.jenis_tanah || c.info.luas_tanah || ''));
 
     // Grafik batang.
@@ -1815,7 +1868,7 @@ hideChangePwMsg();
 
     // Tabel 2 arah (tabulasi silang).
     cross2Table('LayananStatus', 'layanan', 'status_berkas');
-    cross2Table('LayananBayar', 'layanan', 'pembayaran');
+    cross2Table('LayananBayar', 'layanan', payLabel);
 
     // Tabel 3 arah.
     cross3('LayananStatusBayar');
@@ -4879,124 +4932,6 @@ hideChangePwMsg();
   })();
 
   window.$ = $;
-
-  // ===== FIELD TOOLS (FAB MENU) — SENSUS EKONOMI / SURVEY APP TOOLS =====
-  window.closeGpsModal = function() {
-    const m = document.getElementById('gpsModal');
-    if (m && typeof m.close === 'function') m.close();
-  };
-
-  window.closeMemoModal = function() {
-    const m = document.getElementById('memoModal');
-    if (m && typeof m.close === 'function') m.close();
-  };
-
-  window.closeCalcModal = function() {
-    const m = document.getElementById('calcModal');
-    if (m && typeof m.close === 'function') m.close();
-  };
-
-  window.fieldToolGPS = function() {
-    const fab = $('fabMenu');
-    if (fab) fab.hidden = true;
-    const modal = $('gpsModal');
-    if (modal) modal.showModal();
-  };
-
-  window.fieldToolMemo = function() {
-    const fab = $('fabMenu');
-    if (fab) fab.hidden = true;
-    const memo = $('memoInput');
-    if (memo) memo.value = localStorage.getItem('sia_catatan_lapangan') || '';
-    const modal = $('memoModal');
-    if (modal) modal.showModal();
-  };
-
-  window.fieldToolCalc = function() {
-    const fab = $('fabMenu');
-    if (fab) fab.hidden = true;
-    const modal = $('calcModal');
-    if (modal) modal.showModal();
-  };
-
-  window.getGPSLocation = function() {
-    const st = $('gpsStatus');
-    const copyBtn = $('btnCopyGps');
-    if (!navigator.geolocation) {
-      if (st) st.textContent = '❌ Fitur GPS tidak didukung di browser ini.';
-      return;
-    }
-    if (st) st.textContent = '⏳ Mengambil titik koordinat GPS...';
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude.toFixed(6);
-        const lng = pos.coords.longitude.toFixed(6);
-        const acc = pos.coords.accuracy ? pos.coords.accuracy.toFixed(1) : 0;
-        const text = `Lat: ${lat}, Lng: ${lng} (Akurasi: ±${acc}m)`;
-        if (st) st.textContent = text;
-        if (copyBtn) copyBtn.disabled = false;
-        window._lastGpsCoord = text;
-      },
-      (err) => {
-        if (st) st.textContent = '⚠️ Gagal mengambil GPS: ' + (err.message || 'Izin ditolak.');
-        if (copyBtn) copyBtn.disabled = true;
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
-
-  window.copyGPSLocation = function() {
-    if (!window._lastGpsCoord) return;
-    navigator.clipboard.writeText(window._lastGpsCoord).then(() => {
-      alert('Koordinat GPS berhasil disalin:\n' + window._lastGpsCoord);
-    }).catch(() => {
-      prompt('Salin koordinat GPS manual:', window._lastGpsCoord);
-    });
-  };
-
-  window.saveMemo = function() {
-    const val = $('memoInput') ? $('memoInput').value : '';
-    localStorage.setItem('sia_catatan_lapangan', val);
-    const hint = $('memoSavedHint');
-    if (hint) {
-      hint.style.opacity = '1';
-      setTimeout(() => { hint.style.opacity = '0'; }, 2000);
-    }
-  };
-
-  let calcExpression = '';
-  window.calcInput = function(val) {
-    const disp = $('calcDisplay');
-    if (val === 'C') {
-      calcExpression = '';
-      if (disp) disp.textContent = '0';
-      return;
-    }
-    calcExpression += val;
-    if (disp) disp.textContent = calcExpression;
-  };
-
-  window.calcEval = function() {
-    const disp = $('calcDisplay');
-    if (!calcExpression) return;
-    try {
-      const cleanExpr = calcExpression.replace(/[^0-9+\-*/.()]/g, '');
-      const res = Function('"use strict"; return (' + cleanExpr + ')')();
-      calcExpression = String(res);
-      if (disp) disp.textContent = calcExpression;
-    } catch (_) {
-      if (disp) disp.textContent = 'Error';
-      calcExpression = '';
-    }
-  };
-
-  const fabToggle = $('btnFabToggle');
-  if (fabToggle) {
-    fabToggle.addEventListener('click', () => {
-      const menu = $('fabMenu');
-      if (menu) menu.hidden = !menu.hidden;
-    });
-  }
 
   setInterval(() => { if (isAuthed) loadData(); }, 30000);
 

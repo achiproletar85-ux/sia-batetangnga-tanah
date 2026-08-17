@@ -638,6 +638,44 @@ app.get('/api/pemohon/:id/keuangan', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/keuangan/status-semua -> Status pembayaran LUNAS/BELUM LUNAS/BELUM BAYAR
+// untuk SEMUA permohonan, dihitung dari transaksi_keuangan (Pemasukan Cicilan)
+// dibandingkan biaya_total_sertifikat. Dipakai dashboard; aman dibuka semua role
+// karena hanya mengembalikan status, bukan nominal detail.
+app.get('/api/keuangan/status-semua', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from(TABLE_TRX)
+      .select('id_permohonan, nominal')
+      .eq('jenis_transaksi', 'Pemasukan Cicilan')
+      .not('id_permohonan', 'is', null);
+
+    if (error) throw error;
+
+    const totals = {};
+    (data || []).forEach((row) => {
+      totals[row.id_permohonan] = (totals[row.id_permohonan] || 0) + row.nominal;
+    });
+
+    const biayaTotalStr = await getPengaturan('biaya_total_sertifikat', '250000');
+    const biayaTotal = parseInt(biayaTotalStr, 10);
+
+    const result = {};
+    Object.keys(totals).forEach((id) => {
+      const totalTerbayar = totals[id];
+      result[id] = {
+        total_terbayar: totalTerbayar,
+        biaya_total: biayaTotal,
+        status: totalTerbayar >= biayaTotal ? 'LUNAS' : (totalTerbayar > 0 ? 'BELUM LUNAS' : 'BELUM BAYAR'),
+      };
+    });
+
+    res.json({ success: true, biaya_total: biayaTotal, data: result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // GET /api/pemohon/:id/tagihan-berkas -> Cek Tagihan & Berkas untuk satu pemohon
 // Gabungan: data permohonan (permohonan_surat_tanah by id) + ringkasan tagihan +
 // riwayat cicilan (transaksi_keuangan) + daftar berkas (permohonan_uploads).
