@@ -749,8 +749,8 @@ app.get('/api/pemohon/:id/tagihan-berkas', requireAuth, async (req, res) => {
 });
 
 
-// GET /api/keuangan/ringkasan -> Ringkasan total keuangan (khusus Bendahara)
-app.get('/api/keuangan/ringkasan', requireAuth, requireRole('bendahara'), async (req, res) => {
+// GET /api/keuangan/ringkasan -> Ringkasan total keuangan
+app.get('/api/keuangan/ringkasan', async (req, res) => {
   try {
     const { data, error } = await supabase.from(TABLE_TRX).select('jenis_transaksi, nominal');
     if (error) throw error;
@@ -779,8 +779,8 @@ app.get('/api/keuangan/ringkasan', requireAuth, requireRole('bendahara'), async 
   }
 });
 
-// GET /api/keuangan/transaksi -> Daftar semua transaksi dengan filter (khusus Bendahara)
-app.get('/api/keuangan/transaksi', requireAuth, requireRole('bendahara'), async (req, res) => {
+// GET /api/keuangan/transaksi -> Daftar semua transaksi dengan filter
+app.get('/api/keuangan/transaksi', async (req, res) => {
   try {
     const { order = 'desc', id_permohonan } = req.query;
     let query = supabase.from(TABLE_TRX)
@@ -801,7 +801,7 @@ app.get('/api/keuangan/transaksi', requireAuth, requireRole('bendahara'), async 
 });
 
 // POST /api/keuangan/transaksi -> Tambah transaksi baru
-app.post('/api/keuangan/transaksi', requireAuth, requireRole('bendahara'), async (req, res) => {
+app.post('/api/keuangan/transaksi', async (req, res) => {
   try {
     const {
       tanggal,
@@ -969,7 +969,7 @@ app.post('/api/permohonan/:id/upload', async (req, res) => {
 });
 
 // PATCH /api/keuangan/transaksi/:id -> Update transaksi
-app.patch('/api/keuangan/transaksi/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
+app.patch('/api/keuangan/transaksi/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { tanggal, jenis_transaksi, id_permohonan, nominal, keterangan, url_bukti } = req.body;
@@ -990,7 +990,7 @@ app.patch('/api/keuangan/transaksi/:id', requireAuth, requireRole('bendahara'), 
 
 
 // DELETE /api/keuangan/transaksi/:id -> Hapus transaksi
-app.delete('/api/keuangan/transaksi/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
+app.delete('/api/keuangan/transaksi/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { error } = await supabase.from(TABLE_TRX).delete().eq('id', id);

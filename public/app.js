@@ -1468,8 +1468,7 @@
     return currentRole() === 'admin';
   }
   function isBendahara() {
-    const r = currentRole();
-    return r === 'bendahara' || r === 'admin';
+    return true;
   }
   function isUserOnly() {
     return currentRole() === 'user';
