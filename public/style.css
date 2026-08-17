@@ -848,13 +848,13 @@ dialog::backdrop {
 .surat-aw .aw-nama { text-align: center; font-size: 13pt; }
 .surat-aw .aw-jus { text-align: justify; text-justify: inter-word; }
 .surat-sheet.surat-aw .aw-tgl { text-align: right; }
-.surat-sheet.surat-aw .aw-sig-block { margin-top: auto; page-break-inside: avoid; break-inside: avoid; }
+.surat-sheet.surat-aw .aw-sig-block { margin-top: 16px; }
 .surat-aw .aw-batas { margin: 6px 0; }
 .surat-aw .aw-batas div { line-height: 1.55; }
 .surat-aw .aw-batas .aw-bt-lbl { display: inline-block; width: 175px; }
 .surat-aw .aw-ttd-para { text-align: center; margin: 12px 0 4px; }
 .surat-aw .aw-ttd-rows { margin: 0; }
-.surat-aw .aw-ttd-row { display: flex; justify-content: space-between; align-items: baseline; line-height: 1.7; margin-bottom: 12px; }
+.surat-aw .aw-ttd-row { display: flex; justify-content: space-between; align-items: baseline; line-height: 1.7; margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
 .surat-aw .aw-ttd-name { white-space: nowrap; }
 .surat-aw .aw-ttd-dots { white-space: nowrap; }
 /* Daftar ahli waris — BUKAN tabel: 2 kolom kiri-kanan (1,2 sejajar; 3 di bawah 1, dst).
@@ -876,16 +876,18 @@ dialog::backdrop {
   line-height: 1.4;
   overflow-wrap: anywhere;
   word-break: break-word;
+  page-break-inside: avoid;
+  break-inside: avoid;
 }
 .surat-aw .aw-anak-line { font-weight: 600; }
 .surat-aw .aw-anak .aw-no { display: inline-block; width: 22px; }
 .surat-aw .aw-anak .aw-lbl { display: inline-block; width: 74px; }
 .surat-aw .aw-anak-sub { display: block; }
-.aw-footer { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: start; margin-top: 14px; }
+.aw-footer { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: start; margin-top: 14px; page-break-inside: avoid; break-inside: avoid; }
 .aw-footer-left { grid-column: 1 / -1; grid-row: 1; text-align: left; line-height: 1.45; }
 .aw-footer-right { grid-column: 2; grid-row: 2; text-align: center; line-height: 1.4; }
 .aw-saksi-title { text-align: center; margin-bottom: 4px; }
-.aw-saksi-space { height: 55px; }
+.aw-saksi-space { height: 48px; }
 .aw-saksi-pair { display: flex; justify-content: space-between; }
 .aw-saksi-satu { text-align: left; }
 .aw-saksi-dua { text-align: right; }
@@ -894,23 +896,21 @@ dialog::backdrop {
 .aw-nomor .aw-lbl2 { display: inline-block; width: 64px; text-align: right; }
 
 /* ===== Ahli Waris: jumlah halaman berbasis jumlah anak =====
-   body.aw-1pg (<= 4 anak): teks & spasi dirapatkan agar isi PASTI muat
-   1 halaman bahkan di kertas A4/Letter (footer otomatis "Halaman 1 dari 1").
-   body.aw-2pg (>= 5 anak): spasi normal, isi mengalir ke 2 halaman
-   (footer otomatis "Halaman 1 dari 2" / "Halaman 2 dari 2"). */
-body.aw-1pg .surat-sheet.surat-aw { font-size: 11.5pt; line-height: 1.22; }
-body.aw-1pg .surat-sheet.surat-aw .surat-p { margin: 3px 0; }
-body.aw-1pg .surat-sheet.surat-aw .surat-head { font-size: 14.5pt; margin-bottom: 8px; line-height: 1.15; }
-body.aw-1pg .surat-sheet.surat-aw .aw-anak-list { margin: 3px 0; row-gap: 3px; column-gap: 22px; }
-body.aw-1pg .surat-sheet.surat-aw .aw-anak { line-height: 1.22; }
-body.aw-1pg .surat-sheet.surat-aw .aw-ttd-para { margin: 6px 0 3px; }
-body.aw-1pg .surat-sheet.surat-aw .aw-sig-block { margin-top: 12px; }
-body.aw-1pg .surat-sheet.surat-aw .aw-footer { margin-top: 8px; }
-body.aw-1pg .surat-sheet.surat-aw .aw-saksi-space { height: 26px; }
-body.aw-1pg .surat-sheet.surat-aw .aw-ttd-space { height: 26px; }
-body.aw-1pg .surat-sheet.surat-aw .aw-ttd-row { line-height: 1.5; margin-bottom: 3px; }
-body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.3; }
-.aw-ttd-space { height: 55px; }
+   body.aw-1pg (<= 4 anak): spasi seimbang pas 1 halaman tanpa ruang kosong menggantung di bawah.
+   body.aw-2pg (>= 5 anak): spasi mengalir alami 2 halaman tanpa kekosongan parah di halaman 1. */
+body.aw-1pg .surat-sheet.surat-aw { font-size: 12pt; line-height: 1.38; }
+body.aw-1pg .surat-sheet.surat-aw .surat-p { margin: 6px 0; }
+body.aw-1pg .surat-sheet.surat-aw .surat-head { font-size: 15.5pt; margin-bottom: 10px; line-height: 1.2; }
+body.aw-1pg .surat-sheet.surat-aw .aw-anak-list { margin: 8px 0 !important; row-gap: 6px !important; column-gap: 30px !important; }
+body.aw-1pg .surat-sheet.surat-aw .aw-anak { line-height: 1.32; }
+body.aw-1pg .surat-sheet.surat-aw .aw-ttd-para { margin: 10px 0 4px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-sig-block { margin-top: auto; }
+body.aw-1pg .surat-sheet.surat-aw .aw-footer { margin-top: 12px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-saksi-space { height: 44px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-ttd-space { height: 44px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-ttd-row { line-height: 1.55; margin-bottom: 8px; }
+body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.4; }
+.aw-ttd-space { height: 48px; }
 
 /* ===== Kontrol manual tanggal & nomor surat (layar saja) ===== */
 .surat-controls {

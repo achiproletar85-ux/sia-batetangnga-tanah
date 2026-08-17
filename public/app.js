@@ -2107,7 +2107,7 @@ hideChangePwMsg();
       tr.innerHTML = `
         <td data-label="Aksi">
           <button class="btn" data-action="view" data-id="${esc(r.id)}">👁 Detail</button>
-          ${isUserOnly() ? '' : `<button class="btn" data-action="edit" data-id="${esc(r.id)}">✏️ Edit</button>`}
+          <button class="btn" data-action="edit" data-id="${esc(r.id)}" style="background:#0284c7; color:#ffffff; font-weight:600;" title="Edit data pendaftaran">✏️ Edit</button>
           ${isUserOnly() ? '' : `<button class="btn danger" data-action="delete" data-id="${esc(r.id)}">🗑 Hapus</button>`}
         </td>
         <td data-label="ID"><strong>${esc(r.id)}</strong> ${upCount ? `<span class="tag status-s" title="${upCount} upload">📎${upCount}</span>` : ''}</td>

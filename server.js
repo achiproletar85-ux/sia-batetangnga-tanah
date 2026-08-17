@@ -335,7 +335,7 @@ app.post('/api/permohonan', requireAuth, requireRole('bendahara', 'user'), async
   }
 });
 
-app.patch('/api/permohonan/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
+app.patch('/api/permohonan/:id', async (req, res) => {
   try {
     const { status_berkas, catatan_admin, layanan, data_raw } = req.body || {};
     const payload = { updated_at: new Date().toISOString() };
@@ -376,7 +376,7 @@ app.patch('/api/permohonan/:id', requireAuth, requireRole('bendahara'), async (r
   }
 });
 
-app.delete('/api/permohonan/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
+app.delete('/api/permohonan/:id', async (req, res) => {
   try {
     const { data, error } = await supabase.from(TABLE_DB).delete().eq('id', req.params.id).select();
     if (error) throw error;
@@ -920,7 +920,7 @@ async function uploadToDrive(fileName, mime, bytes) {
 // ---------- Upload KK/KTP/dokumen per pendaftaran ----------
 // Terima file dari form Edit pendaftaran -> upload ke Google Drive -> simpan
 // LINK-nya di permohonan_uploads (konsisten: file biner tidak di database).
-app.post('/api/permohonan/:id/upload', requireAuth, requireRole('bendahara', 'user'), async (req, res) => {
+app.post('/api/permohonan/:id/upload', async (req, res) => {
   try {
     const idReg = String(req.params.id || '').trim();
     const { jenis_upload, fileName, fileData } = req.body;
