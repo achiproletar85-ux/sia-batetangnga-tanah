@@ -47,6 +47,11 @@
       $('trxPemohonLabel').style.display = e.target.value === 'Pemasukan Cicilan' ? 'block' : 'none';
     });
     $('keuBody').addEventListener('click', (e) => {
+      const delBtn = e.target.closest('[data-del-trx]');
+      if (delBtn) {
+        deleteTrxRow(delBtn.dataset.delTrx);
+        return;
+      }
       const btn = e.target.closest('button[data-id]');
       if (btn) {
         const id = btn.dataset.id;
@@ -54,24 +59,20 @@
         if (trx) openTrxModal(trx);
       }
     });
-    $('btnDeleteTrx').addEventListener('click', async () => {
-      const id = $('trxId').value;
-      if (!id) return;
-      if (!confirm(`Anda yakin ingin menghapus transaksi ${id}?`)) return;
-      busyBtn($('btnDeleteTrx'), true, 'Menghapus…');
-      try {
-        const res = await fetch(`/api/keuangan/transaksi/${id}`, { method: 'DELETE' });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-        closeTrxModal();
-        await Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]);
-        renderKeuanganTable();
-      } catch(e) {
-        alert(`Gagal menghapus: ${e.message}`);
-      } finally {
-        busyBtn($('btnDeleteTrx'), false);
-      }
-    });
+  }
+
+  async function deleteTrxRow(id) {
+    if (!id) return;
+    if (!confirm(`Anda yakin ingin menghapus transaksi ${id}?`)) return;
+    try {
+      const res = await fetch(`/api/keuangan/transaksi/${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal menghapus');
+      await Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]);
+      renderKeuanganTable();
+    } catch(e) {
+      alert(`Gagal menghapus: ${e.message}`);
+    }
   }
 
   async function fetchPemohonList() {
@@ -153,8 +154,8 @@
         <td>${esc(makerName)}</td>
         <td class="num">${formatRp(t.nominal)}</td>
         <td class="wrap">${esc(t.keterangan)}</td>
-        <td>${t.url_bukti ? `<a class="flink" href="${esc(t.url_bukti)}" target="_blank" rel="noopener">🔗 Lihat</a>` : '—'}</td>
-        ${canInput ? `<td><button class="btn" data-id="${esc(t.id)}">✏️ Edit</button></td>` : ''}
+        <td>${t.url_bukti && t.url_bukti !== '-' ? `<a class="flink" href="${esc(t.url_bukti)}" target="_blank" rel="noopener">🔗 Lihat</a>` : '—'}</td>
+        ${canInput ? `<td><button class="btn" data-id="${esc(t.id)}">✏️ Edit</button> <button class="btn danger" data-del-trx="${esc(t.id)}">🗑</button></td>` : ''}
       `;
       frag.appendChild(tr);
     });
@@ -520,7 +521,6 @@
     $('trxBukti').value = '';
     $('trxBuktiPreview').innerHTML = '';
     $('trxBuktiOld').value = '';
-    $('btnDeleteTrx').style.display = 'none';
 
     if (trx) {
       $('trxModalTitle').textContent = 'Edit Transaksi';
@@ -534,7 +534,6 @@
         $('trxBuktiOld').value = trx.url_bukti;
         $('trxBuktiPreview').innerHTML = `<a href="${esc(trx.url_bukti)}" target="_blank">Lihat Bukti Lama</a>`;
       }
-      $('btnDeleteTrx').style.display = 'inline-block';
     } else {
       $('trxModalTitle').textContent = 'Tambah Transaksi';
       $('trxTanggal').value = new Date().toISOString().split('T')[0];
@@ -633,14 +632,22 @@
     try { localStorage.removeItem(AUTH_KEY); } catch (_) {}
   }
 
-  // Role user: 'bendahara' bisa meng-input data keuangan; selain itu hanya baca + cek.
+  // Role user: 'admin' & 'bendahara' bisa meng-input data keuangan & berkas;
+  // 'user' hanya baca + cek tagihan/berkas (tanpa input).
   function currentRole() {
     const s = getSession();
     const role = (s && s.user && s.user.role) || 'user';
-    return (role === 'bendahara' || role === 'user') ? role : 'user';
+    return (role === 'admin' || role === 'bendahara' || role === 'user') ? role : 'user';
+  }
+  function isAdmin() {
+    return currentRole() === 'admin';
   }
   function isBendahara() {
-    return currentRole() === 'bendahara';
+    const r = currentRole();
+    return r === 'bendahara' || r === 'admin';
+  }
+  function isUserOnly() {
+    return currentRole() === 'user';
   }
   function updateKeuPermissions() {
     const canInput = isBendahara();
@@ -648,7 +655,7 @@
       const el = document.getElementById(id);
       if (el) el.style.display = show ? '' : 'none';
     };
-    // Hanya Bendahara yang boleh meng-input & melihat tabel/ringkasan keuangan.
+    // Hanya Bendahara (atau Admin) yang boleh meng-input & melihat tabel/ringkasan keuangan.
     setVisible('btnTambahTransaksi', canInput);
     setVisible('btnImportKeuangan', canInput);
     setVisible('keuRingkasan', canInput);
@@ -658,7 +665,7 @@
     setVisible('pagerKeuangan', canInput);
     // Cek Tagihan & Berkas tetap tersedia untuk semua user.
     setVisible('btnCekTagihanBerkas', true);
-    // Kolom "Aksi" di tabel hanya relevan untuk Bendahara.
+    // Kolom "Aksi" di tabel hanya relevan untuk Bendahara/Admin.
     const tbl = document.getElementById('keuTable');
     if (tbl) {
       const head = tbl.querySelector('thead tr');
@@ -689,11 +696,11 @@
 
   function setAuthedUI(user) {
     isAuthed = true;
-    const role = (user && user.role === 'bendahara') ? 'bendahara' : 'user';
+    const role = (user && (user.role === 'admin' || user.role === 'bendahara' || user.role === 'user')) ? user.role : 'user';
     if ($('displayUserName')) $('displayUserName').textContent = (user && user.name) || 'Admin Desa';
     if ($('displayUserRole')) {
-      $('displayUserRole').textContent = role === 'bendahara' ? '🏦 Bendahara' : '👤 Petugas / Pengguna';
-      $('displayUserRole').style.color = role === 'bendahara' ? '#059669' : '#0ea5e9';
+      $('displayUserRole').textContent = role === 'admin' ? '🛡️ Admin' : (role === 'bendahara' ? '🏦 Bendahara' : '👤 Petugas / Pengguna');
+      $('displayUserRole').style.color = role === 'admin' ? '#7c3aed' : (role === 'bendahara' ? '#059669' : '#0ea5e9');
     }
     if ($('btnOpenLogin')) $('btnOpenLogin').style.display = 'none';
     if ($('btnOpenLoginNotice')) $('btnOpenLoginNotice').style.display = 'none';
@@ -701,6 +708,13 @@
     if ($('authGuestNotice')) $('authGuestNotice').style.display = 'none';
     if ($('appWorkspace')) $('appWorkspace').style.display = '';
     document.body.classList.remove('guest-mode');
+    // Tombol khusus Admin (Ubah Sandi & Tarik dari Sheet) hanya untuk role admin.
+    if ($('btnChangePw')) $('btnChangePw').style.display = role === 'admin' ? 'flex' : 'none';
+    if ($('btnImportSheet')) $('btnImportSheet').style.display = role === 'admin' ? 'flex' : 'none';
+    // Tombol input data: Tambah Data untuk semua role (admin/bendahara/user),
+    // sedangkan Edit & Simpan Surat tetap untuk admin & bendahara.
+    if ($('btnTambahData')) $('btnTambahData').style.display = '';
+    if ($('btnSaveSuratEdit')) $('btnSaveSuratEdit').style.display = (role === 'admin' || role === 'bendahara') ? '' : 'none';
     updateKeuPermissions();
   }
 
@@ -1265,16 +1279,19 @@ hideChangePwMsg();
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td data-label="ID"><strong>${esc(r.id)}</strong> ${upCount ? `<span class="tag status-s" title="${upCount} upload">📎${upCount}</span>` : ''}</td>
+        <td data-label="Tanggal">${esc(fmtTgl(r.timestamp) || '')}</td>
         <td data-label="Layanan"><span class="tag ${esc(r.layanan)}">${esc(r.layanan)}</span></td>
-        <td data-label="Nama"><strong>${esc(r.nama)}</strong></td>
-        <td data-label="HP">${esc(formatHp(r.hp))}</td>
-        <td data-label="Pembayaran">${esc(r.pembayaran)}</td>
         <td data-label="Jenis Tanah">${esc(info.jenis_tanah || info.luas_tanah || '')}</td>
+        <td data-label="Pemohon"><strong>${esc(r.nama)}</strong></td>
+        <td data-label="Pihak Pertama">${esc(pihakPertamaNama(r.layanan, info))}</td>
+        <td data-label="No. Surat">${esc(info._nomorSuratTercetak || '')}</td>
+        <td data-label="Alamat">${esc(alamatPemohon(r.layanan, info))}</td>
+        <td data-label="Catatan">${esc(r.catatan_admin || '')}</td>
         <td data-label="Status"><span class="tag status-s">${esc(r.status_berkas)}</span></td>
-        <td data-label="Last Updated">${esc(info._adminLast)}</td>
         <td data-label="Aksi">
           <button class="btn" data-action="view" data-id="${esc(r.id)}">👁 Detail</button>
-          <button class="btn" data-action="edit" data-id="${esc(r.id)}">✏️ Edit</button>
+          ${isUserOnly() ? '' : `<button class="btn" data-action="edit" data-id="${esc(r.id)}">✏️ Edit</button>`}
+          ${isUserOnly() ? '' : `<button class="btn danger" data-action="delete" data-id="${esc(r.id)}">🗑 Hapus</button>`}
         </td>`;
       frag.appendChild(tr);
     });
@@ -1309,18 +1326,18 @@ hideChangePwMsg();
     const frag = document.createDocumentFragment();
     shown.forEach((c) => {
       const { r, info, missing } = c;
-      const badgeHtml = missing.length
-        ? `<span class="tag status-ko" title="Kurang: ${esc(missing.join(', '))}">🟠 Kurang ${missing.length}</span>`
-        : `<span class="tag status-ok" title="Siap dicetak">🟢 Lengkap</span>`;
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td data-label="ID"><strong>${esc(r.id)}</strong></td>
+        <td data-label="Tanggal">${esc(fmtTgl(r.timestamp) || '')}</td>
         <td data-label="Layanan"><span class="tag ${esc(r.layanan)}">${esc(r.layanan)}</span></td>
-        <td data-label="Nama"><strong>${esc(r.nama)}</strong></td>
         <td data-label="Jenis Tanah">${esc(info.jenis_tanah || info.luas_tanah || '')}</td>
-        <td data-label="Sporadik">${badgeHtml}</td>
-        <td data-label="Status Berkas">${statusBadge(r.status_berkas)}</td>
-        <td data-label="Catatan Admin" class="sp-catatan">${esc(r.catatan_admin || '')}</td>
+        <td data-label="Pemohon"><strong>${esc(r.nama)}</strong></td>
+        <td data-label="Pihak Pertama">${esc(pihakPertamaNama(r.layanan, info))}</td>
+        <td data-label="No. Surat">${esc(info._nomorSuratTercetak || '')}</td>
+        <td data-label="Alamat">${esc(alamatPemohon(r.layanan, info))}</td>
+        <td data-label="Catatan">${esc(r.catatan_admin || '')}</td>
+        <td data-label="Status">${statusBadge(r.status_berkas)}</td>
         <td data-label="Aksi">
           <button class="btn primary" data-action="surat" data-id="${esc(r.id)}">🖨 Surat</button>
           <button class="btn" data-action="surat-sporadik" data-id="${esc(r.id)}" title="Cetak Surat SPORADIK (Penguasaan Fisik Bidang Tanah)">🖨 SPORADIK</button>
@@ -1620,6 +1637,30 @@ hideChangePwMsg();
     return s;
   }
 
+  // Tanggal (ISO/UTC) -> dd/mm/yyyy, kosong jika tidak valid.
+  function fmtTgl(v) {
+    if (!v) return '';
+    const d = new Date(String(v));
+    if (isNaN(d.getTime())) return String(v);
+    return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  // Nama Pihak Pertama per layanan: JUALBELI=penjual, HIBAH=pemberi, AHLIWARIS=almarhum.
+  function pihakPertamaNama(layanan, info) {
+    const L = String(layanan || '').toUpperCase();
+    if (L === 'JUALBELI') return info.penjual_nama || info.nama_penjual || '';
+    if (L === 'AHLIWARIS') return info.almarhum_nama || info.nama_almarhum || '';
+    return info.pemberi_nama || info.nama_pemberi || '';
+  }
+
+  // Alamat pemohon per layanan (pihak yang mengajukan/penerima).
+  function alamatPemohon(layanan, info) {
+    const L = String(layanan || '').toUpperCase();
+    if (L === 'JUALBELI') return info.pembeli_alamat || info.alamat || '';
+    if (L === 'AHLIWARIS') return info.pemohon_alamat || info.alamat || '';
+    return info.penerima_alamat || info.alamat || '';
+  }
+
   function esc(v) {
     if (v === null || v === undefined) return '';
     return String(v).replace(/[&<>"']/g, (c) => ({
@@ -1659,7 +1700,7 @@ hideChangePwMsg();
         <td data-label="Timestamp">${esc(u.timestamp)}</td>
         <td data-label="File">
           ${u.file_url ? `<a class="flink" href="${esc(u.file_url)}" target="_blank" rel="noopener">🔗 Buka</a>` : '—'}
-          ${u.file_id ? ` <button class="btn" data-del-up="${esc(u.file_id)}">🗑</button>` : ''}
+          ${(u.file_id && !isUserOnly()) ? ` <button class="btn" data-del-up="${esc(u.file_id)}">🗑</button>` : ''}
         </td>`;
       body.appendChild(tr);
     });
@@ -1782,25 +1823,15 @@ hideChangePwMsg();
         </div>
 
         <div class="form-box form-box-upload">
-          <h4>📎 Upload Dokumen (KK / KTP)</h4>
-          <p>Pilih file baru untuk mengganti, atau kosongkan jika tidak diubah.</p>
-          <div class="upload-slots">
-            <div class="upload-slot">
-              <span class="slot-label">KK</span>
-              <input type="file" id="editKkFile" accept="image/*,.pdf" />
-              <div id="editKkStatus" class="slot-status"></div>
-            </div>
-            <div class="upload-slot">
-              <span class="slot-label">KTP</span>
-              <input type="file" id="editKtpFile" accept="image/*,.pdf" />
-              <div id="editKtpStatus" class="slot-status"></div>
-            </div>
-          </div>
+          <h4>📎 Upload Dokumen (PDF / Gambar)</h4>
+          <p>Pilih file baru untuk mengganti, atau kosongkan jika tidak diubah. File yang sudah ada dari Tambah Data tetap tampil.</p>
+          ${((TAMBAH_UPLOADS[currentEditLayanan] || []).concat([{ key: 'DOKUMEN LAIN', label: 'Dokumen Tambahan' }])).map((s) =>
+            `<div class="field full"><label>${esc(s.label)}</label><input type="file" data-jenis="${esc(s.key)}" accept="image/*,.pdf" multiple><div class="slot-status" data-status-for="${esc(s.key)}"></div></div>`
+          ).join('')}
         </div>
 
         <div class="form-actions">
           <button id="btnSaveEdit" class="btn primary">💾 Simpan Data</button>
-          <button id="btnDelete" class="btn danger">🗑 Hapus</button>
         </div>
       </div>`;
     $('editBody').innerHTML = html;
@@ -1823,7 +1854,6 @@ hideChangePwMsg();
       if (h) h.addEventListener('input', () => { formatHargaInput(h); $(`${p}harga_terbilang`).value = terbilangHarga(h); });
     }
     $('btnSaveEdit').addEventListener('click', saveEdit);
-    $('btnDelete').addEventListener('click', deleteRow);
   }
 
   // Kumpulkan nilai semua input ed_* (untuk re-render saat layanan berubah).
@@ -1858,19 +1888,31 @@ hideChangePwMsg();
 
   function renderEditUploadStatus(id) {
     const ups = uploads.filter((u) => u.id_registrasi === id);
-    const pick = (jenis) => ups.find((u) => (u.jenis_upload || '').toUpperCase() === jenis);
-    setSlotStatus('editKkStatus', pick('KK'));
-    setSlotStatus('editKtpStatus', pick('KTP'));
+    // Semua slot upload dari Tambah Data + Dokumen Tambahan — tampilkan file
+    // yang sudah pernah di-upload (agar sinkron dengan Tambah Data).
+    const slots = (TAMBAH_UPLOADS[currentEditLayanan] || []).concat([{ key: 'DOKUMEN LAIN' }]);
+    slots.forEach((s) => {
+      const matches = ups.filter((u) => (u.jenis_upload || '').toUpperCase() === s.key);
+      setSlotStatus(s.key, matches);
+    });
   }
 
-  function setSlotStatus(elId, up) {
-    const el = $(elId);
+  function setSlotStatus(jenis, ups) {
+    const el = $('editBody');
     if (!el) return;
-    if (up && up.file_url) {
-      el.innerHTML = `✅ Ada: <a href="${esc(up.file_url)}" target="_blank" rel="noopener">${esc(up.file_name || 'buka')}</a>`;
-    } else {
-      el.textContent = '';
+    let slot = null;
+    el.querySelectorAll('[data-status-for]').forEach((n) => {
+      if (n.getAttribute('data-status-for') === jenis) slot = n;
+    });
+    if (!slot) return;
+    const list = (ups || []).filter((u) => u && u.file_url);
+    if (!list.length) {
+      slot.textContent = '';
+      return;
     }
+    slot.innerHTML = '✅ Ada: ' + list.map((u) =>
+      `<a href="${esc(u.file_url)}" target="_blank" rel="noopener">${esc(u.file_name || 'buka')}</a>`
+    ).join(', ');
   }
 
   async function saveEdit() {
@@ -1922,11 +1964,31 @@ hideChangePwMsg();
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal simpan');
-      // Upload KK & KTP jika ada file yang dipilih.
-      await uploadEditFile(currentEditId, 'KK', $('editKkFile'));
-      await uploadEditFile(currentEditId, 'KTP', $('editKtpFile'));
+      // Upload setiap slot yang dipilih user. Kegagalan upload TIDAK
+      // membatalkan data yang sudah tersimpan — hanya dilaporkan.
+      const upErrors = [];
+      const slots = $('editBody').querySelectorAll('input[type="file"][data-jenis]');
+      for (const inp of slots) {
+        const jenis = inp.dataset.jenis;
+        for (const f of inp.files) {
+          try {
+            if (f.size > 8 * 1024 * 1024) { upErrors.push(jenis + ' (' + f.name + '): melebihi 8 MB'); continue; }
+            const dataUrl = await readFileAsDataURL(f);
+            const upRes = await fetch(`/api/permohonan/${encodeURIComponent(currentEditId)}/upload`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jenis_upload: jenis, fileName: f.name, fileData: dataUrl })
+            });
+            const upJson = await upRes.json();
+            if (!upRes.ok || !upJson.success) upErrors.push(jenis + ' (' + f.name + '): ' + ((upJson && upJson.error) || 'gagal upload'));
+          } catch (e) {
+            upErrors.push(jenis + ' (' + f.name + '): ' + (e.message || 'gagal upload'));
+          }
+        }
+      }
       $('editModal').close();
       await loadData();
+      if (upErrors.length) alert('Data tersimpan, tetapi upload dokumen gagal:\n' + upErrors.join('\n'));
     } catch (e) {
       alert('Simpan gagal: ' + e.message);
     } finally {
@@ -1934,26 +1996,12 @@ hideChangePwMsg();
     }
   }
 
-  async function uploadEditFile(idReg, jenis, input) {
-    if (!input || !input.files || input.files.length === 0) return;
-    const f = input.files[0];
-    if (f.size > 8 * 1024 * 1024) throw new Error('Ukuran file ' + jenis + ' melebihi 8 MB.');
-    const dataUrl = await readFileAsDataURL(f);
-    const res = await fetch('/api/permohonan/' + encodeURIComponent(idReg) + '/upload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jenis_upload: jenis, fileName: f.name, fileData: dataUrl })
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error((json && json.error) || 'Gagal upload ' + jenis);
-  }
-
-  async function deleteRow() {
-    if (!currentEditId) return;
-    if (!confirm('Hapus pendaftaran ' + currentEditId + ' dari Supabase?')) return;
-    busyBtn($('btnDelete'), true, 'Menghapus…');
+  async function deleteRow(id) {
+    const targetId = id || currentEditId;
+    if (!targetId) return;
+    if (!confirm('Hapus pendaftaran ' + targetId + ' dari Supabase?')) return;
     try {
-      const res = await fetch('/api/permohonan/' + encodeURIComponent(currentEditId), { method: 'DELETE' });
+      const res = await fetch('/api/permohonan/' + encodeURIComponent(targetId), { method: 'DELETE' });
       const json = await res.json();
       if (!json.success) {
         alert('Hapus gagal: ' + (json.error || ''));
@@ -1963,8 +2011,6 @@ hideChangePwMsg();
       await loadData();
     } catch (e) {
       alert('Hapus gagal: ' + e.message);
-    } finally {
-      busyBtn($('btnDelete'), false);
     }
   }
 
@@ -4177,19 +4223,27 @@ hideChangePwMsg();
       if (!json.success) throw new Error(json.error || 'Gagal menyimpan');
 
       const newId = json.data && json.data.id;
-      // Upload lampiran per slot (jenis_upload = data-jenis).
+      // Upload lampiran per slot (jenis_upload = data-jenis). Kegagalan upload
+      // TIDAK membatalkan pendaftaran — hanya dilaporkan setelah tersimpan.
+      const upErrors = [];
       if (newId) {
         const slots = $('tambahBody').querySelectorAll('input[type="file"][data-jenis]');
         for (const inp of slots) {
           const jenis = inp.dataset.jenis;
           for (const f of inp.files) {
-            if (f.size > 8 * 1024 * 1024) continue;
-            const dataUrl = await readFileAsDataURL(f);
-            await fetch(`/api/permohonan/${encodeURIComponent(newId)}/upload`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ jenis_upload: jenis, fileName: f.name, fileData: dataUrl })
-            });
+            try {
+              if (f.size > 8 * 1024 * 1024) { upErrors.push(jenis + ' (' + f.name + '): melebihi 8 MB'); continue; }
+              const dataUrl = await readFileAsDataURL(f);
+              const upRes = await fetch(`/api/permohonan/${encodeURIComponent(newId)}/upload`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jenis_upload: jenis, fileName: f.name, fileData: dataUrl })
+              });
+              const upJson = await upRes.json();
+              if (!upRes.ok || !upJson.success) upErrors.push(jenis + ' (' + f.name + '): ' + (upJson && upJson.error) || 'gagal upload');
+            } catch (e) {
+              upErrors.push(jenis + ' (' + f.name + '): ' + (e.message || 'gagal upload'));
+            }
           }
         }
       }
@@ -4197,7 +4251,7 @@ hideChangePwMsg();
       $('tambahModal').close();
       await loadData();
       if (newId) switchTab('pendaftaran');
-      alert('Pendaftaran berhasil disimpan. ID: ' + newId);
+      alert('Pendaftaran berhasil disimpan. ID: ' + newId + (upErrors.length ? '\n\nUpload dokumen gagal:\n' + upErrors.join('\n') : ''));
     } catch (e) {
       alert('Simpan gagal: ' + e.message);
     } finally {
@@ -4523,6 +4577,7 @@ hideChangePwMsg();
     const id = btn.dataset.id;
     if (action === 'view') showDetail(id);
     if (action === 'edit') openEdit(id);
+    if (action === 'delete') deleteRow(id);
   });
   $('sporadikBody').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
@@ -4551,12 +4606,14 @@ hideChangePwMsg();
   $('srTgl').addEventListener('input', renderSurat);
   maskDmyInput($('srTgl'));
   $('srNoUrut').addEventListener('input', renderSurat);
-  document.querySelectorAll('dialog').forEach((d) => d.addEventListener('click', (e) => {
-    if (e.target === d && d.id !== 'tambahModal') d.close();
-  }));
-  // Kunci pop-up Tambah Baru agar tidak tertutup oleh klik luar / tombol Esc
-  // (hanya tombol Batal / ✕ yang boleh menutupnya).
-  $('tambahModal').addEventListener('cancel', (e) => e.preventDefault());
+  // Kunci SEMUA pop-up: tidak bisa hilang oleh klik luar / tombol Esc.
+  // Hanya tombol close (✕ / Batal) masing-masing yang boleh menutupnya.
+  document.querySelectorAll('dialog').forEach((d) => {
+    d.addEventListener('click', (e) => {
+      if (e.target === d) e.preventDefault();
+    });
+    d.addEventListener('cancel', (e) => e.preventDefault());
+  });
 
   // Tutup semua dropdown autocomplete saat klik di luar field autocomplete.
   // Satu listener GLOBAL (bukan per-instance) agar tidak bocor saat editor
@@ -4629,6 +4686,109 @@ hideChangePwMsg();
     if (mq.addEventListener) mq.addEventListener('change', handler);
     else if (mq.addListener) mq.addListener(handler);
   })();
+
+  // ===== FIELD TOOLS (FAB MENU) — SENSUS EKONOMI / SURVEY APP TOOLS =====
+  window.fieldToolGPS = function() {
+    const fab = $('fabMenu');
+    if (fab) fab.hidden = true;
+    const modal = $('gpsModal');
+    if (modal) modal.showModal();
+  };
+
+  window.fieldToolMemo = function() {
+    const fab = $('fabMenu');
+    if (fab) fab.hidden = true;
+    const memo = $('memoInput');
+    if (memo) memo.value = localStorage.getItem('sia_catatan_lapangan') || '';
+    const modal = $('memoModal');
+    if (modal) modal.showModal();
+  };
+
+  window.fieldToolCalc = function() {
+    const fab = $('fabMenu');
+    if (fab) fab.hidden = true;
+    const modal = $('calcModal');
+    if (modal) modal.showModal();
+  };
+
+  window.getGPSLocation = function() {
+    const st = $('gpsStatus');
+    const copyBtn = $('btnCopyGps');
+    if (!navigator.geolocation) {
+      if (st) st.textContent = '❌ Fitur GPS tidak didukung di browser ini.';
+      return;
+    }
+    if (st) st.textContent = '⏳ Mengambil titik koordinat GPS...';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        const acc = pos.coords.accuracy ? pos.coords.accuracy.toFixed(1) : 0;
+        const text = `Lat: ${lat}, Lng: ${lng} (Akurasi: ±${acc}m)`;
+        if (st) st.textContent = text;
+        if (copyBtn) copyBtn.disabled = false;
+        window._lastGpsCoord = text;
+      },
+      (err) => {
+        if (st) st.textContent = '⚠️ Gagal mengambil GPS: ' + (err.message || 'Izin ditolak.');
+        if (copyBtn) copyBtn.disabled = true;
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  window.copyGPSLocation = function() {
+    if (!window._lastGpsCoord) return;
+    navigator.clipboard.writeText(window._lastGpsCoord).then(() => {
+      alert('Koordinat GPS berhasil disalin:\n' + window._lastGpsCoord);
+    }).catch(() => {
+      prompt('Salin koordinat GPS manual:', window._lastGpsCoord);
+    });
+  };
+
+  window.saveMemo = function() {
+    const val = $('memoInput') ? $('memoInput').value : '';
+    localStorage.setItem('sia_catatan_lapangan', val);
+    const hint = $('memoSavedHint');
+    if (hint) {
+      hint.style.opacity = '1';
+      setTimeout(() => { hint.style.opacity = '0'; }, 2000);
+    }
+  };
+
+  let calcExpression = '';
+  window.calcInput = function(val) {
+    const disp = $('calcDisplay');
+    if (val === 'C') {
+      calcExpression = '';
+      if (disp) disp.textContent = '0';
+      return;
+    }
+    calcExpression += val;
+    if (disp) disp.textContent = calcExpression;
+  };
+
+  window.calcEval = function() {
+    const disp = $('calcDisplay');
+    if (!calcExpression) return;
+    try {
+      const cleanExpr = calcExpression.replace(/[^0-9+\-*/.()]/g, '');
+      const res = Function('"use strict"; return (' + cleanExpr + ')')();
+      calcExpression = String(res);
+      if (disp) disp.textContent = calcExpression;
+    } catch (_) {
+      if (disp) disp.textContent = 'Error';
+      calcExpression = '';
+    }
+  };
+
+  const fabToggle = $('btnFabToggle');
+  if (fabToggle) {
+    fabToggle.addEventListener('click', () => {
+      const menu = $('fabMenu');
+      if (menu) menu.hidden = !menu.hidden;
+    });
+  }
 
   setInterval(() => { if (isAuthed) loadData(); }, 30000);
 

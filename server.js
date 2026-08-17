@@ -116,12 +116,13 @@ function requireAuth(req, res, next) {
 }
 
 // Batasi endpoint agar hanya boleh diakses oleh role tertentu (mis. 'bendahara').
-// Wajib dipakai SETELAH requireAuth agar req.auth terisi.
+// Admin selalu lolos (role 'admin' = akses penuh). Wajib dipakai SETELAH requireAuth
+// agar req.auth terisi.
 function requireRole(...roles) {
   return (req, res, next) => {
     const role = req.auth && req.auth.role;
-    if (!role || !roles.includes(role)) {
-      return res.status(403).json({ success: false, error: 'Anda tidak memiliki izin (khusus Bendahara).' });
+    if (!role || (role !== 'admin' && !roles.includes(role))) {
+      return res.status(403).json({ success: false, error: 'Anda tidak memiliki izin untuk tindakan ini.' });
     }
     next();
   };
@@ -170,7 +171,7 @@ app.post('/api/login', async (req, res) => {
       name = rec.name || u;
       // Bila kolom role belum dibuat (belum migration), akun admin fallback bendahara.
       const r = rec.role;
-      role = (r === 'bendahara' || r === 'user') ? r : (u === AUTH_USER ? 'bendahara' : 'user');
+      role = (r === 'admin' || r === 'bendahara' || r === 'user') ? r : (u === AUTH_USER ? 'bendahara' : 'user');
     }
   } else if (u === AUTH_USER && p === AUTH_PASS) {
     matched = true;
@@ -195,7 +196,7 @@ app.post('/api/logout', (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/change-password', requireAuth, async (req, res) => {
+app.post('/api/change-password', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     const current = String(req.body && req.body.current_password || '');
     const next = String(req.body && req.body.new_password || '');
@@ -257,7 +258,7 @@ app.get('/api/permohonan/:id', requireAuth, async (req, res) => {
 
 // POST /api/permohonan -> Tambah pendaftaran baru langsung dari web (migrasi dari Apps Script).
 // ID otomatis REG-XXXXXX (mengikuti urutan max yang ada), status awal PENDING.
-app.post('/api/permohonan', requireAuth, async (req, res) => {
+app.post('/api/permohonan', requireAuth, requireRole('bendahara', 'user'), async (req, res) => {
   try {
     const body = req.body || {};
     const layanan = clean(String(body.layanan || '').toUpperCase());
@@ -334,7 +335,7 @@ app.post('/api/permohonan', requireAuth, async (req, res) => {
   }
 });
 
-app.patch('/api/permohonan/:id', requireAuth, async (req, res) => {
+app.patch('/api/permohonan/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
     const { status_berkas, catatan_admin, layanan, data_raw } = req.body || {};
     const payload = { updated_at: new Date().toISOString() };
@@ -375,10 +376,11 @@ app.patch('/api/permohonan/:id', requireAuth, async (req, res) => {
   }
 });
 
-app.delete('/api/permohonan/:id', requireAuth, async (req, res) => {
+app.delete('/api/permohonan/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
     const { data, error } = await supabase.from(TABLE_DB).delete().eq('id', req.params.id).select();
     if (error) throw error;
+    await addTombstone(TOMBSTONE_PENDAFTARAN, req.params.id);
     res.json({ success: true, data: data || [] });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -415,10 +417,11 @@ app.get('/api/uploads/:fileId', requireAuth, async (req, res) => {
   }
 });
 
-app.delete('/api/uploads/:fileId', requireAuth, async (req, res) => {
+app.delete('/api/uploads/:fileId', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
     const { data, error } = await supabase.from(TABLE_UP).delete().eq('file_id', req.params.fileId).select();
     if (error) throw error;
+    await addTombstone(TOMBSTONE_UPLOAD, req.params.fileId);
     res.json({ success: true, data: data || [] });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -427,7 +430,7 @@ app.delete('/api/uploads/:fileId', requireAuth, async (req, res) => {
 
 // ---------- Import manual dari spreadsheet (read-only via GAS web app) ----------
 // Panggil GAS action=getRows, lalu upsert baris ke Supabase.
-app.post('/api/import-from-sheet', requireAuth, async (req, res) => {
+app.post('/api/import-from-sheet', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     const gasUrl = process.env.GAS_SYNC_WEB_APP_URL;
     if (!gasUrl) {
@@ -451,6 +454,8 @@ app.post('/api/import-from-sheet', requireAuth, async (req, res) => {
     }
 
     const results = [];
+    const tombPendaftaran = new Set(await getTombstone(TOMBSTONE_PENDAFTARAN));
+    const tombUpload = new Set(await getTombstone(TOMBSTONE_UPLOAD));
     for (const s of sheets) {
       const gasRes = await fetch(gasUrl, {
         method: 'POST',
@@ -480,6 +485,7 @@ app.post('/api/import-from-sheet', requireAuth, async (req, res) => {
         for (const r of rows) {
           const file_id = clean(rowGet(r, 'FILE_ID', 'file_id', 'ID', 'id'));
           if (!file_id) continue;
+          if (tombUpload.has(file_id)) { skipped++; continue; }
           const tsRaw = clean(rowGet(r, 'TIMESTAMP', 'timestamp'));
           const verMs = parseSheetTime(tsRaw);
           const verISO = verMs ? new Date(verMs).toISOString() : now;
@@ -518,6 +524,7 @@ app.post('/api/import-from-sheet', requireAuth, async (req, res) => {
         for (const r of rows) {
           const id = clean(rowGet(r, 'ID', 'id'));
           if (!id) continue;
+          if (tombPendaftaran.has(id)) { skipped++; continue; }
           const lastUpdated = clean(rowGet(r, 'LAST_UPDATED', 'last_updated'));
           const tsRaw = clean(rowGet(r, 'TIMESTAMP', 'timestamp'));
           const verMs = parseSheetTime(lastUpdated) || parseSheetTime(tsRaw);
@@ -567,6 +574,36 @@ async function getPengaturan(kunci, nilaiDefault = null) {
   const { data, error } = await supabase.from(TABLE_SET).select('nilai').eq('kunci', kunci).maybeSingle();
   if (error || !data) return nilaiDefault;
   return data.nilai;
+}
+
+// ---------- Tombstone: daftar ID yang pernah dihapus ----------
+// Agar data yang dihapus lewat aplikasi TIDAK muncul lagi setelah
+// "Tarik dari Sheet" (import manual), ID yang dihapus dicatat di
+// tabel pengaturan_app dan dilewati saat import.
+const TOMBSTONE_PENDAFTARAN = 'tombstone_pendaftaran';
+const TOMBSTONE_UPLOAD = 'tombstone_upload';
+const TOMBSTONE_TRANSAKSI = 'tombstone_transaksi';
+
+async function getTombstone(kunci) {
+  const raw = await getPengaturan(kunci, '[]');
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+async function addTombstone(kunci, id) {
+  const arr = await getTombstone(kunci);
+  if (!arr.includes(id)) {
+    arr.push(id);
+    const { error } = await supabase.from(TABLE_SET).upsert(
+      { kunci, nilai: JSON.stringify(arr), updated_at: new Date().toISOString() },
+      { onConflict: 'kunci' }
+    );
+    if (error) throw error;
+  }
 }
 
 // GET /api/pemohon/:id/keuangan -> Rincian keuangan untuk satu pemohon
@@ -845,7 +882,7 @@ async function uploadToDrive(fileName, mime, bytes) {
 // ---------- Upload KK/KTP/dokumen per pendaftaran ----------
 // Terima file dari form Edit pendaftaran -> upload ke Google Drive -> simpan
 // LINK-nya di permohonan_uploads (konsisten: file biner tidak di database).
-app.post('/api/permohonan/:id/upload', requireAuth, async (req, res) => {
+app.post('/api/permohonan/:id/upload', requireAuth, requireRole('bendahara', 'user'), async (req, res) => {
   try {
     const idReg = String(req.params.id || '').trim();
     const { jenis_upload, fileName, fileData } = req.body;
@@ -920,6 +957,7 @@ app.delete('/api/keuangan/transaksi/:id', requireAuth, requireRole('bendahara'),
     const { id } = req.params;
     const { error } = await supabase.from(TABLE_TRX).delete().eq('id', id);
     if (error) throw error;
+    await addTombstone(TOMBSTONE_TRANSAKSI, id);
     res.json({ success: true, message: 'Transaksi berhasil dihapus' });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -1015,11 +1053,13 @@ app.post('/api/keuangan/import-from-sheet', requireAuth, requireRole('bendahara'
 
     const recs = [];
     let skipped = 0;
+    const tombTransaksi = new Set(await getTombstone(TOMBSTONE_TRANSAKSI));
     for (let i = 1; i < rows.length; i++) {
       const r = rows[i];
       const g = (n) => (n >= 0 && r[n] !== undefined) ? String(r[n]).trim() : '';
       const id = g(iId);
       if (!id) { skipped++; continue; }
+      if (tombTransaksi.has(id)) { skipped++; continue; }
       const tanggal = parseKeuTanggal(g(iTgl));
       if (!tanggal) { skipped++; continue; }
       const sheetModMs = parseSheetTime(g(iMod));
