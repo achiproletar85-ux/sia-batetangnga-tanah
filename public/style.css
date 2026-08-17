@@ -2827,3 +2827,102 @@ canvas, #chartDusun, #chartLayanan {
   height: auto !important;
   box-sizing: border-box !important;
 }
+
+/* ==================================================
+   OPTIMASI TAMPILAN TOUCHSCREEN HP & TABLET (TAB KEUANGAN & FORM)
+   ================================================== */
+@media screen and (max-width: 900px) {
+  /* 1. Penggedean Touch Target Tombol di HP & Tablet (Min Height 46px - 48px) */
+  .btn, .btn-action-primary, button.btn {
+    min-height: 46px !important;
+    padding: 12px 18px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 12px !important;
+  }
+
+  /* 2. Form Inputs & Selects di HP: Font Size 16px Mencegah Auto-Zoom iOS Safari */
+  input, select, textarea, .form input, .field input, .se-field input {
+    min-height: 48px !important;
+    font-size: 16px !important;
+    padding: 12px 14px !important;
+    border-radius: 12px !important;
+  }
+
+  /* 3. Toolbar Tab Keuangan di HP/Tablet: Tombol Stack Full-Width / Large Touch Grid */
+  #tab-keuangan .toolbar, .toolbar-container {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 12px !important;
+    padding: 14px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+  }
+  #tab-keuangan .toolbar button, .toolbar-container button, #btnTambahTransaksi, #btnCetakKeuangan, #btnCekTagihanBerkas, #btnImportKeuangan {
+    width: 100% !important;
+    min-height: 48px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    justify-content: center !important;
+    border-radius: 12px !important;
+  }
+
+  /* 4. Tab Navigasi Menu di HP: Smooth Touch Horizontal Scroll */
+  .tabs {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 6px !important;
+    gap: 8px !important;
+  }
+  .tabbtn {
+    min-height: 44px !important;
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
+  }
+
+  /* 5. Aksi Tabel Transaksi di HP: Tombol Touch Berukuran Besar */
+  #keuTable td:last-child, #dataTable td:last-child, #sporadikTable td:last-child {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-top: 8px !important;
+    padding-top: 10px !important;
+    border-top: 1px dashed #cbd5e1 !important;
+  }
+  #keuTable td:last-child button, #dataTable td:last-child button, #sporadikTable td:last-child button {
+    flex: 1 1 calc(50% - 6px) !important;
+    min-height: 44px !important;
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* 6. Modals di HP: Longgar & Nyaman Tangan */
+  dialog {
+    width: 96vw !important;
+    max-width: 96vw !important;
+    max-height: 94vh !important;
+    border-radius: 16px !important;
+  }
+  .modal-head {
+    padding: 16px 20px !important;
+  }
+  .form-actions button, .modal-body button {
+    min-height: 48px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    width: 100% !important;
+  }
+}

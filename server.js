@@ -276,7 +276,7 @@ app.post('/api/permohonan', requireAuth, requireRole('bendahara', 'user'), async
     if (hp && !/^08\d{8,11}$/.test(hp)) {
       return res.status(400).json({ success: false, error: 'Nomor HP tidak valid (harus 08..., 10-13 digit).' });
     }
-    const nik = clean(data_raw.nik || '').replace(/\D/g, '');
+    const nik = String(clean(data_raw.nik) || '').replace(/\D/g, '');
     if (nik.length !== 16) {
       return res.status(400).json({ success: false, error: 'NIK wajib diisi tepat 16 digit angka.' });
     }

@@ -1646,7 +1646,7 @@ hideChangePwMsg();
               <td class="num"><strong>${rowTot}</strong></td></tr>`;
           }).join('')}
           <tr class="tfoot"><td><strong>Total</strong></td>
-          ${cols.map((b, i) => inner.map((c) => `<td class="num"><strong>${dTotals[i][c]}</strong></td>`).join('') + `<td class="num"><strong>${dTotals[i].reduce((s, v) => s + v, 0)}</strong></td>`).join('')}
+          ${cols.map((b, i) => inner.map((c, j) => `<td class="num"><strong>${dTotals[i][j]}</strong></td>`).join('') + `<td class="num"><strong>${dTotals[i].reduce((s, v) => s + v, 0)}</strong></td>`).join('')}
           <td class="num"><strong>${grand}</strong></td></tr>
         </tbody>
       </table>`;
