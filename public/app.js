@@ -4208,10 +4208,11 @@ hideChangePwMsg();
         </div>
         <div class="surat-ttd surat-ttd-right">
           <div>${kananTitle}</div>
-          <div class="surat-ttd-space-materai">
+          <div class="surat-baris-3">
             <div class="surat-materai">Materai<br>Rp. 10.000,-</div>
+            <div class="surat-tdd-spasi"></div>
           </div>
-          <div>( <b>${escFill(kananNama)}</b> )</div>
+          <div class="surat-tdd-nama">( <b>${escFill(kananNama)}</b> )</div>
         </div>
       </div>`;
 
@@ -4400,10 +4401,11 @@ hideChangePwMsg();
         </div>
         <div class="surat-ttd surat-ttd-right">
           <div>${kananTitle}</div>
-          <div class="surat-ttd-space-materai">
+          <div class="surat-baris-3">
             <div class="surat-materai">Materai<br>Rp. 10.000,-</div>
+            <div class="surat-tdd-spasi"></div>
           </div>
-          <div>( <b>${escFill(kananNama)}</b> )</div>
+          <div class="surat-tdd-nama">( <b>${escFill(kananNama)}</b> )</div>
         </div>
       </div>`;
 
