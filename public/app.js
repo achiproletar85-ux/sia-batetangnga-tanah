@@ -1488,17 +1488,22 @@
       const el = document.getElementById(id);
       if (el) el.style.display = show ? '' : 'none';
     };
-    // Hanya Bendahara (atau Admin) yang boleh meng-input, mencetak laporan, & mengimpor data transaksi keuangan.
+    // Hanya Bendahara (atau Admin) yang boleh melihat ringkasan, tabel, mencetak laporan, & menginput transaksi keuangan.
     setVisible('btnTambahTransaksi', canInput);
     setVisible('btnImportKeuangan', canInput);
     setVisible('btnCetakKeuangan', canInput);
-    // Tabel data & ringkasan saldo selalu dibaca & ditampilkan dari Supabase.
-    setVisible('keuRingkasan', true);
-    setVisible('keuSearchInput', true);
-    setVisible('keuTableWrap', true);
-    setVisible('keuEmpty', true);
-    setVisible('pagerKeuangan', true);
+    setVisible('keuRingkasan', canInput);
+    setVisible('keuSearchInput', canInput);
+    setVisible('keuTableWrap', canInput);
+    setVisible('keuEmpty', canInput);
+    setVisible('pagerKeuangan', canInput);
+    // Cek Tagihan & Berkas tetap tersedia untuk semua user.
     setVisible('btnCekTagihanBerkas', true);
+
+    if (!canInput) {
+      const body = document.getElementById('keuBody');
+      if (body) body.innerHTML = '';
+    }
   }
 
   // Sisipkan token Bearer ke setiap panggilan /api/* secara otomatis.
