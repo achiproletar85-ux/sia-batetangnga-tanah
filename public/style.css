@@ -781,9 +781,17 @@ dialog::backdrop {
 .surat-tb .nib-dot { font-weight: 700; }
 .surat-ttd-row { display: flex; justify-content: flex-end; margin-top: 18px; }
 .surat-materai-row { display: flex; justify-content: flex-end; margin-top: 18px; }
+.surat-ttd-space-materai {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 4px 0;
+}
 .surat-materai {
-  width: 54px;
-  height: 44px;
+  width: 62px;
+  height: 48px;
   border: 1.5px solid #000;
   display: flex;
   align-items: center;
@@ -791,8 +799,10 @@ dialog::backdrop {
   text-align: center;
   font-weight: 700;
   font-size: 8px;
-  line-height: 1.05;
-  margin: 0;
+  line-height: 1.1;
+  color: #000;
+  background: #ffffff;
+  margin: 0 auto;
 }
 .surat-baris-3 { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; margin-top: 0; }
 .surat-tdd-spasi { width: 64px; height: 64px; }

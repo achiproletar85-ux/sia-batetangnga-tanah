@@ -4208,7 +4208,9 @@ hideChangePwMsg();
         </div>
         <div class="surat-ttd surat-ttd-right">
           <div>${kananTitle}</div>
-          <div class="surat-ttd-space"></div>
+          <div class="surat-ttd-space-materai">
+            <div class="surat-materai">Materai<br>Rp. 10.000,-</div>
+          </div>
           <div>( <b>${escFill(kananNama)}</b> )</div>
         </div>
       </div>`;
@@ -4262,9 +4264,6 @@ hideChangePwMsg();
             <div><b>SUMAILA DAMANG</b></div>
           </div>
         </div>
-      </div>
-      <div class="surat-materai-row">
-        <div class="surat-materai">Materai<br>Rp. 10000,-</div>
       </div>`;
 
     $('suratBody').innerHTML = '';
@@ -4399,7 +4398,9 @@ hideChangePwMsg();
         </div>
         <div class="surat-ttd surat-ttd-right">
           <div>${kananTitle}</div>
-          <div class="surat-ttd-space"></div>
+          <div class="surat-ttd-space-materai">
+            <div class="surat-materai">Materai<br>Rp. 10.000,-</div>
+          </div>
           <div>( <b>${escFill(kananNama)}</b> )</div>
         </div>
       </div>`;
@@ -4454,9 +4455,6 @@ hideChangePwMsg();
             <div><b>SUMAILA DAMANG</b></div>
           </div>
         </div>
-      </div>
-      <div class="surat-materai-row">
-        <div class="surat-materai">Materai<br>Rp. 10000,-</div>
       </div>`;
 
     $('suratBody').innerHTML = '';
