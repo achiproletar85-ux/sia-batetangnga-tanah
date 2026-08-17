@@ -159,7 +159,7 @@
         <td class="num">${formatRp(t.nominal)}</td>
         <td class="wrap">${esc(t.keterangan)}</td>
         <td>${t.url_bukti && t.url_bukti !== '-' ? `<a class="flink" href="${esc(t.url_bukti)}" target="_blank" rel="noopener">🔗 Lihat</a>` : '—'}</td>
-        ${canInput ? `<td><button class="btn" data-id="${esc(t.id)}">✏️ Edit</button> <button class="btn danger" data-del-trx="${esc(t.id)}">🗑</button></td>` : ''}
+        ${canInput ? `<td><button class="btn" onclick="cetakKwitansi('${esc(t.id)}')" style="background:#2E7D32; color:#ffffff; font-weight:700; border:none; margin-right:4px;" title="Cetak Kwitansi Pembayaran Resmi">🧾 Kwitansi</button> <button class="btn" data-id="${esc(t.id)}">✏️ Edit</button> <button class="btn danger" data-del-trx="${esc(t.id)}">🗑</button></td>` : `<td><button class="btn" onclick="cetakKwitansi('${esc(t.id)}')" style="background:#2E7D32; color:#ffffff; font-weight:700; border:none;" title="Cetak Kwitansi Pembayaran Resmi">🧾 Kwitansi</button></td>`}
       `;
       frag.appendChild(tr);
     });
@@ -242,6 +242,7 @@
     if (typeof v === 'object') return v;
     try { return JSON.parse(String(v)); } catch (_) { return null; }
   }
+
   // ===== CETAK LAPORAN REKAPITULASI KEUANGAN & KAS DESA =====
   function cetakLaporanKeuangan() {
     if (!keuState || !keuState.length) {
@@ -276,7 +277,6 @@
     let totalPengeluaran = 0;
 
     const tableTrs = sorted.map((t, idx) => {
-      // 1. Perhitungan jenis transaksi yang akurat
       const jenisStr = String(t.jenis_transaksi || t.jenis || t.tipe || '').trim();
       const isMasuk = jenisStr.toLowerCase().includes('pemasukan');
       const nom = Math.abs(Number(t.nominal || 0));
@@ -289,7 +289,6 @@
 
       const tgl = fmtTglDate(t.tanggal) || '-';
 
-      // 2. Isi Nama Pemohon dari Supabase permohonan_surat_tanah
       let namaPemohon = '';
       if (t.nama_pemohon) {
         namaPemohon = t.nama_pemohon;
@@ -314,7 +313,6 @@
         subjek = `<b>${escFill(idReg)}</b>`;
       }
 
-      // 3. Bedakan Pemasukan & Pengeluaran dengan Badge Warna & Kolom Rp
       const badgeJenis = isMasuk 
         ? `<span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:3px 8px; border-radius:4px; font-weight:800; font-size:8.5pt; display:inline-block;">PEMASUKAN</span>`
         : `<span style="background:#ffebee; color:#b71c1c; border:1px solid #ef9a9a; padding:3px 8px; border-radius:4px; font-weight:800; font-size:8.5pt; display:inline-block;">PENGELUARAN</span>`;
@@ -369,8 +367,6 @@
     table.rpt-table th { background: #f1f5f9; color: #000; border: 1px solid #000; padding: 6px 4px; text-align: center; font-weight: 700; }
     table.rpt-table td { border: 1px solid #000; padding: 5px 6px; vertical-align: top; }
     .num-col { text-align: right; font-weight: 600; white-space: nowrap; }
-    .type-in { color: #2E7D32; font-weight: 700; }
-    .type-out { color: #c62828; font-weight: 700; }
     
     .tfoot-total { background: #e2e8f0; font-weight: 800; }
     
@@ -455,9 +451,7 @@
   </div>
 
   <script>
-    window.onload = function() {
-      window.print();
-    };
+    window.onload = function() { window.print(); };
   </script>
 </body>
 </html>`;
@@ -467,9 +461,594 @@
       win.document.write(htmlContent);
       win.document.close();
     } else {
-      alert('Popup terblokir browser. Harap izinkan popup untuk mencetak laporan.');
+      alert('Pop-up terblokir oleh browser. Harap izinkan pop-up untuk mencetak laporan.');
     }
   }
+
+  // ===== HELPER TERBILANG BAHASA INDONESIA UNTUK KWITANSI =====
+  function terbilang(n) {
+    n = Math.abs(Number(n) || 0);
+    const angka = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
+    let hasil = "";
+    if (n < 12) {
+      hasil = " " + angka[n];
+    } else if (n < 20) {
+      hasil = terbilang(n - 10) + " Belas";
+    } else if (n < 100) {
+      hasil = terbilang(Math.floor(n / 10)) + " Puluh" + terbilang(n % 10);
+    } else if (n < 200) {
+      hasil = " Seratus" + terbilang(n - 100);
+    } else if (n < 1000) {
+      hasil = terbilang(Math.floor(n / 100)) + " Ratus" + terbilang(n % 100);
+    } else if (n < 2000) {
+      hasil = " Seribu" + terbilang(n - 1000);
+    } else if (n < 1000000) {
+      hasil = terbilang(Math.floor(n / 1000)) + " Ribu" + terbilang(n % 1000);
+    } else if (n < 1000000000) {
+      hasil = terbilang(Math.floor(n / 1000000)) + " Juta" + terbilang(n % 1000000);
+    } else if (n < 1000000000000) {
+      hasil = terbilang(Math.floor(n / 1000000000)) + " Milyar" + terbilang(n % 1000000000);
+    }
+    return hasil.trim();
+  }
+
+  function formatTerbilangRupiah(n) {
+    const num = Math.abs(Number(n) || 0);
+    if (num === 0) return "Nol Rupiah";
+    const txt = terbilang(num);
+    return (txt + " Rupiah").replace(/\s+/g, ' ');
+  }
+
+  // ===== CETAK LAPORAN KEUANGAN BERDASARKAN BULAN =====
+  function openCetakKeuanganBulanModal() {
+    if (!keuState || !keuState.length) {
+      alert('Belum ada data transaksi keuangan yang dapat dicetak.');
+      return;
+    }
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    const bulanNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+    let optionsStr = bulanNames.map((m, i) => `${i + 1}. ${m}`).join('\n');
+    let inputBulan = prompt(`Masukkan Angka Bulan yang ingin dicetak (1-12):\n\n${optionsStr}`, String(currentMonth));
+    if (!inputBulan) return;
+    
+    let monthNum = parseInt(inputBulan, 10);
+    if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+      alert('Nomor bulan tidak valid. Pilih angka 1 sampai 12.');
+      return;
+    }
+
+    let inputTahun = prompt('Masukkan Tahun:', String(currentYear));
+    if (!inputTahun) return;
+    let yearNum = parseInt(inputTahun, 10);
+    if (isNaN(yearNum) || yearNum < 2000 || yearNum > 2100) {
+      alert('Tahun tidak valid.');
+      return;
+    }
+
+    cetakLaporanKeuanganBulan(monthNum, yearNum);
+  }
+
+  function cetakLaporanKeuanganBulan(targetMonth, targetYear) {
+    const bulanNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    const namaBulan = bulanNames[targetMonth - 1];
+
+    const filtered = keuState.filter(t => {
+      if (!t.tanggal) return false;
+      const d = new Date(t.tanggal);
+      return (d.getMonth() + 1) === targetMonth && d.getFullYear() === targetYear;
+    });
+
+    if (!filtered.length) {
+      alert(`Tidak ada data transaksi keuangan pada periode ${namaBulan} ${targetYear}.`);
+      return;
+    }
+
+    const sorted = [...filtered].sort((a, b) => new Date(a.tanggal || 0) - new Date(b.tanggal || 0));
+
+    let totalPemasukan = 0;
+    let totalPengeluaran = 0;
+
+    const tableTrs = sorted.map((t, idx) => {
+      const jenisStr = String(t.jenis_transaksi || t.jenis || t.tipe || '').trim();
+      const isMasuk = jenisStr.toLowerCase().includes('pemasukan');
+      const nom = Math.abs(Number(t.nominal || 0));
+      
+      if (isMasuk) totalPemasukan += nom;
+      else totalPengeluaran += nom;
+
+      const tgl = fmtTglDate(t.tanggal) || '-';
+
+      let namaPemohon = '';
+      if (t.nama_pemohon) {
+        namaPemohon = t.nama_pemohon;
+      } else if (t.permohonan_surat_tanah) {
+        if (typeof t.permohonan_surat_tanah === 'object') {
+          namaPemohon = t.permohonan_surat_tanah.nama || t.permohonan_surat_tanah.nama_pemohon || '';
+        } else if (typeof t.permohonan_surat_tanah === 'string') {
+          namaPemohon = t.permohonan_surat_tanah;
+        }
+      }
+
+      if (!namaPemohon && t.id_permohonan && state.data && Array.isArray(state.data)) {
+        const p = state.data.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
+        if (p) namaPemohon = p.nama_pemohon || p.nama || p.id_pendaftaran || '';
+      }
+
+      const idReg = t.id_permohonan || t.id_pendaftaran || '';
+      let subjek = '-';
+      if (namaPemohon && namaPemohon !== '-') {
+        subjek = `<b>${escFill(namaPemohon)}</b>${idReg ? `<br><span style="color:#666; font-size:8pt;">(${escFill(idReg)})</span>` : ''}`;
+      } else if (idReg) {
+        subjek = `<b>${escFill(idReg)}</b>`;
+      }
+
+      const badgeJenis = isMasuk 
+        ? `<span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:3px 8px; border-radius:4px; font-weight:800; font-size:8.5pt; display:inline-block;">PEMASUKAN</span>`
+        : `<span style="background:#ffebee; color:#b71c1c; border:1px solid #ef9a9a; padding:3px 8px; border-radius:4px; font-weight:800; font-size:8.5pt; display:inline-block;">PENGELUARAN</span>`;
+
+      const masukStr = isMasuk ? `<strong style="color:#1b5e20;">+ ${formatRp(nom)}</strong>` : '-';
+      const keluarStr = !isMasuk ? `<strong style="color:#b71c1c;">- ${formatRp(nom)}</strong>` : '-';
+
+      return `
+        <tr>
+          <td style="text-align:center; font-weight:600;">${idx + 1}</td>
+          <td style="text-align:center;">${tgl}</td>
+          <td style="text-align:center;">${badgeJenis}</td>
+          <td>${subjek}</td>
+          <td>${escBr(t.keterangan || '-')}</td>
+          <td class="num-col" style="background:${isMasuk ? '#f1f8e9' : 'transparent'};">${masukStr}</td>
+          <td class="num-col" style="background:${!isMasuk ? '#fff5f5' : 'transparent'};">${keluarStr}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const saldoAkhir = totalPemasukan - totalPengeluaran;
+    const nowTgl = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Laporan Keuangan Kas Desa Batetangnga - ${namaBulan} ${targetYear}</title>
+  <style>
+    @page { size: 8.5in 13in portrait; margin: 1cm 1.5cm; }
+    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #111; margin: 0; padding: 10px; }
+    .kop-wrap { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px; }
+    .kop-logo { width: 55px; height: 55px; object-fit: contain; }
+    .kop-text { text-align: center; flex: 1; margin: 0 10px; }
+    .kop-text h4 { margin: 0; font-size: 10pt; text-transform: uppercase; font-weight: 700; }
+    .kop-text h3 { margin: 2px 0; font-size: 11.5pt; text-transform: uppercase; font-weight: 800; color: #2E7D32; }
+    .kop-text p { margin: 0; font-size: 8.5pt; font-style: italic; color: #333; }
+    
+    .doc-head { text-align: center; margin: 14px 0 16px 0; }
+    .doc-head h2 { margin: 0; font-size: 12pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; color: #E53935; }
+    .doc-head p { margin: 3px 0 0 0; font-size: 9.5pt; font-weight: 700; color: #1b5e20; }
+    
+    .sum-grid { display: flex; gap: 10px; margin-bottom: 16px; }
+    .sum-card { flex: 1; border: 1px solid #000; padding: 8px; border-radius: 6px; text-align: center; }
+    .sum-card.in { background: #e8f5e9; }
+    .sum-card.out { background: #ffebee; }
+    .sum-card.bal { background: #fffde7; }
+    .sum-lbl { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #333; }
+    .sum-val { font-size: 11pt; font-weight: 800; margin-top: 2px; }
+    
+    table.rpt-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 9pt; }
+    table.rpt-table th { background: #f1f5f9; color: #000; border: 1px solid #000; padding: 6px 4px; text-align: center; font-weight: 700; }
+    table.rpt-table td { border: 1px solid #000; padding: 5px 6px; vertical-align: top; }
+    .num-col { text-align: right; font-weight: 600; white-space: nowrap; }
+    
+    .tfoot-total { background: #e2e8f0; font-weight: 800; }
+    
+    .sig-row { display: flex; justify-content: space-between; margin-top: 28px; page-break-inside: avoid; }
+    .sig-box { text-align: center; width: 42%; }
+    .sig-date { margin-bottom: 50px; font-size: 9.5pt; }
+    .sig-name { font-weight: 800; text-decoration: underline; font-size: 10pt; }
+    .sig-title { font-size: 9pt; }
+  </style>
+</head>
+<body>
+  <div class="kop-wrap">
+    <img src="logo-desa.png" class="kop-logo" alt="Logo Desa">
+    <div class="kop-text">
+      <h4>PEMERINTAH KABUPATEN POLEWALI MANDAR</h4>
+      <h4>KECAMATAN BINUANG</h4>
+      <h3>DESA BATETANGNGA</h3>
+      <p>Alamat: Jl. Tanai Kanang, Desa Batetangnga, Kec. Binuang, Polman</p>
+    </div>
+    <img src="logo.bmp" class="kop-logo" alt="Logo Polman">
+  </div>
+
+  <div class="doc-head">
+    <h2>LAPORAN KEUANGAN KAS DESA BERDASARKAN BULAN</h2>
+    <p>PERIODE TRANSAKSI: ${namaBulan.toUpperCase()} ${targetYear}</p>
+  </div>
+
+  <div class="sum-grid">
+    <div class="sum-card in">
+      <div class="sum-lbl">Total Pemasukan Bulan ${namaBulan}</div>
+      <div class="sum-val" style="color:#2E7D32;">${formatRp(totalPemasukan)}</div>
+    </div>
+    <div class="sum-card out">
+      <div class="sum-lbl">Total Pengeluaran Bulan ${namaBulan}</div>
+      <div class="sum-val" style="color:#c62828;">${formatRp(totalPengeluaran)}</div>
+    </div>
+    <div class="sum-card bal">
+      <div class="sum-lbl">Saldo Akhir Bulan ${namaBulan}</div>
+      <div class="sum-val" style="color:#1b5e20;">${formatRp(saldoAkhir)}</div>
+    </div>
+  </div>
+
+  <table class="rpt-table">
+    <thead>
+      <tr>
+        <th style="width:30px;">NO</th>
+        <th style="width:85px;">TANGGAL</th>
+        <th style="width:110px;">TIPE / JENIS</th>
+        <th style="width:150px;">PEMOHON / SUBJEK</th>
+        <th>KETERANGAN TRANSAKSI</th>
+        <th style="width:110px;">PEMASUKAN (Rp)</th>
+        <th style="width:110px;">PENGELUARAN (Rp)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${tableTrs}
+    </tbody>
+    <tfoot>
+      <tr class="tfoot-total">
+        <td colspan="5" style="text-align:right; padding:6px 8px;">TOTAL BULAN ${namaBulan.toUpperCase()} :</td>
+        <td class="num-col" style="color:#2E7D32;">${formatRp(totalPemasukan)}</td>
+        <td class="num-col" style="color:#c62828;">${formatRp(totalPengeluaran)}</td>
+      </tr>
+      <tr class="tfoot-total" style="background:#fef08a;">
+        <td colspan="5" style="text-align:right; padding:6px 8px;">SALDO AKHIR PERIODE ${namaBulan.toUpperCase()} :</td>
+        <td colspan="2" class="num-col" style="text-align:center; color:#1b5e20; font-size:10.5pt;">${formatRp(saldoAkhir)}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="sig-row">
+    <div class="sig-box">
+      <div class="sig-date">&nbsp;<br>Pengelola Keuangan / Bendahara,</div>
+      <div class="sig-name">( ............................................ )</div>
+      <div class="sig-title">NIP. ........................................</div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-date">Batetangnga, ${nowTgl}<br>Kepala Desa Batetangnga,</div>
+      <div class="sig-name">SUMAILA DAMANG</div>
+      <div class="sig-title">Kepala Desa</div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() { window.print(); };
+  </script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(htmlContent);
+      win.document.close();
+    } else {
+      alert('Pop-up terblokir oleh browser. Harap izinkan pop-up untuk mencetak laporan.');
+    }
+  }
+
+  // ===== CETAK LAPORAN KEUANGAN PER PEMOHON (ID) & TOTAL LUNAS =====
+  function cetakLaporanPerPemohon() {
+    if (!keuState || !keuState.length) {
+      alert('Belum ada data transaksi keuangan yang dapat dicetak.');
+      return;
+    }
+
+    const mapPemohon = {};
+
+    keuState.forEach(t => {
+      const jenisStr = String(t.jenis_transaksi || t.jenis || t.tipe || '').trim();
+      const isMasuk = jenisStr.toLowerCase().includes('pemasukan');
+      const nom = Math.abs(Number(t.nominal || 0));
+
+      let namaPemohon = '';
+      if (t.nama_pemohon) {
+        namaPemohon = t.nama_pemohon;
+      } else if (t.permohonan_surat_tanah) {
+        if (typeof t.permohonan_surat_tanah === 'object') {
+          namaPemohon = t.permohonan_surat_tanah.nama || t.permohonan_surat_tanah.nama_pemohon || '';
+        } else if (typeof t.permohonan_surat_tanah === 'string') {
+          namaPemohon = t.permohonan_surat_tanah;
+        }
+      }
+
+      if (!namaPemohon && t.id_permohonan && state.data && Array.isArray(state.data)) {
+        const p = state.data.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
+        if (p) namaPemohon = p.nama_pemohon || p.nama || p.id_pendaftaran || '';
+      }
+
+      const idReg = t.id_permohonan || t.id_pendaftaran || 'UMUM';
+      const key = idReg;
+
+      if (!mapPemohon[key]) {
+        mapPemohon[key] = {
+          id: idReg,
+          nama: namaPemohon || 'Masyarakat Umum / Non-Register',
+          totalBayar: 0,
+          totalPengeluaran: 0,
+          jumlahTrx: 0,
+          keteranganList: []
+        };
+      }
+
+      if (isMasuk) mapPemohon[key].totalBayar += nom;
+      else mapPemohon[key].totalPengeluaran += nom;
+
+      mapPemohon[key].jumlahTrx += 1;
+      if (t.keterangan) mapPemohon[key].keteranganList.push(t.keterangan);
+    });
+
+    const listPemohon = Object.values(mapPemohon);
+    if (!listPemohon.length) {
+      alert('Tidak ada data pemohon yang ditemukan.');
+      return;
+    }
+
+    let grandTotalBayar = 0;
+    const tableTrs = listPemohon.map((p, idx) => {
+      grandTotalBayar += p.totalBayar;
+      const ket = p.keteranganList.length ? escBr(p.keteranganList.slice(0, 2).join('; ')) : '-';
+      return `
+        <tr>
+          <td style="text-align:center; font-weight:600;">${idx + 1}</td>
+          <td style="text-align:center; font-weight:700;">${escFill(p.id)}</td>
+          <td><b>${escFill(p.nama)}</b></td>
+          <td style="text-align:center;">${p.jumlahTrx} Transaksi</td>
+          <td>${ket}</td>
+          <td class="num-col" style="color:#1b5e20; font-weight:800;">${formatRp(p.totalBayar)}</td>
+          <td style="text-align:center;"><span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:2px 8px; border-radius:4px; font-weight:800; font-size:8pt;">LUNAS</span></td>
+        </tr>
+      `;
+    }).join('');
+
+    const nowTgl = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Laporan Keuangan Per Pemohon & Total Pembayaran Lunas</title>
+  <style>
+    @page { size: 8.5in 13in portrait; margin: 1cm 1.5cm; }
+    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #111; margin: 0; padding: 10px; }
+    .kop-wrap { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px; }
+    .kop-logo { width: 55px; height: 55px; object-fit: contain; }
+    .kop-text { text-align: center; flex: 1; margin: 0 10px; }
+    .kop-text h4 { margin: 0; font-size: 10pt; text-transform: uppercase; font-weight: 700; }
+    .kop-text h3 { margin: 2px 0; font-size: 11.5pt; text-transform: uppercase; font-weight: 800; color: #2E7D32; }
+    .kop-text p { margin: 0; font-size: 8.5pt; font-style: italic; color: #333; }
+    
+    .doc-head { text-align: center; margin: 14px 0 16px 0; }
+    .doc-head h2 { margin: 0; font-size: 12pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; color: #7c3aed; }
+    .doc-head p { margin: 3px 0 0 0; font-size: 9pt; font-weight: 600; color: #444; }
+    
+    table.rpt-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 9pt; }
+    table.rpt-table th { background: #7c3aed; color: #ffffff; border: 1px solid #000; padding: 7px 4px; text-align: center; font-weight: 700; }
+    table.rpt-table td { border: 1px solid #000; padding: 6px 7px; vertical-align: top; }
+    .num-col { text-align: right; font-weight: 600; white-space: nowrap; }
+    .tfoot-total { background: #f3e8ff; font-weight: 800; }
+    
+    .sig-row { display: flex; justify-content: space-between; margin-top: 28px; page-break-inside: avoid; }
+    .sig-box { text-align: center; width: 42%; }
+    .sig-date { margin-bottom: 50px; font-size: 9.5pt; }
+    .sig-name { font-weight: 800; text-decoration: underline; font-size: 10pt; }
+    .sig-title { font-size: 9pt; }
+  </style>
+</head>
+<body>
+  <div class="kop-wrap">
+    <img src="logo-desa.png" class="kop-logo" alt="Logo Desa">
+    <div class="kop-text">
+      <h4>PEMERINTAH KABUPATEN POLEWALI MANDAR</h4>
+      <h4>KECAMATAN BINUANG</h4>
+      <h3>DESA BATETANGNGA</h3>
+      <p>Alamat: Jl. Tanai Kanang, Desa Batetangnga, Kec. Binuang, Polman</p>
+    </div>
+    <img src="logo.bmp" class="kop-logo" alt="Logo Polman">
+  </div>
+
+  <div class="doc-head">
+    <h2>LAPORAN PEMBAYARAN PER PEMOHON (ID REGISTRASI)</h2>
+    <p>Rekapitulasi Total Pembayaran Lunas Berdasarkan Subjek Permohonan Surat Tanah</p>
+  </div>
+
+  <table class="rpt-table">
+    <thead>
+      <tr>
+        <th style="width:30px;">NO</th>
+        <th style="width:110px;">ID REGISTRASI</th>
+        <th style="width:180px;">NAMA PEMOHON (SUBJEK)</th>
+        <th style="width:100px;">FREKUENSI</th>
+        <th>KETERANGAN TRANSAKSI</th>
+        <th style="width:130px;">TOTAL LUNAS (Rp)</th>
+        <th style="width:90px;">STATUS</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${tableTrs}
+    </tbody>
+    <tfoot>
+      <tr class="tfoot-total">
+        <td colspan="5" style="text-align:right; padding:8px;">GRAND TOTAL PEMBAYARAN SELURUH PEMOHON LUNAS :</td>
+        <td class="num-col" style="color:#1b5e20; font-size:10.5pt;">${formatRp(grandTotalBayar)}</td>
+        <td style="text-align:center; color:#1b5e20;">LUNAS</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="sig-row">
+    <div class="sig-box">
+      <div class="sig-date">&nbsp;<br>Pengelola Keuangan / Bendahara,</div>
+      <div class="sig-name">( ............................................ )</div>
+      <div class="sig-title">NIP. ........................................</div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-date">Batetangnga, ${nowTgl}<br>Kepala Desa Batetangnga,</div>
+      <div class="sig-name">SUMAILA DAMANG</div>
+      <div class="sig-title">Kepala Desa</div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() { window.print(); };
+  </script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(htmlContent);
+      win.document.close();
+    } else {
+      alert('Pop-up terblokir oleh browser. Harap izinkan pop-up untuk mencetak.');
+    }
+  }
+
+  // ===== CETAK KWITANSI PEMBAYARAN RESMI =====
+  function cetakKwitansi(trxId) {
+    if (!keuState || !keuState.length) {
+      alert('Belum ada data transaksi untuk dicetak kwitansi.');
+      return;
+    }
+
+    let t = keuState.find(x => String(x.id) === String(trxId));
+    if (!t && keuState.length > 0) {
+      t = keuState[0];
+    }
+
+    if (!t) {
+      alert('Transaksi tidak ditemukan.');
+      return;
+    }
+
+    const nom = Math.abs(Number(t.nominal || 0));
+    const terbilangStr = formatTerbilangRupiah(nom);
+    const tglCetak = fmtTglDate(t.tanggal) || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    let namaPemohon = '';
+    if (t.nama_pemohon) {
+      namaPemohon = t.nama_pemohon;
+    } else if (t.permohonan_surat_tanah) {
+      if (typeof t.permohonan_surat_tanah === 'object') {
+        namaPemohon = t.permohonan_surat_tanah.nama || t.permohonan_surat_tanah.nama_pemohon || '';
+      } else if (typeof t.permohonan_surat_tanah === 'string') {
+        namaPemohon = t.permohonan_surat_tanah;
+      }
+    }
+
+    if (!namaPemohon && t.id_permohonan && state.data && Array.isArray(state.data)) {
+      const p = state.data.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
+      if (p) namaPemohon = p.nama_pemohon || p.nama || p.id_pendaftaran || '';
+    }
+
+    const idReg = t.id_permohonan || t.id_pendaftaran || 'REG-DESA';
+    const subjekFull = namaPemohon ? `${namaPemohon} (${idReg})` : idReg;
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Kwitansi Pembayaran - ${escFill(idReg)}</title>
+  <style>
+    @page { size: 8.5in 5.5in landscape; margin: 0.8cm 1.2cm; }
+    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #111; margin: 0; padding: 15px; }
+    .kwitansi-box { border: 2px solid #0f172a; padding: 18px; border-radius: 8px; background: #fff; }
+    .kop-wrap { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 12px; }
+    .kop-logo { width: 50px; height: 50px; object-fit: contain; }
+    .kop-text { text-align: center; flex: 1; margin: 0 10px; }
+    .kop-text h4 { margin: 0; font-size: 9.5pt; text-transform: uppercase; font-weight: 700; }
+    .kop-text h3 { margin: 2px 0; font-size: 11pt; text-transform: uppercase; font-weight: 800; color: #2E7D32; }
+    .kop-text p { margin: 0; font-size: 8pt; font-style: italic; color: #333; }
+    
+    .kw-title { text-align: center; font-size: 13pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; color: #1b5e20; margin: 10px 0 16px 0; }
+    
+    table.kw-table { width: 100%; border-collapse: collapse; font-size: 10pt; line-height: 1.8; margin-bottom: 16px; }
+    table.kw-table td { padding: 4px 6px; vertical-align: top; }
+    
+    .box-rupiah { border: 2px solid #2E7D32; background: #e8f5e9; color: #1b5e20; padding: 8px 18px; font-size: 14pt; font-weight: 800; border-radius: 6px; display: inline-block; }
+    
+    .sig-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 14px; }
+    .sig-box { text-align: center; width: 220px; }
+    .sig-date { font-size: 9pt; margin-bottom: 45px; }
+    .sig-name { font-weight: 800; text-decoration: underline; font-size: 9.5pt; }
+  </style>
+</head>
+<body>
+  <div class="kwitansi-box">
+    <div class="kop-wrap">
+      <img src="logo-desa.png" class="kop-logo" alt="Logo Desa">
+      <div class="kop-text">
+        <h4>PEMERINTAH KABUPATEN POLEWALI MANDAR</h4>
+        <h4>KECAMATAN BINUANG</h4>
+        <h3>DESA BATETANGNGA</h3>
+        <p>Alamat: Jl. Tanai Kanang, Desa Batetangnga, Kec. Binuang, Polman</p>
+      </div>
+      <img src="logo.bmp" class="kop-logo" alt="Logo Polman">
+    </div>
+
+    <div class="kw-title">KWITANSI PEMBAYARAN RESMI</div>
+
+    <table class="kw-table">
+      <tr>
+        <td style="width:140px; font-weight:bold;">No. Kwitansi</td>
+        <td style="width:10px;">:</td>
+        <td style="font-weight:bold; color:#E53935;">KW-${escFill(t.id || '001')} / ${escFill(idReg)}</td>
+      </tr>
+      <tr>
+        <td style="font-weight:bold;">Telah Terima Dari</td>
+        <td>:</td>
+        <td><b style="font-size:11pt; color:#1b5e20;">${escFill(subjekFull)}</b></td>
+      </tr>
+      <tr>
+        <td style="font-weight:bold;">Uang Sejumlah</td>
+        <td>:</td>
+        <td style="background:#f1f8e9; border:1px solid #a5d6a7; font-weight:bold; font-style:italic; color:#1b5e20; padding:6px 10px;">
+          # ${escFill(terbilangStr)} #
+        </td>
+      </tr>
+      <tr>
+        <td style="font-weight:bold;">Untuk Pembayaran</td>
+        <td>:</td>
+        <td>${escBr(t.keterangan || 'Administrasi / Layanan Pendaftaran Pertanahan Desa Batetangnga')}</td>
+      </tr>
+    </table>
+
+    <div class="sig-row">
+      <div class="box-rupiah">
+        Rp ${formatRp(nom)}
+      </div>
+      <div class="sig-box">
+        <div class="sig-date">Batetangnga, ${tglCetak}<br>Bendahara / Pengelola Keuangan,</div>
+        <div class="sig-name">( ............................................ )</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() { window.print(); };
+  </script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(htmlContent);
+      win.document.close();
+    } else {
+      alert('Pop-up terblokir oleh browser. Harap izinkan pop-up untuk mencetak kwitansi.');
+    }
+  }
+
+  window.cetakKwitansi = cetakKwitansi;
 
   // Field data_raw yang dianggap penting untuk ditampilkan di panel Cek.
   // Hanya ±10 kolom kunci agar tampilan tidak membludak dengan semua isian.
@@ -1513,6 +2092,11 @@ hideChangePwMsg();
       const upCount = uploadMap.get(r.id) || 0;
       const tr = document.createElement('tr');
       tr.innerHTML = `
+        <td data-label="Aksi">
+          <button class="btn" data-action="view" data-id="${esc(r.id)}">👁 Detail</button>
+          ${isUserOnly() ? '' : `<button class="btn" data-action="edit" data-id="${esc(r.id)}">✏️ Edit</button>`}
+          ${isUserOnly() ? '' : `<button class="btn danger" data-action="delete" data-id="${esc(r.id)}">🗑 Hapus</button>`}
+        </td>
         <td data-label="ID"><strong>${esc(r.id)}</strong> ${upCount ? `<span class="tag status-s" title="${upCount} upload">📎${upCount}</span>` : ''}</td>
         <td data-label="Tanggal">${esc(fmtTgl(r.timestamp) || '')}</td>
         <td data-label="Layanan"><span class="tag ${esc(r.layanan)}">${esc(r.layanan)}</span></td>
@@ -1522,12 +2106,7 @@ hideChangePwMsg();
         <td data-label="No. Surat">${esc(info._nomorSuratTercetak || '')}</td>
         <td data-label="Alamat">${esc(alamatPemohon(r.layanan, info))}</td>
         <td data-label="Catatan">${esc(r.catatan_admin || '')}</td>
-        <td data-label="Status"><span class="tag status-s">${esc(r.status_berkas)}</span></td>
-        <td data-label="Aksi">
-          <button class="btn" data-action="view" data-id="${esc(r.id)}">👁 Detail</button>
-          ${isUserOnly() ? '' : `<button class="btn" data-action="edit" data-id="${esc(r.id)}">✏️ Edit</button>`}
-          ${isUserOnly() ? '' : `<button class="btn danger" data-action="delete" data-id="${esc(r.id)}">🗑 Hapus</button>`}
-        </td>`;
+        <td data-label="Status"><span class="tag status-s">${esc(r.status_berkas)}</span></td>`;
       frag.appendChild(tr);
     });
     body.appendChild(frag);
@@ -1563,6 +2142,10 @@ hideChangePwMsg();
       const { r, info, missing } = c;
       const tr = document.createElement('tr');
       tr.innerHTML = `
+        <td data-label="Aksi">
+          <button class="btn primary" data-action="surat" data-id="${esc(r.id)}">🖨 Surat</button>
+          <button class="btn" data-action="surat-sporadik" data-id="${esc(r.id)}" title="Cetak Surat SPORADIK (Penguasaan Fisik Bidang Tanah)">🖨 SPORADIK</button>
+        </td>
         <td data-label="ID"><strong>${esc(r.id)}</strong></td>
         <td data-label="Tanggal">${esc(fmtTgl(r.timestamp) || '')}</td>
         <td data-label="Layanan"><span class="tag ${esc(r.layanan)}">${esc(r.layanan)}</span></td>
@@ -1572,11 +2155,7 @@ hideChangePwMsg();
         <td data-label="No. Surat">${esc(info._nomorSuratTercetak || '')}</td>
         <td data-label="Alamat">${esc(alamatPemohon(r.layanan, info))}</td>
         <td data-label="Catatan">${esc(r.catatan_admin || '')}</td>
-        <td data-label="Status">${statusBadge(r.status_berkas)}</td>
-        <td data-label="Aksi">
-          <button class="btn primary" data-action="surat" data-id="${esc(r.id)}">🖨 Surat</button>
-          <button class="btn" data-action="surat-sporadik" data-id="${esc(r.id)}" title="Cetak Surat SPORADIK (Penguasaan Fisik Bidang Tanah)">🖨 SPORADIK</button>
-        </td>`;
+        <td data-label="Status">${statusBadge(r.status_berkas)}</td>`;
       frag.appendChild(tr);
     });
     body.appendChild(frag);
