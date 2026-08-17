@@ -2725,28 +2725,66 @@ header, .app-header, .modal-head {
 }
 
 /* ==================================================
-   PERBAIKAN TOTAL UI/UX - KONTRAS WARNA & LAYOUT NAVBAR
+   NAVBAR PUTIH ELEGAN (#FFFFFF) & PERBAIKAN TOTAL UI/UX
    ================================================== */
 
-/* 1. Header Topbar Spacing & Loose Layout */
+/* 1. Header Navbar Putih Bersih (#FFFFFF) & Loose Spacing */
 header, .app-header {
   padding: 16px 28px !important;
   gap: 16px !important;
-  background: linear-gradient(135deg, #E53935, #C62828) !important;
-  border-bottom: 4px solid #FBC02D !important;
-}
-header h1, .app-title {
-  color: #FFFFFF !important;
-  font-weight: 800 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
-}
-header p, .app-subtitle {
-  color: #FFF9C4 !important;
-  font-weight: 600 !important;
-  opacity: 0.95 !important;
+  background: #FFFFFF !important;
+  border-bottom: 2px solid #E5E7EB !important;
+  border-top: 4px solid #E53935 !important;
+  box-shadow: 0 4px 18px -4px rgba(15, 23, 42, 0.06) !important;
+  color: #111827 !important;
 }
 
-/* 2. Stat Cards & High Contrast Numbers (#111827) */
+header h1, .app-title {
+  color: #111827 !important;
+  font-weight: 800 !important;
+  text-shadow: none !important;
+  letter-spacing: -0.2px !important;
+}
+
+header p, .app-subtitle {
+  color: #4B5563 !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+
+/* Status Badges di Topbar Putih */
+.tb-status .badge, header .badge {
+  background: #F8F9FA !important;
+  border: 1px solid #E5E7EB !important;
+  color: #374151 !important;
+  font-weight: 600 !important;
+}
+.badge.ok {
+  color: #2E7D32 !important;
+  background: #E8F5E9 !important;
+  border-color: #A5D6A7 !important;
+}
+.badge.err {
+  color: #E53935 !important;
+  background: #FFEBEE !important;
+  border-color: #EF9A9A !important;
+}
+
+/* Search Input di Topbar Putih */
+.tb-search, #topSearch {
+  background: #F8F9FA !important;
+  border: 1px solid #D1D5DB !important;
+  color: #111827 !important;
+  padding: 8px 14px !important;
+  border-radius: 10px !important;
+}
+.tb-search:focus, #topSearch:focus {
+  border-color: #2E7D32 !important;
+  background: #FFFFFF !important;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2) !important;
+}
+
+/* 2. Kartu Statistik & High Contrast Numbers (#111827) */
 .dash-card, .card-stat {
   background: #FFFFFF !important;
   border: 1px solid #E5E7EB !important;
@@ -2767,14 +2805,14 @@ header p, .app-subtitle {
   margin-top: 4px !important;
 }
 
-/* 3. Text Contrast in Light Backgrounds (#F8F9FA) */
+/* 3. Latar Belakang Utama Abu-abu Sangat Terang (#F8F9FA) */
 body, main, .main-card, .workspace-card {
   background-color: #F8F9FA !important;
   color: #111827 !important;
 }
 
-/* 4. Table Header Contrast */
-table thead th, .table-master thead th {
+/* 4. Table Header Red Contrast (#E53935) */
+table thead th, .table-master thead th, #dataTable thead th, #keuTable thead th {
   background-color: #E53935 !important;
   color: #FFFFFF !important;
   font-weight: 800 !important;
