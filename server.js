@@ -1502,10 +1502,71 @@ async function buildDocValues(record, extraValues) {
     }).join('\n\n');
   };
 
+  // 5) Generasi KIRI dan KANAN secara terpisah (Untuk Tabel 1 Baris 2 Kolom di Google Docs)
+  const buildTabelAhliWarisKiri = (list) => {
+    if (!list || !list.length) return '';
+    const blocks = [];
+    for (let i = 0; i < list.length; i += 2) {
+      const left = list[i];
+      const leftNo = i + 1;
+      const leftNm = String(left.nama || '').trim().toUpperCase();
+      const leftTmpt = left.tempat_lahir || 'Batetangnga';
+      const leftTgl = left.tanggal_lahir ? fmtIdDate(left.tanggal_lahir) : '';
+      const leftTtl = leftTmpt + (leftTgl ? ', ' + leftTgl : '');
+      const leftPekr = left.pekerjaan || '-';
+      const leftAlmt = left.alamat || '-';
+      blocks.push(`${leftNo}. Nama\t\t: ${leftNm}\n   TTL\t\t: ${leftTtl}\n   Pekerjaan\t: ${leftPekr}\n   Alamat\t\t: ${leftAlmt}`);
+    }
+    return blocks.join('\n\n');
+  };
+
+  const buildTabelAhliWarisKanan = (list) => {
+    if (!list || !list.length) return '';
+    const blocks = [];
+    for (let i = 1; i < list.length; i += 2) {
+      const right = list[i];
+      const rightNo = i + 1;
+      const rightNm = String(right.nama || '').trim().toUpperCase();
+      const rightTmpt = right.tempat_lahir || 'Batetangnga';
+      const rightTgl = right.tanggal_lahir ? fmtIdDate(right.tanggal_lahir) : '';
+      const rightTtl = rightTmpt + (rightTgl ? ', ' + rightTgl : '');
+      const rightPekr = right.pekerjaan || '-';
+      const rightAlmt = right.alamat || '-';
+      blocks.push(`${rightNo}. Nama\t\t: ${rightNm}\n   TTL\t\t: ${rightTtl}\n   Pekerjaan\t: ${rightPekr}\n   Alamat\t\t: ${rightAlmt}`);
+    }
+    return blocks.join('\n\n');
+  };
+
+  const buildTtdAhliWarisKiri = (list) => {
+    if (!list || !list.length) return '';
+    const blocks = [];
+    for (let i = 0; i < list.length; i += 2) {
+      const leftNo = i + 1;
+      const leftNm = String(list[i].nama || '').trim().toUpperCase();
+      blocks.push(`${leftNo}. ${leftNm}\n( ............................ )`);
+    }
+    return blocks.join('\n\n');
+  };
+
+  const buildTtdAhliWarisKanan = (list) => {
+    if (!list || !list.length) return '';
+    const blocks = [];
+    for (let i = 1; i < list.length; i += 2) {
+      const rightNo = i + 1;
+      const rightNm = String(list[i].nama || '').trim().toUpperCase();
+      blocks.push(`${rightNo}. ${rightNm}\n( ............................ )`);
+    }
+    return blocks.join('\n\n');
+  };
+
   const tabelAhliWarisHtml = buildTabelAhliWarisHtml(ahliWarisList);
   const ttdAhliWarisHtml = buildTtdAhliWarisHtml(ahliWarisList);
   const tabelAhliWarisStr = buildTabelAhliWaris(ahliWarisList);
   const ttdAhliWarisStr = buildTtdAhliWaris(ahliWarisList);
+  const tabelAhliWarisKiriStr = buildTabelAhliWarisKiri(ahliWarisList);
+  const tabelAhliWarisKananStr = buildTabelAhliWarisKanan(ahliWarisList);
+  const ttdAhliWarisKiriStr = buildTtdAhliWarisKiri(ahliWarisList);
+  const ttdAhliWarisKananStr = buildTtdAhliWarisKanan(ahliWarisList);
 
   // Alias umum agar placeholder fleksibel (mis. {{nama}} / {{nama_lengkap}}).
   const alias = {
@@ -1619,6 +1680,10 @@ async function buildDocValues(record, extraValues) {
     tabelahliwaris: tabelAhliWarisStr,
     ttd_ahli_waris: ttdAhliWarisStr,
     ttdahliwaris: ttdAhliWarisStr,
+    tabel_ahli_waris_kiri: tabelAhliWarisKiriStr,
+    tabel_ahli_waris_kanan: tabelAhliWarisKananStr,
+    ttd_ahli_waris_kiri: ttdAhliWarisKiriStr,
+    ttd_ahli_waris_kanan: ttdAhliWarisKananStr,
 
     // Khusus Surat Hibah (Sesuai Presisi Pengguna)
     penerima_tgl_lahir: fmtIdDate(dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir),
