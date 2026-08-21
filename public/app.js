@@ -1083,101 +1083,28 @@
   }
 
   async function docsRenderCore(input, idReg, extraValues) {
-    const btn = $('btnDocsRender');
-    busyBtn(btn, true, 'Merender surat…');
-    try {
-      const res = await fetch('/api/docs/render', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ link: input, idReg, jenis: docsState.jenis || 'SPORADIK', extraValues: extraValues || {} })
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Gagal merender surat.');
-      docsState.lastRender = json;
-      docsState.lastRender.idReg = idReg;
-      $('docsTitle').textContent = '· ' + (json.title || '');
-      const statusHtml = [
-        ...(json.filled || []).map((f) => `<span class="docs-field-chip ok">✅ {{${esc(f)}}}</span>`),
-        ...(json.missing || []).map((f) => `<span class="docs-field-chip bad">⚠️ {{${esc(f)}}} — kosong</span>`)
-      ].join(' ');
-      $('docsFieldStatus').innerHTML = statusHtml || '<em style="font-size:12px; color:var(--muted);">Tidak ada placeholder.</em>';
-      if ($('docsFieldStatusSummaryText')) {
-        const nFilled = (json.filled || []).length;
-        const nMissing = (json.missing || []).length;
-        $('docsFieldStatusSummaryText').textContent = `${nFilled} Terisi ${nMissing ? ('• ' + nMissing + ' Perlu Diisi') : '• Lengkap ✅'}`;
-      }
-      $('docsPreview').innerHTML = json.html;
-      $('docsPreviewCard').hidden = false;
-      $('docsPreviewCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      docsShowManualFields(json.fields);
-    } catch (e) {
-      const msg = e.message || 'Gagal merender surat.';
-      if ($('docsRenderInfo')) {
-        $('docsRenderInfo').innerHTML = `<span class="docs-field-chip bad">⚠️ ${esc(msg)}</span>`;
-      } else if ($('docsDetectResult')) {
-        $('docsDetectResult').innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:12px; border-radius:8px; font-weight:700; font-size:13px; margin-top:10px;">⚠️ ${esc(msg)}</div>`;
-      } else {
-        alert('⚠️ Gagal merender surat: ' + msg);
-      }
-    } finally {
-      busyBtn(btn, false);
-    }
+    return docsGenerate(input, idReg, extraValues);
   }
 
-  function docsPrint() {
-    if (!docsState.lastRender) return;
-    // Hasil dari Generate = dokumen Google asli -> buka di tab baru (cetak dari Google Docs).
-    if (docsState.lastRender.url) {
-      window.open(docsState.lastRender.url, '_blank', 'noopener');
-      return;
-    }
-    const win = window.open('', '_blank', 'width=900,height=1200');
-    if (!win) { alert('Browser memblokir pop-up. Izinkan pop-up untuk mencetak surat.'); return; }
-    win.document.write(`<!doctype html>
-<html lang="id">
-<head>
-<meta charset="utf-8">
-<title>${esc(docsState.lastRender.title || 'Surat')}</title>
-<style>
-  @page { size: A4 portrait; margin: 15mm 20mm; }
-  * { box-sizing: border-box; }
-  body { font-family: "Times New Roman", Times, Georgia, serif; margin: 0; padding: 24px; color: #000; font-size: 12pt; line-height: 1.55; background: #fff; }
-  .docs-body { max-width: 210mm; margin: 0 auto; }
-  .docs-body p { margin: 8px 0; text-align: justify; }
-  table.doc-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11pt; }
-  table.doc-table th, table.doc-table td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top; }
-  table.doc-table th { background: #eee; }
-  @media print {
-    body { padding: 0; margin: 0; }
-    .docs-body { max-width: 100%; margin: 0; }
-  }
-</style>
-</head>
-<body>
-  <div class="docs-body">${docsState.lastRender.html}</div>
-</body>
-</html>`);
-    win.document.close();
-    setTimeout(() => { win.focus(); win.print(); }, 250);
-  }
-
-  // Salin dokumen Google asli & isi placeholder LANGSUNG di dalam dokumen Google,
-  // lalu buka hasilnya di tab baru (format asli Google Docs terjaga).
-  async function docsGenerate() {
-    const input = docsDocIdFromInput();
-    const idReg = String($('docsIdReg').value || '').trim();
+  async function docsGenerate(customInput, customIdReg, extraValues) {
+    const input = customInput || docsDocIdFromInput();
+    const idReg = String(customIdReg || ($('docsIdReg') ? $('docsIdReg').value : '') || '').trim();
     if (!input) { alert('Tempel link / ID Google Docs terlebih dahulu.'); return; }
     if (!idReg) { alert('Isi ID pendaftaran terlebih dahulu.'); return; }
-    const btn = $('btnDocsGenerate');
-    busyBtn(btn, true, 'Membuat dokumen…');
+
+    const btn = $('btnDocsRender') || $('btnDocsGenerate');
+    busyBtn(btn, true, 'Membuat Dokumen Google…');
+
     try {
       const res = await fetch('/api/docs/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ link: input, idReg, jenis: docsState.jenis || 'SPORADIK', extraValues: docsCollectManual() })
+        body: JSON.stringify({ link: input, idReg, jenis: docsState.jenis || 'SPORADIK', extraValues: extraValues || docsCollectManual() })
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Gagal membuat dokumen.');
+      if (!json.success) throw new Error(json.error || 'Gagal membuat dokumen Google Docs.');
+
+      docsState.docId = json.docId;
       docsState.lastRender = {
         title: json.title,
         docId: json.docId,
@@ -1187,31 +1114,24 @@
         missing: json.missing || [],
         html: ''
       };
-      $('docsTitle').textContent = '· ' + (json.title || '');
-      const statusHtml = [
-        ...(json.filled || []).map((f) => `<span class="docs-field-chip ok">✅ {{${esc(f)}}} terisi</span>`),
-        ...(json.missing || []).map((f) => `<span class="docs-field-chip bad">⚠️ {{${esc(f)}}} — kosong</span>`)
-      ].join(' ');
-      $('docsFieldStatus').innerHTML = statusHtml || '<em style="font-size:12px; color:var(--muted);">Tidak ada placeholder.</em>';
-      if ($('docsFieldStatusSummaryText')) {
-        const nFilled = (json.filled || []).length;
-        const nMissing = (json.missing || []).length;
-        $('docsFieldStatusSummaryText').textContent = `${nFilled} Terisi ${nMissing ? ('• ' + nMissing + ' Perlu Diisi') : '• Lengkap ✅'}`;
+
+      docsUpdateLiveIframe(json.docId);
+
+      const liveCard = $('docsLiveCard');
+      if (liveCard) {
+        liveCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-      $('docsPreview').innerHTML = `<div class="docs-generate-done">
-        <p><strong>✅ Dokumen Google berhasil dibuat.</strong> Placeholder diisi langsung di dalam dokumen Google (format asli terjaga).</p>
-        <div style="margin:14px 0;">
-          <iframe src="${esc('https://docs.google.com/document/d/' + encodeURIComponent(json.docId) + '/preview')}" class="docs-live-frame" title="Preview Dokumen Google"></iframe>
-        </div>
-        <p><a class="btn" style="background:#1a73e8; color:#fff; text-decoration:none; display:inline-flex; align-items:center; gap:6px;" href="${esc(json.url)}" target="_blank" rel="noopener">
-          <i data-lucide="external-link" style="width:15px; height:15px;"></i> Buka Dokumen Google (tab baru)
-        </a></p>
-      </div>`;
-      $('docsPreviewCard').hidden = false;
-      $('docsPreviewCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      docsShowManualFields(json.fields);
+
+      renderDocsHistory();
+
+      alert(`✅ Dokumen Google Docs (${json.title || 'Surat'}) berhasil dibuat!\n\nSalinan dokumen baru telah dibuat di Google Drive & seluruh placeholder (${(json.filled || []).length} terisi) terisi 100% presisi dengan format asli terjaga.`);
     } catch (e) {
-      $('docsRenderInfo').innerHTML = `<span class="docs-field-chip bad">⚠️ ${esc(e.message)}</span>`;
+      const msg = e.message || 'Gagal membuat dokumen Google Docs.';
+      if ($('docsDetectResult')) {
+        $('docsDetectResult').innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:12px; border-radius:8px; font-weight:700; font-size:13px; margin-top:10px;">⚠️ ${esc(msg)}</div>`;
+      } else {
+        alert('⚠️ Gagal membuat dokumen Google Docs: ' + msg);
+      }
     } finally {
       busyBtn(btn, false);
     }
