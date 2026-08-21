@@ -1463,18 +1463,16 @@ async function buildDocValues(record, extraValues) {
     }).join('\n');
   };
 
-  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Format Resmi Titik Penghubung Akta & Ruang Tinggi Tanda Tangan)
+  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Format Resmi — nama + "( ... )" di mana
+  //    tanda tangan diisi). Tidak ada titik penghubung (hanya titik di dalam kurung
+  //    sebagai garis tanda tangan). Antar nomor diberi jarak untuk ruang tanda tangan.
   const buildTtdAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
       const n = idx + 1;
       const nm = String(item.nama || '').trim().toUpperCase();
-      const prefix = `${n}. ${nm} `;
-      const totalWidth = 72;
-      const dotsCount = Math.max(8, totalWidth - prefix.length - 30);
-      const dots = '.'.repeat(dotsCount);
-      return `${prefix}${dots} ( ............................ )`;
-    }).join('\n\n\n').trim();
+      return `${n}. ${nm} ( ............................ )`;
+    }).join('\n\n').trim();
   };
 
   // 5) Generasi KIRI dan KANAN secara terpisah (Untuk Tabel 1 Baris 2 Kolom di Google Docs)
@@ -2157,6 +2155,60 @@ function extractAllPlaceholders(doc) {
   return found;
 }
 
+// Cari elemen content (paragraf) yang mengandung placeholder tertentu (mis. {{TTD_AW}}),
+// termasuk di dalam tabel/header/footer. Mengembalikan elemen content (punya
+// startIndex/endIndex untuk updateParagraphStyle) atau null.
+function findPlaceholderParagraph(doc, key) {
+  const keyNorm = normKey(''); // placeholder
+  const targetOpen = '{{' + normKey(key) + '}}';
+  const targetBrace = '{' + normKey(key) + '}';
+  let result = null;
+  const walk = (el) => {
+    if (!el || typeof el !== 'object' || result) return;
+    if (el.paragraph) {
+      const txtNorm = normKey(paragraphText(el.paragraph));
+      if (txtNorm.includes(targetOpen) || txtNorm.includes(targetBrace)) {
+        result = el;
+      }
+    }
+    if (el.table) {
+      (el.table.tableRows || []).forEach((row) => {
+        (row.tableCells || []).forEach((cell) => {
+          (cell.content || []).forEach(walk);
+        });
+      });
+    }
+    if (Array.isArray(el)) el.forEach(walk);
+  };
+  (doc.body && doc.body.content || []).forEach(walk);
+  if (doc.headers) Object.values(doc.headers).forEach((h) => (h.content || []).forEach(walk));
+  if (doc.footers) Object.values(doc.footers).forEach((f) => (f.content || []).forEach(walk));
+  if (doc.footnotes) Object.values(doc.footnotes).forEach((fn) => (fn.content || []).forEach(walk));
+  return result;
+}
+
+// Set font MONOSPACE pada rentang teks sebuah paragraf agar padding titik
+// (di buildTtdAhliWaris) tersusun lurus — Google Docs API tidak mengizinkan
+// pengubahan tabStops (read-only), sehingga monospace adalah solusi praktis.
+async function setMonospaceFont(docId, paragraph) {
+  const token = await googleAccessToken();
+  const requests = [{
+    updateTextStyle: {
+      range: { startIndex: paragraph.startIndex, endIndex: paragraph.endIndex },
+      textStyle: { weightedFontFamily: { fontFamily: 'Courier New', weight: 400 } },
+      fields: 'weightedFontFamily'
+    }
+  }];
+  const res = await fetch('https://docs.googleapis.com/v1/documents/' + encodeURIComponent(docId) + ':batchUpdate', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requests })
+  });
+  const j = await res.json();
+  if (!res.ok) console.error('[setMonospaceFont] gagal:', j && j.error && j.error.message);
+  return j;
+}
+
 // POST /api/docs/generate -> salin dokumen Google asli + isi placeholder LANGSUNG
 // di dalam dokumen Google (bukan HTML). Format/layout asli terjaga, hasilnya
 // berupa dokumen Google Docs yang bisa dibuka & dicetak langsung dari Google.
@@ -2211,6 +2263,18 @@ app.post('/api/docs/generate', requireAuth, async (req, res) => {
     // 1) Salin dokumen asli -> file baru di Drive (placeholder masih utuh).
     const newName = ((doc.title || 'Surat') + ' - ' + idReg).slice(0, 150);
     const newId = await copyDriveDoc(docId, newName);
+
+    // 1b) Set font MONOSPACE pada paragraf {{TTD_AW}} agar "( ... )" rata kanan & lurus
+    //     (padding titik di buildTtdAhliWaris hanya rapi di font monospace).
+    try {
+      const ttdPara = findPlaceholderParagraph(doc, 'TTD_AW');
+      if (ttdPara) {
+        await setMonospaceFont(newId, ttdPara);
+        console.log('[Generate] font monospace TTD_AW di-set pada doc ' + newId);
+      }
+    } catch (e) {
+      console.error('[Generate] gagal set font monospace TTD_AW:', e.message);
+    }
 
     // 2) Kumpulkan daftar placeholder (dari dokumen asli, termasuk tabel, header, footer).
     const placeholders = extractAllPlaceholders(doc);
