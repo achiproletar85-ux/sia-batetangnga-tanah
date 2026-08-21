@@ -1442,53 +1442,25 @@ async function buildDocValues(record, extraValues) {
     return html;
   };
 
-  // 3) Generasi TABEL_AHLI_WARIS Teks Baku (Perataan Presisi Titik Dua padEnd 13 Karakter & Kolom Kanan 50 Karakter)
+  // 3) Generasi TABEL_AHLI_WARIS Teks Baku (Format 1 Kolom Presisi, Titik Dua 100% Lurus Tegak & Bebas Tabrakan Spasi)
   const buildTabelAhliWaris = (list) => {
     if (!list || !list.length) return '';
-    const blocks = [];
-    for (let i = 0; i < list.length; i += 2) {
-      const left = list[i];
-      const right = list[i + 1];
+    return list.map((item, idx) => {
+      const no = idx + 1;
+      const nm = String(item.nama || '').trim().toUpperCase();
+      const tmpt = item.tempat_lahir || 'Batetangnga';
+      const tgl = item.tanggal_lahir ? fmtIdDate(item.tanggal_lahir) : '';
+      const ttl = tmpt + (tgl ? ', ' + tgl : '');
+      const pekr = item.pekerjaan || '-';
+      const almt = item.alamat || '-';
 
-      const leftNo = i + 1;
-      const leftNm = String(left.nama || '').trim().toUpperCase();
-      const leftTmpt = left.tempat_lahir || 'Batetangnga';
-      const leftTgl = left.tanggal_lahir ? fmtIdDate(left.tanggal_lahir) : '';
-      const leftTtl = leftTmpt + (leftTgl ? ', ' + leftTgl : '');
-      const leftPekr = left.pekerjaan || '-';
-      const leftAlmt = left.alamat || '-';
+      const l1 = `${no}. Nama`.padEnd(13, ' ') + `: ${nm}`;
+      const l2 = `   TTL`.padEnd(13, ' ') + `: ${ttl}`;
+      const l3 = `   Pekerjaan`.padEnd(13, ' ') + `: ${pekr}`;
+      const l4 = `   Alamat`.padEnd(13, ' ') + `: ${almt}`;
 
-      const l1 = `${leftNo}. Nama`.padEnd(13, ' ') + `: ${leftNm}`;
-      const l2 = `   TTL`.padEnd(13, ' ') + `: ${leftTtl}`;
-      const l3 = `   Pekerjaan`.padEnd(13, ' ') + `: ${leftPekr}`;
-      const l4 = `   Alamat`.padEnd(13, ' ') + `: ${leftAlmt}`;
-
-      if (right) {
-        const rightNo = i + 2;
-        const rightNm = String(right.nama || '').trim().toUpperCase();
-        const rightTmpt = right.tempat_lahir || 'Batetangnga';
-        const rightTgl = right.tanggal_lahir ? fmtIdDate(right.tanggal_lahir) : '';
-        const rightTtl = rightTmpt + (rightTgl ? ', ' + rightTgl : '');
-        const rightPekr = right.pekerjaan || '-';
-        const rightAlmt = right.alamat || '-';
-
-        const r1 = `${rightNo}. Nama`.padEnd(13, ' ') + `: ${rightNm}`;
-        const r2 = `   TTL`.padEnd(13, ' ') + `: ${rightTtl}`;
-        const r3 = `   Pekerjaan`.padEnd(13, ' ') + `: ${rightPekr}`;
-        const r4 = `   Alamat`.padEnd(13, ' ') + `: ${rightAlmt}`;
-
-        const colWidth = 50;
-        blocks.push(
-          l1.padEnd(colWidth, ' ') + r1 + '\n' +
-          l2.padEnd(colWidth, ' ') + r2 + '\n' +
-          l3.padEnd(colWidth, ' ') + r3 + '\n' +
-          l4.padEnd(colWidth, ' ') + r4
-        );
-      } else {
-        blocks.push(l1 + '\n' + l2 + '\n' + l3 + '\n' + l4);
-      }
-    }
-    return blocks.join('\n\n');
+      return l1 + '\n' + l2 + '\n' + l3 + '\n' + l4;
+    }).join('\n\n');
   };
 
   // 4) Generasi TTD_AHLI_WARIS Teks Baku (Single Newline agar SEMUA TTD muat dalam 1 halaman & tidak terlempar ke halaman 2)
