@@ -1372,9 +1372,11 @@ async function buildDocValues(record, extraValues) {
     pekerjaan_penerima: dr.penerima_pekerjaan || dr.pembeli_pekerjaan || '',
     alamat_penerima: dr.penerima_alamat || dr.pembeli_alamat || dr.alamat || '',
 
-    // Nomor surat & register tercetak.
-    nomor_surat: dr._nomorSuratTercetak || dr.nomorSuratTercetak || values[normKey('nomor_surat')] || dr.nomor_surat || record.id,
-    no_surat: dr._nomorSuratTercetak || dr.nomorSuratTercetak || values[normKey('nomor_surat')] || dr.nomor_surat || record.id,
+    // Nomor surat & register tercetak (Eksplisit: NOMOR_SURAT = nomorSuratTercetak).
+    nomor_surat: dr.nomorSuratTercetak || dr._nomorSuratTercetak || values[normKey('nomor_surat')] || dr.nomor_surat || record.id,
+    nomorsurattercetak: dr.nomorSuratTercetak || dr._nomorSuratTercetak || values[normKey('nomor_surat')] || dr.nomor_surat || record.id,
+    _nomorsurattercetak: dr.nomorSuratTercetak || dr._nomorSuratTercetak || values[normKey('nomor_surat')] || dr.nomor_surat || record.id,
+    no_surat: dr.nomorSuratTercetak || dr._nomorSuratTercetak || values[normKey('nomor_surat')] || dr.nomor_surat || record.id,
     nomor_register: values[normKey('nomor_register')] || record.id,
     // Tahun pembelian/pemberian (tergantung layanan).
     tahun_pembelian: dr.tahun_pemberian || dr.tahun_pembelian || dr.tahun_penguasaan || '',

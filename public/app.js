@@ -1459,7 +1459,7 @@
         items: [
           { key: 'saksi_1', label: 'Nama Saksi 1 ({{SAKSI_1}})', val: dr.saksi1_nama || '' },
           { key: 'saksi_2', label: 'Nama Saksi 2 ({{SAKSI_2}})', val: dr.saksi2_nama || '' },
-          { key: 'nomor_surat', label: 'Nomor Register Surat ({{NOMOR_SURAT}})', val: dr._nomorSuratTercetak || dr.nomorSuratTercetak || dr.nomor_surat || (match ? match.id : '') || '' },
+          { key: 'nomor_surat', label: 'Nomor Register Surat ({{NOMOR_SURAT}})', val: dr.nomorSuratTercetak || dr._nomorSuratTercetak || dr.nomor_surat || (match ? match.id : '') || '' },
           { key: 'kepala_desa', label: 'Nama Kepala Desa / Lurah', val: dr.kepala_desa || 'SUMALLA DAMANG' }
         ]
       }
