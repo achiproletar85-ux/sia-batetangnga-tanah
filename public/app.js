@@ -1418,7 +1418,56 @@
     const age1 = dr.saksi1_umur || ageFrom(dr.saksi1_tanggal_lahir || dr.saksi1_ttl);
     const age2 = dr.saksi2_umur || ageFrom(dr.saksi2_tanggal_lahir || dr.saksi2_ttl);
 
-    const schema = [
+    const isJualBeli = docsState.jenis === 'JUALBELI' || (match && String(match.layanan || '').toUpperCase() === 'JUALBELI');
+
+    const schema = isJualBeli ? [
+      {
+        cat: '🤝 Pihak Pertama (Penjual / Yang Melakukan Pengoperan)',
+        items: [
+          { key: 'nama_pihak_pertama', label: 'Nama Penjual (Pihak 1)', val: dr.penjual_nama || dr.pemberi_nama || (match ? match.nama : '') || '' },
+          { key: 'umur_pihak_pertama', label: 'Umur Penjual (Tahun)', val: dr.penjual_umur || dr.pemberi_umur || ageFrom(dr.penjual_tanggal_lahir || dr.tanggal_lahir) || '' },
+          { key: 'pekerjaan_pihak_pertama', label: 'Pekerjaan Penjual', val: dr.penjual_pekerjaan || dr.pekerjaan || dr.pemberi_pekerjaan || '' },
+          { key: 'alamat_pihak_pertama', label: 'Alamat Penjual', val: dr.penjual_alamat || dr.alamat || dr.pemberi_alamat || '' }
+        ]
+      },
+      {
+        cat: '🤝 Pihak Kedua (Pembeli / Yang Menerima Pengoperan)',
+        items: [
+          { key: 'nama_lengkap_pihak_kedua', label: 'Nama Pembeli (Pihak 2)', val: dr.pembeli_nama || dr.penerima_nama || (match ? match.nama : '') || '' },
+          { key: 'umur_pihak_kedua', label: 'Umur Pembeli (Tahun)', val: dr.pembeli_umur || dr.penerima_umur || ageFrom(dr.pembeli_tanggal_lahir) || '' },
+          { key: 'pekerjaan_pihak_kedua', label: 'Pekerjaan Pembeli', val: dr.pembeli_pekerjaan || dr.penerima_pekerjaan || '' },
+          { key: 'alamat_pihak_kedua', label: 'Alamat Pembeli', val: dr.pembeli_alamat || dr.penerima_alamat || '' }
+        ]
+      },
+      {
+        cat: '💰 Nilai Transaksi & Harga Jual Beli',
+        items: [
+          { key: 'rp_harga_jual', label: 'Harga Jual Beli (Rp)', val: dr.harga_jual || dr.harga || dr.biaya || '' },
+          { key: 'terbilang_harga_jual', label: 'Terbilang Harga', val: dr.terbilang_harga || '' }
+        ]
+      },
+      {
+        cat: '🗺️ Data Objek Tanah & Batas Sebelah',
+        items: [
+          { key: 'alamat_lokasi_tanah', label: 'Alamat Lokasi Tanah', val: dr.alamat_tanah || dr.jalan || '' },
+          { key: 'luas_tanah', label: 'Luas Tanah (m²)', val: dr.luas_tanah || dr.luas || '' },
+          { key: 'tahun_pembelian', label: 'Tahun Pembelian / Pengoperan', val: dr.tahun_pembelian || dr.tahun_pemberian || dr.tahun_penguasaan || '' },
+          { key: 'pemilik_tanah_sebelah_utara', label: 'Batas Sebelah Utara', val: dr.batas_utara || '' },
+          { key: 'pemilik_tanah_sebelah_timur', label: 'Batas Sebelah Timur', val: dr.batas_timur || '' },
+          { key: 'pemilik_tanah_sebelah_selatan', label: 'Batas Sebelah Selatan', val: dr.batas_selatan || '' },
+          { key: 'pemilik_tanah_sebelah_barat', label: 'Batas Sebelah Barat', val: dr.batas_barat || '' }
+        ]
+      },
+      {
+        cat: '👥 Saksi-Saksi & Pengesahan',
+        items: [
+          { key: 'nama_saksi_pertama', label: 'Nama Saksi Pertama (1)', val: dr.saksi1_nama || '' },
+          { key: 'nama_saksi_kedua', label: 'Nama Saksi Kedua (2)', val: dr.saksi2_nama || '' },
+          { key: 'no_surat', label: 'Nomor Register Surat', val: (match ? match.id : '') || dr.nomor_surat || '' },
+          { key: 'kepala_desa', label: 'Nama Kepala Desa / Lurah', val: dr.kepala_desa || 'SUMALLA DAMANG' }
+        ]
+      }
+    ] : [
       {
         cat: '👤 Data Pemohon / Pihak Utama',
         items: [

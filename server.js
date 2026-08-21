@@ -1161,6 +1161,31 @@ function fmtIdDate(v) {
   return d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
 }
 
+function angkaKeTerbilang(n) {
+  const num = Math.abs(parseInt(String(n || 0).replace(/[^0-9]/g, ''), 10));
+  if (isNaN(num) || num === 0) return 'Nol Rupiah';
+  const satuan = ['', 'Satu', 'Dua', 'Tiga', 'Empat', 'Lima', 'Enam', 'Tujuh', 'Delapan', 'Sembilan', 'Sepuluh', 'Sebelas'];
+  const terbilang = (x) => {
+    if (x < 12) return satuan[x];
+    if (x < 20) return terbilang(x - 10) + ' Belas';
+    if (x < 100) return terbilang(Math.floor(x / 10)) + ' Puluh ' + (x % 10 ? terbilang(x % 10) : '');
+    if (x < 200) return 'Seratus ' + (x % 100 ? terbilang(x - 100) : '');
+    if (x < 1000) return terbilang(Math.floor(x / 100)) + ' Ratus ' + (x % 100 ? terbilang(x % 100) : '');
+    if (x < 2000) return 'Seribu ' + (x % 1000 ? terbilang(x - 1000) : '');
+    if (x < 1000000) return terbilang(Math.floor(x / 1000)) + ' Ribu ' + (x % 1000 ? terbilang(x % 1000) : '');
+    if (x < 1000000000) return terbilang(Math.floor(x / 1000000)) + ' Juta ' + (x % 1000000 ? terbilang(x % 1000000) : '');
+    if (x < 1000000000000) return terbilang(Math.floor(x / 1000000000)) + ' Milyar ' + (x % 1000000000 ? terbilang(x % 1000000000) : '');
+    return String(x);
+  };
+  return terbilang(num).replace(/\s+/g, ' ').trim() + ' Rupiah';
+}
+
+function formatRupiah(n) {
+  const num = parseInt(String(n || 0).replace(/[^0-9]/g, ''), 10);
+  if (isNaN(num) || num === 0) return String(n || '');
+  return 'Rp ' + num.toLocaleString('id-ID') + ',-';
+}
+
 // Kumpulkan seluruh nilai yang bisa dipakai placeholder dari satu pendaftaran.
 async function buildDocValues(record, extraValues) {
   let dr = {};
@@ -1297,6 +1322,37 @@ async function buildDocValues(record, extraValues) {
     alamat_saksi2: values[normKey('saksi2_alamat')] || dr.saksi2_alamat,
     pekerjaan_saksi2: values[normKey('saksi2_pekerjaan')] || dr.saksi2_pekerjaan,
     perkejaan_saksi2: values[normKey('saksi2_pekerjaan')] || dr.saksi2_pekerjaan,
+
+    // Khusus Surat Jual Beli / Pengoperan / Pengalihan Hak
+    nama_pihak_pertama: dr.penjual_nama || dr.pemberi_nama || values[normKey('nama')] || record.nama,
+    nama_pihak_1: dr.penjual_nama || dr.pemberi_nama || values[normKey('nama')] || record.nama,
+    umur_pihak_pertama: dr.penjual_umur || dr.pemberi_umur || ageFrom(dr.penjual_tanggal_lahir || dr.tanggal_lahir) || '',
+    umur_pihak_1: dr.penjual_umur || dr.pemberi_umur || ageFrom(dr.penjual_tanggal_lahir || dr.tanggal_lahir) || '',
+    pekerjaan_pihak_pertama: dr.penjual_pekerjaan || dr.pekerjaan || dr.pemberi_pekerjaan || '',
+    alamat_pihak_pertama: dr.penjual_alamat || dr.alamat || dr.pemberi_alamat || '',
+
+    nama_lengkap_pihak_kedua: dr.pembeli_nama || dr.penerima_nama || record.nama,
+    nama_pihak_kedua: dr.pembeli_nama || dr.penerima_nama || record.nama,
+    nama_pihak_2: dr.pembeli_nama || dr.penerima_nama || record.nama,
+    umur_pihak_kedua: dr.pembeli_umur || dr.penerima_umur || ageFrom(dr.pembeli_tanggal_lahir) || '',
+    umur_pihak_2: dr.pembeli_umur || dr.penerima_umur || ageFrom(dr.pembeli_tanggal_lahir) || '',
+    pekerjaan_pihak_kedua: dr.pembeli_pekerjaan || dr.penerima_pekerjaan || '',
+    alamat_pihak_kedua: dr.pembeli_alamat || dr.penerima_alamat || '',
+
+    alamat_lokasi_tanah: dr.alamat_tanah || dr.jalan || '',
+    pemilik_tanah_sebelah_utara: dr.batas_utara || '',
+    pemilik_tanah_sebelah_timur: dr.batas_timur || '',
+    pemilik_tanah_sebelah_selatan: dr.batas_selatan || '',
+    pemilik_tanah_sebelah_barat: dr.batas_barat || '',
+
+    rp_harga_jual: formatRupiah(dr.harga_jual || dr.harga || dr.biaya || '0'),
+    harga_jual: formatRupiah(dr.harga_jual || dr.harga || dr.biaya || '0'),
+    terbilang_harga_jual: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || '0'),
+    terbilang_harga: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || '0'),
+
+    nama_saksi_pertama: dr.saksi1_nama || '',
+    nama_saksi_kedua: dr.saksi2_nama || '',
+    no_surat: values[normKey('nomor_surat')] || dr.nomor_surat || record.id,
 
     // Nomor surat & register tercetak.
     nomor_surat: values[normKey('nomor_surat')] || values[normKey('_nomorSuratTercetak')] || dr._nomorSuratTercetak || dr.nomor_surat || record.id,
