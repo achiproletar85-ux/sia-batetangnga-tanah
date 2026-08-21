@@ -2233,9 +2233,17 @@ app.post('/api/docs/generate', requireAuth, async (req, res) => {
     }
 
     // 4) Tulis nilai ke dokumen hasil salinan.
-    if (replacements.length) await fillDocText(newId, replacements);
+    console.log(`[Docs Generate] idReg: ${idReg}, docId: ${docId} -> newId: ${newId}`);
+    console.log(`[Docs Generate] Total replacements: ${replacements.length}`);
+    console.log(`[Docs Generate] tabel_aw value preview:\n${values['tabelaw'] || '(KOSONG)'}`);
+    console.log(`[Docs Generate] ttd_aw value preview:\n${values['ttdaw'] || '(KOSONG)'}`);
+    if (replacements.length) {
+      const resFill = await fillDocText(newId, replacements);
+      console.log(`[Docs Generate] Google Docs batchUpdate SUCCESS. Responses count: ${(resFill && resFill.replies && resFill.replies.length) || 0}`);
+    }
 
     const resultUrl = 'https://docs.google.com/document/d/' + newId + '/edit';
+    console.log(`[Docs Generate] Ready URL: ${resultUrl}`);
     const fields = placeholders.map((key) => {
       const nk = normKey(key);
       let v = values[nk];
