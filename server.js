@@ -1762,8 +1762,23 @@ app.post('/api/docs/generate', requireAuth, async (req, res) => {
     const idReg = extractRegId(idRegRaw);
     if (!idRegRaw) return res.status(400).json({ success: false, error: 'ID atau Nama pendaftaran wajib diisi.' });
 
-    const record = await findRecordByRegOrName(idRegRaw);
-    if (!record) return res.status(404).json({ success: false, error: 'Pendaftaran tidak ditemukan untuk: ' + idRegRaw });
+    let record = await findRecordByRegOrName(idRegRaw);
+    if (!record) {
+      const ev = (req.body && req.body.extraValues) || {};
+      if (ev && typeof ev === 'object' && Object.keys(ev).length > 0) {
+        record = {
+          id: idRegRaw,
+          nama: ev.nama || ev.nama_pihak_pertama || ev.nama_lengkap_pihak_kedua || idRegRaw,
+          layanan: requestedJenis || 'SPORADIK',
+          data_raw: ev
+        };
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'Pendaftaran "' + idRegRaw + '" tidak ditemukan di database. Silakan pilih ID Pendaftaran dari daftar pilihan.'
+        });
+      }
+    }
 
     const requestedJenis = String(req.body && (req.body.jenis || req.body.jenisSurat) || '').trim().toUpperCase();
     const serviceTypes = ['HIBAH', 'JUALBELI', 'AHLIWARIS'];
