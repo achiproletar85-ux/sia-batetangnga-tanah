@@ -1468,7 +1468,7 @@
         cat: '🤝 Pihak Pertama (Penjual / Yang Melakukan Pengoperan)',
         items: [
           { key: 'nama_pihak_pertama', label: 'Nama Penjual (Pihak 1)', val: dr.penjual_nama || dr.pemberi_nama || dr.pihak1_nama || '' },
-          { key: 'umur_pihak_pertama', label: 'Umur Penjual (Tahun)', val: dr.penjual_umur || dr.pemberi_umur || ageFrom(dr.pembeli_tanggal_lahir || dr.penjual_tanggal_lahir || dr.pemberi_tanggal_lahir || dr.tanggal_lahir) || '' },
+          { key: 'penjual_umur', label: 'Umur Penjual ({{PENJUAL_UMUR}})', val: dr.penjual_umur || dr.pemberi_umur || ageFrom(dr.penjual_tanggal_lahir || dr.pemberi_tanggal_lahir) || '' },
           { key: 'pekerjaan', label: 'Pekerjaan Penjual ({{PEKERJAAN}})', val: dr.penjual_pekerjaan || dr.pemberi_pekerjaan || dr.pekerjaan || '' },
           { key: 'alamat_pihak_pertama', label: 'Alamat Penjual (Pihak 1)', val: dr.penjual_alamat || dr.pemberi_alamat || dr.alamat || '' }
         ]
@@ -1477,7 +1477,7 @@
         cat: '🤝 Pihak Kedua (Pembeli / Yang Menerima Pengoperan)',
         items: [
           { key: 'nama_lengkap_pihak_kedua', label: 'Nama Pembeli (Pihak 2)', val: dr.pembeli_nama || dr.penerima_nama || (match ? match.nama : '') || '' },
-          { key: 'umur_pihak_kedua', label: 'Umur Pembeli (Tahun)', val: dr.pembeli_umur || dr.penerima_umur || ageFrom(dr.pemberi_tanggal_lahir || dr.penerima_tanggal_lahir || dr.pembeli_tanggal_lahir) || '' },
+          { key: 'pembeli_umur', label: 'Umur Pembeli ({{PEMBELI_UMUR}})', val: dr.pembeli_umur || dr.penerima_umur || ageFrom(dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir) || '' },
           { key: 'pekerjaan_pihak_kedua', label: 'Pekerjaan Pembeli', val: dr.pembeli_pekerjaan || dr.penerima_pekerjaan || '' },
           { key: 'alamat_pihak_kedua', label: 'Alamat Pembeli', val: dr.pembeli_alamat || dr.penerima_alamat || dr.alamat || '' }
         ]
