@@ -1331,6 +1331,29 @@ async function buildDocValues(record, extraValues) {
     });
   }
 
+  // Format seluruh nama orang menjadi HURUF BESAR SEMUA (UPPERCASE).
+  const nameKeys = [
+    'nama', 'namapemohon', 'namalengkap', 'pemohon',
+    'penerimanama', 'namapenerima', 'penerima',
+    'pemberinama', 'namapemberi', 'pemberi',
+    'pembelinama', 'namapembeli', 'pembeli',
+    'penjualnama', 'namapenjual', 'penjual',
+    'ahliwarisnama', 'namaahliwaris', 'ahliwaris',
+    'saksi1nama', 'namasaksi1', 'saksi1',
+    'saksi2nama', 'namasaksi2', 'saksi2',
+    'kepaladesa', 'namakepaladesa', 'lurah', 'lurahnama',
+    'pihak1', 'pihak2', 'namapihak1', 'namapihak2'
+  ];
+
+  Object.keys(values).forEach((k) => {
+    const isNameField = nameKeys.includes(k) || k.includes('nama') || k.includes('saksi');
+    const isPlaceField = k.includes('desa') || k.includes('jalan') || k.includes('kecamatan') || k.includes('kabupaten') || k.includes('provinsi');
+    
+    if (isNameField && !isPlaceField && typeof values[k] === 'string') {
+      values[k] = values[k].toUpperCase();
+    }
+  });
+
   return values;
 }
 
