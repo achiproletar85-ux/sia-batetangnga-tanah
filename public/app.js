@@ -524,6 +524,8 @@
   let docsMasterLinksMap = {};
 
   async function docsFetchAllMasterLinks() {
+    const sess = typeof getSession === 'function' ? getSession() : null;
+    if (!sess || !sess.token) return;
     try {
       const resList = await fetch('/api/docs/jenis-list');
       const jsonList = await resList.json();
@@ -751,6 +753,8 @@
 
   // Muat link template tersimpan per jenis dokumen.
   async function docsLoadTemplate(jenis) {
+    const sess = typeof getSession === 'function' ? getSession() : null;
+    if (!sess || !sess.token) return;
     const targetJenis = jenis || docsState.jenis || 'SPORADIK';
     const badge = $('docsActiveJenisStatusBadge');
     if (badge) badge.textContent = 'Memuat template…';
@@ -1071,7 +1075,14 @@
       $('docsPreviewCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
       docsShowManualFields(json.fields);
     } catch (e) {
-      $('docsRenderInfo').innerHTML = `<span class="docs-field-chip bad">⚠️ ${esc(e.message)}</span>`;
+      const msg = e.message || 'Gagal merender surat.';
+      if ($('docsRenderInfo')) {
+        $('docsRenderInfo').innerHTML = `<span class="docs-field-chip bad">⚠️ ${esc(msg)}</span>`;
+      } else if ($('docsDetectResult')) {
+        $('docsDetectResult').innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:12px; border-radius:8px; font-weight:700; font-size:13px; margin-top:10px;">⚠️ ${esc(msg)}</div>`;
+      } else {
+        alert('⚠️ Gagal merender surat: ' + msg);
+      }
     } finally {
       busyBtn(btn, false);
     }
