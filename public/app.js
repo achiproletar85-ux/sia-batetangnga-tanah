@@ -415,6 +415,61 @@
     docsUpdateLiveIframe(id);
   }
 
+  let docsIsInlineEditing = false;
+
+  function docsToggleInlineEdit() {
+    const sheet = $('docsPreview');
+    const btn = $('btnDocsInlineEdit');
+    if (!sheet) return;
+
+    docsIsInlineEditing = !docsIsInlineEditing;
+    sheet.contentEditable = docsIsInlineEditing ? 'true' : 'false';
+
+    if (docsIsInlineEditing) {
+      sheet.style.border = '2px dashed #0284c7';
+      sheet.style.background = '#f8fafc';
+      sheet.style.outline = 'none';
+      sheet.style.padding = '24px';
+      sheet.style.borderRadius = '8px';
+      sheet.focus();
+
+      if (btn) {
+        btn.innerHTML = `<i data-lucide="check" style="width:15px; height:15px;"></i> 💾 Selesai Edit Teks`;
+        btn.style.background = '#0284c7';
+        btn.style.color = '#ffffff';
+        btn.style.borderColor = '#0284c7';
+      }
+
+      if (!$('docsInlineEditNotice')) {
+        const notice = document.createElement('div');
+        notice.id = 'docsInlineEditNotice';
+        notice.style.cssText = 'background:#e0f2fe; border:1px solid #7dd3fc; color:#0369a1; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; gap:8px;';
+        notice.innerHTML = `✏️ Mode Edit Teks Langsung Aktif: Anda dapat mengetik, merubah, atau menghapus teks langsung pada lembar kertas di bawah ini. Tekan "💾 Selesai Edit Teks" jika sudah selesai.`;
+        sheet.parentNode.insertBefore(notice, sheet);
+      }
+    } else {
+      sheet.style.border = '';
+      sheet.style.background = '';
+      sheet.style.padding = '';
+
+      if (btn) {
+        btn.innerHTML = `<i data-lucide="edit-3" style="width:15px; height:15px;"></i> ✏️ Edit Teks Langsung`;
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }
+
+      const notice = $('docsInlineEditNotice');
+      if (notice) notice.remove();
+
+      if (docsState.lastRender) {
+        docsState.lastRender.html = sheet.innerHTML;
+      }
+      alert('✅ Perubahan teks surat berhasil disimpan pada tab ini!');
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+
   function docsSetMode(mode) {
     docsState.mode = mode;
     if ($('btnDocsModePreview')) $('btnDocsModePreview').classList.toggle('active', mode === 'preview');
@@ -422,9 +477,15 @@
     docsUpdateLiveIframe();
 
     if (mode === 'edit') {
-      const id = docsState.docId || docsExtractDocId(docsDocIdFromInput());
-      if (id) {
-        window.open(`https://docs.google.com/document/d/${encodeURIComponent(id)}/edit`, '_blank', 'noopener');
+      const card = $('docsPreviewCard');
+      if (card && !card.hidden) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (!docsIsInlineEditing) docsToggleInlineEdit();
+      } else {
+        const id = docsState.docId || docsExtractDocId(docsDocIdFromInput());
+        if (id) {
+          window.open(`https://docs.google.com/document/d/${encodeURIComponent(id)}/edit`, '_blank', 'noopener');
+        }
       }
     }
   }
@@ -1291,6 +1352,7 @@
     if ($('btnDocsStatusClose')) $('btnDocsStatusClose').addEventListener('click', () => { $('docsStatusPanel').style.display = 'none'; });
     if ($('btnDocsRender')) $('btnDocsRender').addEventListener('click', docsRender);
     if ($('btnDocsRenderManual')) $('btnDocsRenderManual').addEventListener('click', docsRender);
+    if ($('btnDocsInlineEdit')) $('btnDocsInlineEdit').addEventListener('click', docsToggleInlineEdit);
     if ($('btnDocsGenerate')) $('btnDocsGenerate').addEventListener('click', docsGenerate);
     if ($('btnDocsPrint')) $('btnDocsPrint').addEventListener('click', docsPrint);
     if ($('btnDocsSave')) $('btnDocsSave').addEventListener('click', docsSave);
