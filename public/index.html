@@ -594,33 +594,33 @@
       <!-- Section 2: Generator & Live Viewer (2 Kolom Rapi) -->
       <div class="docs-layout">
 
-        <!-- Panel Kiri: Form Pembuatan Surat (Fokus & Bersih) -->
+        <!-- Panel Kiri: Form Pembuatan Surat (Fokus, Bersih, & Elegan) -->
         <div class="docs-controls">
-          <div class="card docs-step">
-            <div class="docs-step-head">
-              <span class="docs-step-num">1</span>
+          <div class="card docs-step" style="border:1px solid #cbd5e1; border-radius:16px; padding:20px; background:#ffffff; box-shadow:0 4px 20px -5px rgba(0,0,0,0.05); margin-bottom:20px;">
+            <div class="docs-step-head" style="display:flex; align-items:center; gap:12px; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+              <span class="docs-step-num" style="background:linear-gradient(135deg, #047857, #064e3b); color:#fff; font-weight:800; border-radius:50%; width:28px; height:28px; display:inline-flex; justify-content:center; align-items:center; font-size:13px;">1</span>
               <div>
-                <h3 style="margin:0; font-size:15px; font-weight:800; color:#0f172a;">Pilih Jenis Surat &amp; Pendaftar</h3>
+                <h3 style="margin:0; font-size:15px; font-weight:800; color:#065f46; font-family:'Space Grotesk', sans-serif;">Pilih Jenis Surat &amp; Pendaftar</h3>
                 <p style="margin:2px 0 0; font-size:12.5px; color:#64748b;">Pilih jenis dokumen dan data pemohon tanah.</p>
               </div>
             </div>
 
             <!-- Selector Dropdown Jenis Surat -->
             <div class="docs-field-group" style="margin-top:12px;">
-              <label class="docs-field-label" style="font-weight:700;">Jenis Surat Dokumen</label>
-              <select id="docsSelectJenisDropdown" class="docs-select-input" style="font-weight:700; color:#1e293b; cursor:pointer;">
+              <label class="docs-field-label" style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#334155;">Jenis Surat Dokumen</label>
+              <select id="docsSelectJenisDropdown" class="docs-select-input" style="font-weight:700; color:#0f172a; cursor:pointer; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; background:#ffffff;">
                 <!-- Dynamically populated -->
               </select>
             </div>
 
             <!-- Selector Pemohon / Pendaftaran -->
             <div class="docs-field-group" style="margin-top:12px;">
-              <label class="docs-field-label" style="font-weight:700;">ID Pendaftaran / Pemohon</label>
-              <input id="docsIdReg" list="pemohonList" class="docs-select-input" placeholder="Contoh: REG-907237 atau Nama Pemohon" />
+              <label class="docs-field-label" style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#334155;">ID Pendaftaran / Pemohon</label>
+              <input id="docsIdReg" list="pemohonList" class="docs-select-input" placeholder="Contoh: REG-907237 atau Nama Pemohon" style="font-weight:600; color:#0f172a; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; background:#ffffff;" />
             </div>
 
             <!-- Status Template Aktif & Link Supabase Resmi -->
-            <div id="docsJenisActiveInfo" class="docs-active-jenis-box" style="margin-top:12px;">
+            <div id="docsJenisActiveInfo" class="docs-active-jenis-box" style="margin-top:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px;">
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
                 <span style="font-size:12px; font-weight:700; color:#334155;">Status Template:</span>
                 <span id="docsActiveJenisStatusBadge" class="docs-summary-badge">Memuat...</span>
@@ -629,49 +629,49 @@
 
             <!-- Field Link Google Docs Template Resmi Supabase -->
             <div class="docs-field-group" style="margin-top:12px;">
-              <label class="docs-field-label" style="font-weight:700; display:flex; justify-space-between; align-items:center;">
+              <label class="docs-field-label" style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#334155; display:flex; justify-content:space-between; align-items:center;">
                 <span>Link Google Docs Template (Resmi Supabase)</span>
               </label>
               <div style="display:flex; gap:6px; margin-top:4px;">
-                <input id="docsLink" type="text" class="docs-select-input" placeholder="https://docs.google.com/document/d/..." style="font-size:12px;" />
-                <button id="btnDocsSaveLink" type="button" class="btn btn-action-secondary" style="font-size:11.5px; padding:6px 10px; white-space:nowrap;" title="Simpan Link ke Supabase">
+                <input id="docsLink" type="text" class="docs-select-input" placeholder="https://docs.google.com/document/d/..." style="font-size:12px; border:1px solid #cbd5e1; border-radius:8px; padding:8px 12px;" />
+                <button id="btnDocsSaveLink" type="button" class="btn btn-action-secondary" style="font-size:11.5px; padding:6px 12px; white-space:nowrap; border-radius:8px; font-weight:700;" title="Simpan Link ke Supabase">
                   💾 Simpan
                 </button>
               </div>
-              <small style="color:#64748b; font-size:11px; display:block; margin-top:2px;">
-                ✅ Link ini diambil &amp; tersimpan secara aman di Supabase database.
+              <small style="color:#64748b; font-size:11px; display:block; margin-top:4px;">
+                ✅ Link ini tersimpan secara aman di Supabase database.
               </small>
             </div>
 
-            <!-- Tombol Aksi Utama (Bersih & Fokus) -->
-            <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px;">
-              <button id="btnDocsRender" class="btn primary docs-btn-wide" style="justify-content:center; padding:10px 16px; font-size:14px; font-weight:800;">
+            <!-- Tombol Aksi Utama (Bersih & Elegan Gaya SPORADIK) -->
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
+              <button id="btnDocsRender" class="btn primary docs-btn-wide" style="justify-content:center; padding:12px 18px; font-size:14px; font-weight:800; background:linear-gradient(135deg, #047857, #064e3b); border:none; color:#ffffff; border-radius:10px; box-shadow:0 10px 24px -10px rgba(6,78,59,0.7); cursor:pointer;">
                 <i data-lucide="wand-2" style="width:18px; height:18px;"></i> Render Surat Otomatis
               </button>
-              <button id="btnDocsDetect" class="btn btn-action-secondary docs-btn-wide" style="justify-content:center; font-size:12.5px;">
+              <button id="btnDocsDetect" class="btn btn-action-secondary docs-btn-wide" style="justify-content:center; font-size:12.5px; padding:9px 14px; border-radius:8px; font-weight:700;">
                 <i data-lucide="scan-search" style="width:15px; height:15px;"></i> Deteksi Placeholder {{...}}
               </button>
             </div>
             
-            <div id="docsDetectResult" class="docs-detect-result" style="margin-top:12px;">
+            <div id="docsDetectResult" class="docs-detect-result" style="margin-top:12px; font-size:12px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px;">
               Pilih pendaftaran lalu klik <strong>Render Surat Otomatis</strong> untuk mengisi dokumen.
             </div>
           </div>
 
-          <!-- Step 2: Form Edit Field Manual (Selalu Terlihat) -->
-          <div class="card docs-step docs-manual-card" id="docsManualPanel" style="display:block;">
-            <div class="docs-step-head">
-              <span class="docs-step-num docs-step-num-warn">📋</span>
+          <!-- Step 2: Form Edit Field Manual (Selalu Terlihat - Desain Elegan SPORADIK) -->
+          <div class="card docs-step docs-manual-card" id="docsManualPanel" style="display:block; border:1px solid #cbd5e1; border-radius:16px; padding:20px; background:#ffffff; box-shadow:0 4px 20px -5px rgba(0,0,0,0.05);">
+            <div class="docs-step-head" style="display:flex; align-items:center; gap:12px; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+              <span class="docs-step-num docs-step-num-warn" style="background:#f59e0b; color:#fff; font-weight:800; border-radius:50%; width:28px; height:28px; display:inline-flex; justify-content:center; align-items:center; font-size:13px;">📋</span>
               <div>
-                <h3>Tinjau &amp; Edit Data Field Surat</h3>
-                <p>Seluruh field placeholder ditampilkan di sini. Cek &amp; sesuaikan jika ada yang kurang.</p>
+                <h3 style="margin:0; font-size:15px; font-weight:800; color:#065f46; font-family:'Space Grotesk', sans-serif;">Tinjau &amp; Edit Data Field Surat</h3>
+                <p style="margin:2px 0 0; font-size:12.5px; color:#64748b;">Seluruh field placeholder ditampilkan di sini. Cek &amp; sesuaikan jika ada yang kurang.</p>
               </div>
             </div>
-            <div class="docs-manual-scroll">
+            <div class="docs-manual-scroll" style="max-height:540px; overflow-y:auto; padding-right:4px;">
               <div id="docsManualFields" class="docs-manual-grid"></div>
             </div>
-            <button id="btnDocsRenderManual" class="btn primary docs-btn-wide" style="margin-top:14px;">
-              <i data-lucide="wand-2" style="width:16px; height:16px;"></i> Render Ulang dengan Field Ini
+            <button id="btnDocsRenderManual" class="btn primary docs-btn-wide" style="margin-top:16px; justify-content:center; padding:12px 18px; font-size:14px; font-weight:800; background:linear-gradient(135deg, #047857, #064e3b); border:none; color:#ffffff; border-radius:10px; box-shadow:0 10px 24px -10px rgba(6,78,59,0.7); cursor:pointer; width:100%;">
+              <i data-lucide="wand-2" style="width:18px; height:18px;"></i> Render Ulang dengan Field Ini
             </button>
           </div>
         </div>
@@ -950,6 +950,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=20260821_11"></script>
+  <script src="app.js?v=20260821_12"></script>
 </body>
 </html>

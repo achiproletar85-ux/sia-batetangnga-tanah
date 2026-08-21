@@ -1529,20 +1529,28 @@
     ];
 
     box.innerHTML = schema.map((grp) => `
-      <div style="margin-bottom:12px; background:#ffffff; border:1px solid #e2e8f0; padding:10px 12px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-        <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:8px; border-bottom:1px solid #f1f5f9; padding-bottom:4px;">${esc(grp.cat)}</div>
-        <div style="display:grid; grid-template-columns:1fr; gap:6px;">
+      <div class="form-block" style="margin-bottom:16px; background:#ffffff; border:1px solid #cbd5e1; border-radius:14px; padding:14px; box-shadow:0 2px 10px -4px rgba(0,0,0,0.04);">
+        <div class="card-title" style="margin:0 0 12px; padding-bottom:8px; border-bottom:1px solid #e2e8f0; font-size:13.5px; font-weight:800; color:#065f46; font-family:'Space Grotesk', sans-serif; display:flex; justify-content:space-between; align-items:center;">
+          <span>${esc(grp.cat)}</span>
+          <span class="chip chip-auto" style="font-size:10px; font-weight:700; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; border-radius:12px; padding:2px 8px;">Grup Field</span>
+        </div>
+        <div class="block-grid" style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px;">
           ${grp.items.map((it) => {
             const v = String(it.val || '').trim();
             const isFilled = Boolean(v);
             const inputType = it.type || 'text';
+            const statusBg = isFilled ? '#f0fdf4' : '#fff7ed';
+            const statusBorder = isFilled ? '#a7f3d0' : '#fed7aa';
+            const statusBadgeText = isFilled ? '🟢 Terisi' : '🔴 Kosong';
+            const badgeColor = isFilled ? '#166534' : '#c2410c';
             return `
-            <div class="docs-manual-item ${isFilled ? 'is-filled' : 'is-empty'}" style="padding:4px 6px;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <label class="docs-manual-label" style="font-size:11.5px; font-weight:700;">${isFilled ? '🟢' : '🔴'} {{${esc(it.key)}}}</label>
-                <small style="color:#64748b; font-size:10.5px;">${esc(it.label)}</small>
+            <div class="field docs-manual-item ${isFilled ? 'is-filled' : 'is-empty'}" style="margin-bottom:0; background:${statusBg}; border:1px solid ${statusBorder}; border-radius:10px; padding:8px 10px; transition:all 0.15s ease;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:#334155; margin:0;">${esc(it.label)}</label>
+                <span class="chip" style="font-size:9.5px; font-weight:800; color:${badgeColor}; background:rgba(255,255,255,0.7); border:1px solid ${statusBorder}; border-radius:10px; padding:1px 6px; white-space:nowrap;">${statusBadgeText}</span>
               </div>
-              <input type="${inputType}" data-ph="${esc(it.key)}" value="${esc(v)}" placeholder="Isi ${esc(it.label)}…" style="font-size:12px; padding:5px 8px; margin-top:2px;" />
+              <div style="font-size:10px; color:#64748b; font-family:monospace; margin-bottom:4px;">{{${esc(it.key)}}}</div>
+              <input type="${inputType}" data-ph="${esc(it.key)}" value="${esc(v)}" placeholder="Isi ${esc(it.label)}…" style="font-family:inherit; font-size:12px; font-weight:600; color:#0f172a; border:1px solid #cbd5e1; border-radius:7px; padding:7px 10px; background:#ffffff; box-sizing:border-box; width:100%; transition:all 0.2s ease;" />
             </div>`;
           }).join('')}
         </div>
