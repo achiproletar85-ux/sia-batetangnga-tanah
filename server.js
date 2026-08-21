@@ -1268,37 +1268,60 @@ async function buildDocValues(record, extraValues) {
   const tglLhr = values[normKey('tanggal_lahir')] || dr.tanggal_lahir || dr.penerima_tanggal_lahir || dr.pembeli_tanggal_lahir;
   const ttlCombined = (tmpt && tglLhr) ? (tmpt + ', ' + fmtIdDate(tglLhr)) : '';
 
+  const parseIndonesianDate = (tStr) => {
+    if (!tStr) return null;
+    const s = String(tStr).trim();
+
+    let m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+    if (m) return { yyyy: m[1], mm: m[2], dd: m[3] };
+
+    m = /^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/.exec(s);
+    if (m) return { dd: String(m[1]).padStart(2, '0'), mm: String(m[2]).padStart(2, '0'), yyyy: m[3] };
+
+    const blnMap = {
+      jan: '01', januari: '01',
+      feb: '02', februari: '02',
+      mar: '03', maret: '03',
+      apr: '04', april: '04',
+      mei: '05',
+      jun: '06', juni: '06',
+      jul: '07', juli: '07',
+      agu: '08', ags: '08', agustus: '08', aug: '08', august: '08',
+      sep: '09', september: '09',
+      okt: '10', oktober: '10', oct: '10',
+      nov: '11', november: '11',
+      des: '12', desember: '12', dec: '12'
+    };
+
+    m = /(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/.exec(s);
+    if (m) {
+      const dd = String(m[1]).padStart(2, '0');
+      const blnNama = m[2].toLowerCase();
+      const mm = blnMap[blnNama] || blnMap[blnNama.slice(0, 3)] || '';
+      const yyyy = m[3];
+      if (mm && yyyy) return { dd, mm, yyyy };
+    }
+
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return {
+        dd: String(d.getDate()).padStart(2, '0'),
+        mm: String(d.getMonth() + 1).padStart(2, '0'),
+        yyyy: String(d.getFullYear())
+      };
+    }
+
+    return null;
+  };
+
   // Helper format nomor surat SPORADIK: 145-xxx/Des.Bat/560/MM/YYYY
   const formatNomorSuratSporadik = (rawVal, tglVal) => {
     const strVal = String(rawVal || '').trim();
     if (!strVal) return '';
 
-    let mm = '', yyyy = '';
-    if (tglVal) {
-      const tStr = String(tglVal).trim();
-      let m = /^(\d{4})-(\d{2})-(\d{2})/.exec(tStr);
-      if (m) {
-        yyyy = m[1];
-        mm = m[2];
-      } else {
-        m = /(\d{1,2})[\s\/-](\d{1,2})[\s\/-](\d{4})/.exec(tStr);
-        if (m) {
-          mm = String(m[2]).padStart(2, '0');
-          yyyy = m[3];
-        } else {
-          const d = new Date(tStr);
-          if (!isNaN(d.getTime())) {
-            yyyy = String(d.getFullYear());
-            mm = String(d.getMonth() + 1).padStart(2, '0');
-          }
-        }
-      }
-    }
-
-    if (!mm || !yyyy) {
-      mm = String(now.getMonth() + 1).padStart(2, '0');
-      yyyy = String(now.getFullYear());
-    }
+    const dt = parseIndonesianDate(tglVal);
+    const mm = dt ? dt.mm : String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = dt ? dt.yyyy : String(now.getFullYear());
 
     if (/^145-\d{3}\/Des\.Bat\/560\/\d{2}\/\d{4}$/i.test(strVal)) {
       return strVal;
