@@ -1419,8 +1419,51 @@
     const age2 = dr.saksi2_umur || ageFrom(dr.saksi2_tanggal_lahir || dr.saksi2_ttl);
 
     const isJualBeli = docsState.jenis === 'JUALBELI' || (match && String(match.layanan || '').toUpperCase() === 'JUALBELI');
+    const isHibah = docsState.jenis === 'HIBAH' || (match && String(match.layanan || '').toUpperCase() === 'HIBAH');
 
-    const schema = isJualBeli ? [
+    const schema = isHibah ? [
+      {
+        cat: '🎁 Pihak Pertama (Pemberi Hibah)',
+        items: [
+          { key: 'nama_pemberi', label: 'Nama Pemberi Hibah', val: dr.pemberi_nama || dr.penjual_nama || '' },
+          { key: 'pemberi_tgl_lahir', label: 'Tgl Lahir Pemberi ({{PEMBERI_TGL_LAHIR}})', val: dr.penjual_tanggal_lahir || dr.pemberi_tanggal_lahir || '', type: 'date' },
+          { key: 'umur_pemberi', label: 'Umur Pemberi (Tahun)', val: dr.pemberi_umur || ageFrom(dr.pemberi_tanggal_lahir || dr.penjual_tanggal_lahir) || '' },
+          { key: 'pekerjaan_pemberi', label: 'Pekerjaan Pemberi Hibah', val: dr.pemberi_pekerjaan || dr.penjual_pekerjaan || '' },
+          { key: 'alamat_pemberi', label: 'Alamat Pemberi Hibah', val: dr.pemberi_alamat || dr.penjual_alamat || '' }
+        ]
+      },
+      {
+        cat: '🎁 Pihak Kedua (Penerima Hibah)',
+        items: [
+          { key: 'nama_penerima', label: 'Nama Penerima Hibah', val: dr.penerima_nama || dr.pembeli_nama || (match ? match.nama : '') || '' },
+          { key: 'penerima_tgl_lahir', label: 'Tgl Lahir Penerima ({{PENERIMA_TGL_LAHIR}})', val: dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir || '', type: 'date' },
+          { key: 'umur_penerima', label: 'Umur Penerima (Tahun)', val: dr.penerima_umur || ageFrom(dr.penerima_tanggal_lahir || dr.pembeli_tanggal_lahir) || '' },
+          { key: 'pekerjaan_penerima', label: 'Pekerjaan Penerima Hibah', val: dr.penerima_pekerjaan || dr.pembeli_pekerjaan || '' },
+          { key: 'alamat_penerima', label: 'Alamat Penerima Hibah', val: dr.penerima_alamat || dr.pembeli_alamat || dr.alamat || '' }
+        ]
+      },
+      {
+        cat: '🗺️ Data Objek Tanah & Batas Sebelah',
+        items: [
+          { key: 'alamat_lokasi_tanah', label: 'Alamat Lokasi Tanah', val: dr.alamat_tanah || dr.jalan || '' },
+          { key: 'luas_tanah', label: 'Luas Tanah (m²)', val: dr.luas_tanah || dr.luas || '' },
+          { key: 'tahun_pemberian', label: 'Tahun Pemberian / Penguasaan', val: dr.tahun_pemberian || dr.tahun_pembelian || dr.tahun_penguasaan || '' },
+          { key: 'pemilik_tanah_sebelah_utara', label: 'Batas Sebelah Utara', val: dr.batas_utara || dr.batas_barat || '' },
+          { key: 'pemilik_tanah_sebelah_timur', label: 'Batas Sebelah Timur', val: dr.batas_timur || '' },
+          { key: 'pemilik_tanah_sebelah_selatan', label: 'Batas Sebelah Selatan', val: dr.batas_selatan || '' },
+          { key: 'pemilik_tanah_sebelah_barat', label: 'Batas Sebelah Barat', val: dr.batas_barat || '' }
+        ]
+      },
+      {
+        cat: '👥 Saksi-Saksi & Pengesahan',
+        items: [
+          { key: 'saksi_1', label: 'Nama Saksi 1 ({{SAKSI_1}})', val: dr.saksi1_nama || '' },
+          { key: 'saksi_2', label: 'Nama Saksi 2 ({{SAKSI_2}})', val: dr.saksi2_nama || '' },
+          { key: 'nomor_surat', label: 'Nomor Register Surat ({{NOMOR_SURAT}})', val: dr._nomorSuratTercetak || dr.nomor_surat || (match ? match.id : '') || '' },
+          { key: 'kepala_desa', label: 'Nama Kepala Desa / Lurah', val: dr.kepala_desa || 'SUMALLA DAMANG' }
+        ]
+      }
+    ] : isJualBeli ? [
       {
         cat: '🤝 Pihak Pertama (Penjual / Yang Melakukan Pengoperan)',
         items: [

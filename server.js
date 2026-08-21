@@ -1351,12 +1351,28 @@ async function buildDocValues(record, extraValues) {
     terbilang_harga_jual: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || '0'),
     terbilang_harga: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || '0'),
 
-    nama_saksi_pertama: dr.saksi1_nama || '',
-    nama_saksi_kedua: dr.saksi2_nama || '',
-    no_surat: values[normKey('nomor_surat')] || dr.nomor_surat || record.id,
+    // Khusus Surat Hibah (Sesuai Presisi Pengguna)
+    penerima_tgl_lahir: fmtIdDate(dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir),
+    pemberi_tgl_lahir: fmtIdDate(dr.penjual_tanggal_lahir || dr.pemberi_tanggal_lahir),
+    saksi_1: dr.saksi1_nama || '',
+    saksi_2: dr.saksi2_nama || '',
+    nama_pemberi: dr.pemberi_nama || dr.penjual_nama || '',
+    pemberi_hibah: dr.pemberi_nama || dr.penjual_nama || '',
+    pemberi_nama: dr.pemberi_nama || dr.penjual_nama || '',
+    umur_pemberi: dr.pemberi_umur || ageFrom(dr.pemberi_tanggal_lahir || dr.penjual_tanggal_lahir) || '',
+    pekerjaan_pemberi: dr.pemberi_pekerjaan || dr.penjual_pekerjaan || '',
+    alamat_pemberi: dr.pemberi_alamat || dr.penjual_alamat || '',
+
+    nama_penerima: dr.penerima_nama || dr.pembeli_nama || record.nama,
+    penerima_hibah: dr.penerima_nama || dr.pembeli_nama || record.nama,
+    penerima_nama: dr.penerima_nama || dr.pembeli_nama || record.nama,
+    umur_penerima: dr.penerima_umur || ageFrom(dr.penerima_tanggal_lahir || dr.pembeli_tanggal_lahir) || '',
+    pekerjaan_penerima: dr.penerima_pekerjaan || dr.pembeli_pekerjaan || '',
+    alamat_penerima: dr.penerima_alamat || dr.pembeli_alamat || dr.alamat || '',
 
     // Nomor surat & register tercetak.
-    nomor_surat: values[normKey('nomor_surat')] || values[normKey('_nomorSuratTercetak')] || dr._nomorSuratTercetak || dr.nomor_surat || record.id,
+    nomor_surat: dr._nomorSuratTercetak || values[normKey('nomor_surat')] || dr.nomor_surat || record.id,
+    no_surat: dr._nomorSuratTercetak || values[normKey('nomor_surat')] || dr.nomor_surat || record.id,
     nomor_register: values[normKey('nomor_register')] || record.id,
     // Tahun pembelian/pemberian (tergantung layanan).
     tahun_pembelian: dr.tahun_pemberian || dr.tahun_pembelian || dr.tahun_penguasaan || '',
