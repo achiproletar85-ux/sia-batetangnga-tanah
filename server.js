@@ -2134,6 +2134,79 @@ function extractAllPlaceholders(doc) {
   return found;
 }
 
+// Hapus baris tabel yang berisi placeholder anak yang tidak terpakai
+async function deleteEmptyAhliWarisRows(docId, doc, maxAnak) {
+  const requests = [];
+  const rowsToDelete = [];
+  const max = parseInt(maxAnak, 10) || 0;
+
+  const walk = (el) => {
+    if (!el || typeof el !== 'object') return;
+    if (el.table) {
+      const tableStart = el.startIndex;
+      (el.table.tableRows || []).forEach((row, rIndex) => {
+        let hasUnusedAnak = false;
+        let hasUsedAnak = false;
+        
+        (row.tableCells || []).forEach((cell) => {
+           let cellText = '';
+           const walkCell = (celEl) => {
+             if (celEl.paragraph) {
+               celEl.paragraph.elements.forEach(e => {
+                 if (e.textRun) cellText += String(e.textRun.content);
+               });
+             }
+             if (celEl.table) { /* ignore */ }
+           };
+           (cell.content || []).forEach(walkCell);
+           
+           // Match {{ANAK_X_...}} or {{AHLIWARIS_X_...}} or {{TTD_X_...}}
+           const re = /\{\{\s*(?:ANAK|AHLIWARIS)_(\d+)_/gi;
+           let m;
+           while ((m = re.exec(cellText)) !== null) {
+             const anakNum = parseInt(m[1], 10);
+             if (anakNum > max) hasUnusedAnak = true;
+             else hasUsedAnak = true;
+           }
+        });
+        
+        // Hapus jika ada placeholder anak tak terpakai dan TIDAK ADA anak terpakai di baris yang sama.
+        if (hasUnusedAnak && !hasUsedAnak) {
+           rowsToDelete.push({ tableStart, rowIndex: rIndex });
+        }
+      });
+    }
+    if (Array.isArray(el)) el.forEach(walk);
+  };
+
+  (doc.body && doc.body.content || []).forEach(walk);
+
+  rowsToDelete.sort((a, b) => {
+    if (a.tableStart !== b.tableStart) return b.tableStart - a.tableStart;
+    return b.rowIndex - a.rowIndex; // bottom to top
+  });
+
+  rowsToDelete.forEach(r => {
+    requests.push({
+      deleteTableRow: {
+        tableCellLocation: {
+          tableStartLocation: { index: r.tableStart },
+          rowIndex: r.rowIndex
+        }
+      }
+    });
+  });
+
+  if (requests.length > 0) {
+    const token = await googleAccessToken();
+    await fetch('https://docs.googleapis.com/v1/documents/' + encodeURIComponent(docId) + ':batchUpdate', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests })
+    });
+  }
+}
+
 // POST /api/docs/generate -> salin dokumen Google asli + isi placeholder LANGSUNG
 // di dalam dokumen Google (bukan HTML). Format/layout asli terjaga, hasilnya
 // berupa dokumen Google Docs yang bisa dibuka & dicetak langsung dari Google.
@@ -2188,6 +2261,11 @@ app.post('/api/docs/generate', requireAuth, async (req, res) => {
     // 1) Salin dokumen asli -> file baru di Drive (placeholder masih utuh).
     const newName = ((doc.title || 'Surat') + ' - ' + idReg).slice(0, 150);
     const newId = await copyDriveDoc(docId, newName);
+
+    // [FITUR BARU] Hapus baris tabel kosong yang berlebih (jika jumlah anak dinamis)
+    if (requestedJenis === 'AHLIWARIS' || (record && String(record.layanan || '').toUpperCase() === 'AHLIWARIS') || (doc.title || '').toUpperCase().includes('WARIS')) {
+      await deleteEmptyAhliWarisRows(newId, doc, values['jumlah_anak'] || 0);
+    }
 
     // 2) Kumpulkan daftar placeholder (dari dokumen asli, termasuk tabel, header, footer).
     const placeholders = extractAllPlaceholders(doc);
