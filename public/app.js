@@ -1420,8 +1420,47 @@
 
     const isJualBeli = docsState.jenis === 'JUALBELI' || (match && String(match.layanan || '').toUpperCase() === 'JUALBELI');
     const isHibah = docsState.jenis === 'HIBAH' || (match && String(match.layanan || '').toUpperCase() === 'HIBAH');
+    const isAhliWaris = docsState.jenis === 'AHLIWARIS' || (match && String(match.layanan || '').toUpperCase() === 'AHLIWARIS');
 
-    const schema = isHibah ? [
+    const schema = isAhliWaris ? [
+      {
+        cat: '⚰️ Data Almarhum/Almarhumah & Pasangan',
+        items: [
+          { key: 'almarhum_nama', label: 'Nama Almarhum/Almarhumah', val: (dr.almarhum_nama || dr.almarhumah_nama || dr.nama_almarhum || dr.pemberi_nama || dr.penjual_nama || '').toUpperCase() },
+          { key: 'pasangan_nama', label: 'Nama Suami / Istri Almarhum', val: (dr.pasangan_nama || dr.nama_pasangan || dr.istri_suami || '').toUpperCase() },
+          { key: 'tahun', label: 'Tahun Meninggal ({{TAHUN}})', val: dr.tahun || dr.tahun_pemberian || dr.tahun_pembelian || '' }
+        ]
+      },
+      {
+        cat: '👨‍👩‍👧‍👦 Ahli Waris Penerima Hak',
+        items: [
+          { key: 'nama_pemohon', label: 'Nama Penerima Hak (An. {{NAMA_PEMOHON}})', val: (dr.nama_pemohon || (match ? match.nama : '') || '').toUpperCase() },
+          { key: 'jumlah_anak', label: 'Jumlah Anak ({{JUMLAH_ANAK}})', val: String(dr.jumlah_anak || dr.jumlah_ahli_waris || '0') }
+        ]
+      },
+      {
+        cat: '🗺️ Data Objek Tanah & Batas Sebelah',
+        items: [
+          { key: 'jenis_tanah', label: 'Jenis Tanah ({{JENIS_TANAH}})', val: dr.jenis_tanah || dr.peruntukan || 'Pekarangan' },
+          { key: 'luas_tanah', label: 'Luas Tanah (m²)', val: dr.luas_tanah || dr.luas || '' },
+          { key: 'alamat_tanah', label: 'Alamat Tanah ({{ALAMAT_TANAH}})', val: dr.alamat_tanah || dr.jalan || '' },
+          { key: 'dusun', label: 'Dusun ({{DUSUN}})', val: dr.dusun || dr.rt_rw || 'Saleko' },
+          { key: 'batas_utara', label: 'Batas Utara ({{BATAS_UTARA}})', val: dr.batas_utara || '' },
+          { key: 'batas_timur', label: 'Batas Timur ({{BATAS_TIMUR}})', val: dr.batas_timur || '' },
+          { key: 'batas_selatan', label: 'Batas Selatan ({{BATAS_SELATAN}})', val: dr.batas_selatan || '' },
+          { key: 'batas_barat', label: 'Batas Barat ({{BATAS_BARAT}})', val: dr.batas_barat || '' }
+        ]
+      },
+      {
+        cat: '👥 Saksi-Saksi & Pengesahan',
+        items: [
+          { key: 'saksi_1', label: 'Nama Saksi 1 ({{SAKSI_1}})', val: (dr.saksi1_nama || '').toUpperCase() },
+          { key: 'saksi_2', label: 'Nama Saksi 2 ({{SAKSI_2}})', val: (dr.saksi2_nama || '').toUpperCase() },
+          { key: 'nomor_surat', label: 'Nomor Register Surat ({{NOMOR_SURAT}})', val: dr.nomorSuratTercetak || dr._nomorSuratTercetak || dr.nomor_surat || '' },
+          { key: 'kepala_desa', label: 'Nama Kepala Desa / Lurah', val: dr.kepala_desa || 'SUMALLA DAMANG' }
+        ]
+      }
+    ] : isHibah ? [
       {
         cat: '🎁 Pihak Pertama (Pemberi Hibah)',
         items: [

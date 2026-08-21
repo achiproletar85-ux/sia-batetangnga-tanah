@@ -1341,6 +1341,81 @@ async function buildDocValues(record, extraValues) {
   const formattedNomorSurat = formatNomorSuratSporadik(rawNumSurat, tglSuratVal);
   const thnVal = dr.tahun_pemberian || dr.tahun_pembelian || dr.tahun_penguasaan || '';
 
+  // --- Khusus Pemrosesan Surat Ahli Waris ---
+  const almarhumNama = String((extraValues && (extraValues.almarhum_nama || extraValues.nama_almarhum)) || dr.almarhum_nama || dr.almarhumah_nama || dr.nama_almarhum || dr.pemberi_nama || dr.penjual_nama || '').trim().toUpperCase();
+  const pasanganNama = String((extraValues && (extraValues.pasangan_nama || extraValues.nama_pasangan)) || dr.pasangan_nama || dr.nama_pasangan || dr.istri_suami || '').trim().toUpperCase();
+
+  let ahliWarisList = [];
+  if (extraValues && Array.isArray(extraValues.ahli_waris)) {
+    ahliWarisList = extraValues.ahli_waris;
+  } else if (dr.ahli_waris && Array.isArray(dr.ahli_waris)) {
+    ahliWarisList = dr.ahli_waris;
+  } else if (typeof dr.ahli_waris === 'string') {
+    try { ahliWarisList = JSON.parse(dr.ahli_waris); } catch (_) {}
+  }
+
+  if (!ahliWarisList.length) {
+    const list = [];
+    for (let i = 1; i <= 10; i++) {
+      const nm = (extraValues && extraValues[`anak_${i}_nama`]) || dr[`anak_${i}_nama`] || dr[`anak${i}_nama`] || dr[`ahliwaris${i}_nama`];
+      if (nm) {
+        list.push({
+          nama: String(nm).trim().toUpperCase(),
+          tempat_lahir: (extraValues && extraValues[`anak_${i}_tempat_lahir`]) || dr[`anak_${i}_tempat_lahir`] || dr[`anak${i}_tempat_lahir`] || 'Batetangnga',
+          tanggal_lahir: (extraValues && extraValues[`anak_${i}_tanggal_lahir`]) || dr[`anak_${i}_tanggal_lahir`] || dr[`anak${i}_tanggal_lahir`] || '',
+          pekerjaan: (extraValues && extraValues[`anak_${i}_pekerjaan`]) || dr[`anak_${i}_pekerjaan`] || dr[`anak${i}_pekerjaan`] || 'Mengurus Rumah Tangga',
+          alamat: (extraValues && extraValues[`anak_${i}_alamat`]) || dr[`anak_${i}_alamat`] || dr[`anak${i}_alamat`] || 'Batetangnga'
+        });
+      }
+    }
+    ahliWarisList = list;
+  }
+
+  const jumlahAnakVal = ahliWarisList.length || parseInt((extraValues && extraValues.jumlah_anak) || dr.jumlah_anak || dr.jumlah_ahli_waris || '0', 10) || 0;
+  const jumlahAnakTerbilangVal = angkaKeTerbilang(jumlahAnakVal).replace(/Rupiah/gi, '').trim();
+
+  // 1) Generasi TABEL_AHLI_WARIS (Ganjil Kiri/Kanan, Genap Kanan/Kiri Sejajar)
+  const buildTabelAhliWaris = (list) => {
+    if (!list || !list.length) return '';
+    return list.map((item, idx) => {
+      const n = idx + 1;
+      const nm = String(item.nama || '').trim().toUpperCase();
+      const tmpt = item.tempat_lahir || 'Batetangnga';
+      const tglStr = item.tanggal_lahir ? fmtIdDate(item.tanggal_lahir) : '';
+      const ttl = tmpt + (tglStr ? ', ' + tglStr : '');
+      const pekr = item.pekerjaan || '-';
+      const almt = item.alamat || '-';
+      return `${n}.Nama\t: ${nm}\n  TTL\t: ${ttl}\n  Pekerjaan\t: ${pekr}\n  Alamat\t: ${almt}`;
+    }).join('\n\n');
+  };
+
+  // 2) Generasi TTD_AHLI_WARIS (Signature Block 2 Kolom Sejajar)
+  const buildTtdAhliWaris = (list) => {
+    if (!list || !list.length) return '';
+    const lines = [];
+    for (let i = 0; i < list.length; i += 2) {
+      const left = list[i];
+      const right = list[i + 1];
+
+      const leftNo = i + 1;
+      const leftName = String(left.nama || '').trim().toUpperCase();
+
+      if (right) {
+        const rightNo = i + 2;
+        const rightName = String(right.nama || '').trim().toUpperCase();
+        lines.push(`${leftNo}. ${leftName.padEnd(28, ' ')} ${rightNo}. ${rightName}`);
+        lines.push(`( ............................ )`.padEnd(31, ' ') + `( ............................ )\n`);
+      } else {
+        lines.push(`${leftNo}. ${leftName}`);
+        lines.push(`( ............................ )\n`);
+      }
+    }
+    return lines.join('\n');
+  };
+
+  const tabelAhliWarisStr = buildTabelAhliWaris(ahliWarisList);
+  const ttdAhliWarisStr = buildTtdAhliWaris(ahliWarisList);
+
   // Alias umum agar placeholder fleksibel (mis. {{nama}} / {{nama_lengkap}}).
   const alias = {
     nama_lengkap: values[normKey('nama')],
@@ -1438,6 +1513,21 @@ async function buildDocValues(record, extraValues) {
     harga_terbilang: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
     hargaterbilang: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
     terbilang: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
+
+    // Khusus Surat Ahli Waris (Sesuai Presisi Pengguna)
+    almarhum_nama: almarhumNama,
+    nama_almarhum: almarhumNama,
+    almarhumah_nama: almarhumNama,
+    pasangan_nama: pasanganNama,
+    nama_pasangan: pasanganNama,
+    suami_istri: pasanganNama,
+    jumlah_anak: String(jumlahAnakVal),
+    jumlah_ahli_waris: String(jumlahAnakVal),
+    jumlah_anak_terbilang: jumlahAnakTerbilangVal,
+    tabel_ahli_waris: tabelAhliWarisStr,
+    tabelahliwaris: tabelAhliWarisStr,
+    ttd_ahli_waris: ttdAhliWarisStr,
+    ttdahliwaris: ttdAhliWarisStr,
 
     // Khusus Surat Hibah (Sesuai Presisi Pengguna)
     penerima_tgl_lahir: fmtIdDate(dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir),
