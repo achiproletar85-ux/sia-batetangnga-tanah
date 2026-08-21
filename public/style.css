@@ -124,6 +124,28 @@ header h1 span { display: block; font-size: 11px; font-weight: 600; color: #fff9
 .btn-ghost { background: transparent; border: none; color: var(--muted); font-size: 20px; cursor: pointer; transition: color 0.2s ease, transform 0.15s ease; border-radius: 8px; }
 .btn-ghost:hover { color: var(--text); transform: rotate(90deg); }
 
+#btnBackSurat {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 14px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--primary) !important;
+  background: var(--panel2) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  transform: none !important;
+}
+#btnBackSurat:hover {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+  border-color: var(--accent) !important;
+  transform: translateX(-4px) !important;
+}
+
 main { padding: 24px; max-width: 100%; margin: 0 auto; }
 
 /* ===== Navigasi Tab Hijau Daun (Desa Batetangnga) ===== */
@@ -561,10 +583,10 @@ dialog::backdrop {
 .edit-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .edit-meta .field { margin: 0; flex: 1; min-width: 180px; }
 /* ===== Form "Tambah Data": grid 2 kolom responsif ===== */
-.field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px 14px; margin-bottom: 6px; }
-.field-grid .sec-title { grid-column: 1 / -1; }
-.field { display: flex; flex-direction: column; }
-.field.full { grid-column: 1 / -1; }
+.field-grid { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px 14px !important; margin-bottom: 6px !important; }
+.field-grid .sec-title { grid-column: 1 / -1 !important; }
+.field { display: flex !important; flex-direction: column !important; }
+.field.full { grid-column: 1 / -1 !important; }
 .field label {
   display: block; margin-bottom: 4px; font-size: 12px; color: var(--muted); letter-spacing: 0.2px;
 }
@@ -575,7 +597,7 @@ dialog::backdrop {
 }
 .field input:focus, .field select:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
 .field .sec-title { margin: 6px 0 0; }
-@media screen and (max-width: 640px) { .field-grid { grid-template-columns: 1fr; } }
+@media screen and (max-width: 480px) { .field-grid { grid-template-columns: 1fr !important; } }
 #tambahModal { width: min(1200px, 96vw); max-width: 96vw; }
 #tambahModal[open] { max-height: 92vh; overflow-y: auto; }
 .umur-hint {
@@ -705,14 +727,12 @@ dialog::backdrop {
 .surat-view-head .muted-line { margin: 2px 0 0; font-size: 12px; }
 .surat-view-grid {
   display: grid;
-  grid-template-columns: minmax(360px, 440px) 1fr;
+  grid-template-columns: minmax(460px, 560px) 1fr;
   gap: 18px;
   align-items: start;
 }
 .surat-editor-col { min-width: 0; }
 .surat-preview-col { min-width: 0; }
-/* Area pratinjau: kolom kanan punya skrol sendiri (atas-bawah) agar surat
-   yang panjang bisa digulir tanpa ikut menggulir halaman/editor. */
 .surat-preview-col #suratBody {
   max-height: 68vh;
   overflow-y: auto;
@@ -739,28 +759,28 @@ dialog::backdrop {
   width: min(8.5in, 100%);
   margin-left: auto;
   margin-right: auto;
-  padding: 38px 46px;
+  padding: 32px 40px;
   border-radius: 6px;
-  font-family: "Times New Roman", Times, serif;
-  font-size: 15px;
-  line-height: 1.55;
+  font-family: Georgia, "Merriweather", "Times New Roman", serif;
+  font-size: 13.5px;
+  line-height: 1.45;
   box-shadow: 0 2px 30px -4px rgba(0, 0, 0, 0.5);
   max-width: 100%;
 }
 .surat-sheet .surat-head {
   text-align: center;
   font-weight: bold;
-  font-size: 16pt;
-  margin-bottom: 15px;
-  line-height: 1.3;
+  font-size: 13.5pt;
+  margin-bottom: 12px;
+  line-height: 1.25;
 }
-.surat-sheet .surat-p { margin: 12px 0; text-align: left; }
-.surat-tb { border-collapse: collapse; margin: 6px 0; width: 100%; table-layout: fixed; }
-.surat-tb td { padding: 2px 4px 2px 0; vertical-align: top; font-size: 15px; line-height: 1.55; overflow-wrap: break-word; word-break: break-word; border: none !important; border-bottom: none !important; }
+.surat-sheet .surat-p { margin: 8px 0; text-align: left; font-size: 13.5px; line-height: 1.45; }
+.surat-tb { border-collapse: collapse; margin: 4px 0; width: 100%; table-layout: fixed; }
+.surat-tb td { padding: 1.5px 4px 1.5px 0; vertical-align: top; font-size: 13.5px; line-height: 1.45; overflow-wrap: break-word; word-break: break-word; border: none !important; border-bottom: none !important; }
 /* Kolom label lebar tetap 180px: titik dua rata sejajar & nilai tidak pernah
    terdorong ke kanan / menempel tepi kanan (tata letak deterministik). */
-.surat-tb .lbl { width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.surat-tb td:nth-child(2) { width: 16px; white-space: nowrap; color: #000; }
+.surat-tb .lbl { width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.surat-tb td:nth-child(2) { width: 14px; white-space: nowrap; color: #000; }
 .surat-tb .nib-wrap { white-space: nowrap; }
 .surat-tb.nib-table .lbl { width: 50px; white-space: nowrap; }
 .surat-tb.nib-table td { vertical-align: middle; }
@@ -768,13 +788,13 @@ dialog::backdrop {
 .surat-tb.nib-table td:nth-child(3) { text-align: center; }
 .surat-tb .nib-box {
   display: inline-block;
-  width: 28px;
-  height: 32px;
-  line-height: 32px;
+  width: 23px;
+  height: 27px;
+  line-height: 27px;
   border: 1px solid #000;
   text-align: center;
-  font-family: "Courier New", monospace;
-  font-size: 18px;
+  font-family: "Courier Prime", "Courier New", monospace;
+  font-size: 14px;
   margin: 0 1px;
   vertical-align: middle;
 }
@@ -790,19 +810,20 @@ dialog::backdrop {
   margin: 4px 0;
 }
 .surat-materai {
-  width: 62px;
-  height: 48px;
-  border: 1.5px solid #000;
+  width: 44px;
+  height: 28px;
+  border: 1px dashed #999999;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-weight: 700;
-  font-size: 8px;
-  line-height: 1.1;
-  color: #000;
+  font-weight: 400 !important;
+  font-size: 5.5pt !important;
+  line-height: 1.05;
+  color: #777777;
   background: #ffffff;
-  margin: 0 auto;
+  margin: 0 auto 0 0;
+  opacity: 0.8;
 }
 .surat-baris-3 { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; margin-top: 0; }
 .surat-tdd-spasi { width: 64px; height: 64px; }
@@ -811,48 +832,85 @@ dialog::backdrop {
 .surat-ttd-space { height: 64px; }
 .surat-saksi { margin: 10px 0; }
 .surat-sheet .surat-saksi-head { text-align: center; font-weight: 700; margin-bottom: 1.4em; }
-.surat-saksi-baris { display: flex; justify-content: space-between; align-items: baseline; width: 100%; margin-bottom: 28px; }
+.surat-saksi-baris { display: flex; justify-content: space-between; align-items: baseline; width: 100%; margin-bottom: 28px; padding: 0 35px; }
 .surat-saksi-baris:last-child { margin-bottom: 0; }
-.surat-saksi-kiri { text-align: left; width: 50%; max-width: 50%; word-break: break-all; overflow-wrap: anywhere; white-space: normal; }
-.surat-saksi-kanan { text-align: right; white-space: nowrap; width: auto; }
+.surat-saksi-kiri { text-align: left; width: 50%; max-width: 50%; word-break: break-all; overflow-wrap: anywhere; white-space: normal; padding-left: 35px; }
+.surat-saksi-kanan { text-align: right; white-space: nowrap; width: auto; padding-right: 35px; }
 .surat-saksi-grid { display: flex; gap: 28px; align-items: flex-start; }
 .surat-saksi-col { flex: 1 1 0; min-width: 0; word-break: break-all; overflow-wrap: anywhere; }
 .surat-saksi-col .lbl { width: 104px; }
 .surat-saksi-col .s-no { display: inline-block; width: 1.4em; white-space: nowrap; }
 .surat-saksi-col td { word-break: break-all; overflow-wrap: anywhere; }
-.surat-reg { width: auto; table-layout: auto; margin: 14px 0 0 auto !important; margin-right: 0 !important; }
+.surat-reg { width: auto; table-layout: auto; margin: 0 0 4px auto !important; margin-right: 0 !important; display: inline-block; text-align: left !important; }
+.surat-reg td { text-align: left !important; padding: 1px 4px !important; }
 .surat-reg .lbl { width: auto; overflow: visible; text-overflow: clip; }
 .surat-reg + .surat-ttd-row { margin-top: 4px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 
-.surat-tgl-line { text-align: right; }
+.surat-tgl-line, .aw-tgl {
+  text-align: right !important;
+  width: 100% !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+  margin-top: 10px !important;
+  margin-bottom: 8px !important;
+}
 .surat-no-line { text-align: left; }
-.letter-ttd { justify-content: space-between !important; }
-.surat-ttd-left, .surat-ttd-right { min-width: 220px; text-align: center; }
+.letter-ttd {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: stretch !important;
+  margin-top: 10px !important;
+}
+.surat-ttd-left, .surat-ttd-right {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  min-width: 230px !important;
+  text-align: center !important;
+}
+.surat-ttd-header {
+  min-height: 34px !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  line-height: 1.25 !important;
+  text-align: center !important;
+}
+.surat-ttd-space-box {
+  height: 44px !important;
+  flex-grow: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 2px 0 !important;
+}
+.surat-tdd-nama {
+  text-align: center !important;
+  margin-top: auto !important;
+  white-space: nowrap !important;
+}
 .surat-ttd-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 48px; margin-top: 16px; }
-/* Tabel daftar ahli waris — BAKU: border hitam rapi, header tengah, font 10.5pt. */
-.surat-anak-tb { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 10.5pt; table-layout: fixed; }
+.surat-anak-tb { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 11.5pt; table-layout: fixed; }
 .surat-anak-tb th, .surat-anak-tb td { border: 1px solid #000; padding: 4px; vertical-align: top; text-align: left; line-height: 1.45; overflow-wrap: break-word; word-break: break-word; }
 .surat-anak-tb th { background: #f8fafc; font-weight: 700; text-align: center; }
-.surat-anak-tb th:first-child, .surat-anak-tb td:first-child { text-align: center; width: 35px; }
-.surat-anak-tb th:nth-child(2), .surat-anak-tb td:nth-child(2) { width: 22%; }
-.surat-anak-tb th:nth-child(3), .surat-anak-tb td:nth-child(3) { width: 30%; }
-.se-anak-head { font-weight: 700; font-size: 12px; margin: 8px 0 2px; letter-spacing: 0.3px; }
-.se-anak-title { font-weight: 700; font-size: 11px; margin: 4px 0 0; color: var(--accent); }
 
-/* ===== Surat AHLI WARIS — tata letak baku (8.5x13in, pas 1 halaman) ===== */
-.surat-sheet.surat-aw { box-sizing: border-box; min-height: calc(13in - 2cm); display: flex; flex-direction: column; font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.5; }
-.surat-sheet.surat-aw .surat-head { font-size: 16pt; margin-bottom: 12px; line-height: 1.3; }
-.surat-sheet.surat-aw .surat-p { margin: 7px 0; }
+/* ===== Surat AHLI WARIS — tata letak baku & compact ===== */
+.surat-sheet.surat-aw { box-sizing: border-box; min-height: calc(13in - 2cm); display: flex; flex-direction: column; font-family: Georgia, "Merriweather", "Times New Roman", serif; font-size: 13.5px; line-height: 1.45; }
+.surat-sheet.surat-aw .surat-head { font-size: 13.5pt; margin-bottom: 6px; line-height: 1.25; font-weight: 700; text-align: center; }
+.surat-sheet.surat-aw .surat-p { margin: 3.5px 0; font-size: 13px; line-height: 1.4; }
 .surat-aw .aw-intro { text-align: left; }
-.surat-aw .aw-nama { text-align: center; font-size: 13pt; }
+.surat-aw .aw-nama { text-align: center; font-size: 12.5pt; font-weight: 700; margin: 4px 0; }
 .surat-aw .aw-jus { text-align: justify; text-justify: inter-word; }
-.surat-sheet.surat-aw .aw-tgl { text-align: right; }
+.surat-sheet.surat-aw .aw-tgl { text-align: right !important; width: 100% !important; margin-left: auto !important; }
 .surat-sheet.surat-aw .aw-sig-block { margin-top: 16px; }
 .surat-aw .aw-batas { margin: 6px 0; }
-.surat-aw .aw-batas div { line-height: 1.55; }
+.surat-aw .aw-batas div { line-height: 1.45; }
 .surat-aw .aw-batas .aw-bt-lbl { display: inline-block; width: 175px; }
-.surat-aw .aw-ttd-para { text-align: center; margin: 12px 0 4px; }
+.surat-aw .aw-ttd-wrap { page-break-inside: avoid !important; break-inside: avoid !important; }
+.surat-aw .aw-ttd-para { text-align: center; margin: 12px 0 4px; page-break-after: avoid !important; break-after: avoid !important; }
 .surat-aw .aw-ttd-rows { margin: 0; }
 .surat-aw .aw-ttd-row { display: flex; justify-content: space-between; align-items: baseline; line-height: 1.7; margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
 .surat-aw .aw-ttd-name { white-space: nowrap; }
@@ -886,11 +944,11 @@ dialog::backdrop {
 .aw-footer { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: start; margin-top: 14px; page-break-inside: avoid; break-inside: avoid; }
 .aw-footer-left { grid-column: 1 / -1; grid-row: 1; text-align: left; line-height: 1.45; }
 .aw-footer-right { grid-column: 2; grid-row: 2; text-align: center; line-height: 1.4; }
-.aw-saksi-title { text-align: center; margin-bottom: 4px; }
-.aw-saksi-space { height: 48px; }
-.aw-saksi-pair { display: flex; justify-content: space-between; }
-.aw-saksi-satu { text-align: left; }
-.aw-saksi-dua { text-align: right; }
+.aw-saksi-title { text-align: center; margin-bottom: 4px; font-weight: 700; }
+.aw-saksi-space { height: 44px; }
+.aw-saksi-pair { display: flex; justify-content: space-between; padding: 0 35px; }
+.aw-saksi-satu { text-align: left; padding-left: 35px; }
+.aw-saksi-dua { text-align: right; padding-right: 35px; }
 .aw-nomor { }
 .aw-nomor-wrap { display: inline-block; text-align: left; }
 .aw-nomor .aw-lbl2 { display: inline-block; width: 64px; text-align: right; }
@@ -986,32 +1044,6 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.4; }
   background: var(--bg);
   color: var(--text);
   font-size: 13px;
-  width: 100%;
-  text-transform: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  resize: vertical;
-  font-family: inherit;
-  box-sizing: border-box;
-}
-.se-field textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
-.se-field.locked textarea { background: var(--panel); color: var(--accent); border-style: dashed; cursor: not-allowed; }
-.se-field:not(.locked) textarea { border-color: rgba(52, 211, 153, 0.5); background: rgba(52, 211, 153, 0.06); }
-.se-field input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
-.se-field.locked span { color: var(--text-soft); }
-.se-field.locked input {
-  background: var(--panel);
-  color: var(--accent);
-  border-style: dashed;
-  cursor: not-allowed;
-}
-.se-field:not(.locked) input { border-color: rgba(52, 211, 153, 0.5); background: rgba(52, 211, 153, 0.06); }
-.se-field:not(.locked) span::after { content: " ✏️"; }
-#seStatus { margin: 12px 2px 0; font-size: 12px; }
-
-/* ===== Autocomplete Master Warga (layar saja, tidak ikut cetak) ===== */
-.ac-dd {
-  position: relative;
-  z-index: 30;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--panel);
@@ -1076,85 +1108,79 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.4; }
   .detail-grid { grid-template-columns: 1fr; }
 }
 
-/* ===== Cetak: TERKUNCI TEPAT 1 HALAMAN (Direct Print & Save as PDF identik) ===== */
+/* ===== Cetak: SURAT 12pt, mengalir alami (tidak dikecilkan, tidak terpotong) ===== */
 @media print {
-  /* Kertas F4/Folio 8.5 x 13 inci, potret. Margin @page 0 -> inset 2.4cm dijamin
-     oleh padding .surat-sheet (bekerja walau dialog cetak "Minimum"). */
+  /* Kertas F4/Folio 8.5 x 13 inci, potret. Margin @page baku 1.5cm 1.8cm seimbang atas & bawah. */
   @page {
     size: 8.5in 13in portrait;
-    margin: 0;
+    margin: 1.5cm 1.8cm;
   }
 
-  /* Body persis satu kotak halaman dan tidak boleh melimpah ke halaman 2. */
+  /* Sembunyikan SELURUH gambar web, logo, header, navbar, dan komponen UI non-surat secara display:none */
+  img, svg, picture, .brand-logo-img, .brand-logo-badge, .brand-section,
+  header, nav, .app-header, .topbar, .sidebar, .tabs, .tab-navigation, .tabbtn,
+  .surat-controls, .surat-editor-col, .surat-view-head, .panel-title, .modal-actions,
+  .print-hide, .fab-container, .tb-status, .pager, .toolbar {
+    display: none !important;
+  }
+
   html, body {
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
     page-break-after: avoid !important;
     page-break-before: avoid !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
   }
-  body { background: #fff; margin: 0; padding: 0; }
+  body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
 
-  header, .tabs, .tabbtn { display: none !important; }
-  /* Semua elemen UI disembunyikan secara visual; surat dikecualikan di bawah. */
-  body * { visibility: hidden; }
-  main { padding: 0 !important; margin: 0 !important; max-width: none !important; }
-  #tab-sporadik, #suratView, .surat-view-grid, .surat-preview-col {
+  main, .app-container, .main-card, .workspace-card, #appWorkspace,
+  #tab-sporadik, #suratView, .surat-view-grid, .surat-preview-col, #suratBody {
     display: block !important;
-    width: auto !important;
-    max-width: none !important;
-    min-width: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    background: none !important;
-    box-shadow: none !important;
-  }
-  /* Kanvas surat DIKUNCI selebar-setinggi satu halaman: tidak ada halaman ke-2. */
-  .surat-preview-col #suratBody, #suratBody {
-    display: block !important;
-    width: auto !important;
-    max-width: none !important;
-    min-width: 0 !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    background: none !important;
-    box-shadow: none !important;
-    overflow: hidden !important;
-  }
-  .surat-sheet, .surat-sheet * { visibility: visible !important; }
-  .surat-sheet {
     position: static !important;
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-    height: 100% !important;
-    max-height: 100% !important;
-    box-sizing: border-box;
-    background: #fff;
-    color: #000;
-    padding: 2.4cm;
-    border-radius: 0;
-    box-shadow: none;
-    page-break-inside: avoid;
-    break-inside: avoid;
-    overflow: hidden !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
   }
-  .surat-head { page-break-after: avoid; }
+
+  .surat-sheet {
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    box-sizing: border-box !important;
+    background: #fff !important;
+    color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    font-size: 16px !important;
+    line-height: 1.45 !important;
+  }
+  .surat-head { page-break-after: avoid; margin-top: 0 !important; margin-bottom: 12px !important; line-height: 1.25; font-size: 16pt; }
   .surat-tb, .surat-tb tr { page-break-inside: avoid; break-inside: avoid; }
   .surat-ttd-row, .surat-saksi, .aw-footer { page-break-inside: avoid; break-inside: avoid; }
-  .print-hide { display: none !important; }
 
-  /* ---- Kompakkan 2-3px (hanya cetak/PDF) agar muat 1 halaman ---- */
-.surat-sheet { line-height: 1.4; }
-  .surat-sheet .surat-head { margin-bottom: 15px; line-height: 1.2; font-size: 16pt; }
-  .surat-sheet .surat-p { margin: 5px 0; }
-  .surat-tb { margin: 1px 0; }
-  .surat-tdd-space { height: 48px; }
-  .surat-saksi-baris { margin-bottom: 15px; }
+  /* ---- Spasi proporsional 1 halaman ---- */
+  .surat-sheet .surat-p { margin: 5px 0; font-size: 16px; }
+  .surat-tb { margin: 2px 0; }
+  .surat-tb td { font-size: 16px; }
+  .surat-tdd-space { height: 44px; }
+  .surat-saksi-baris { margin-bottom: 14px; }
 }
 
 /* ===== Cetak AHLI WARIS: TERKUNCI pas 1 halaman (kertas 8.5x13in/F4)
@@ -1165,7 +1191,7 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.4; }
   .surat-sheet.surat-aw {
     page: aw;
     padding: 0 !important;
-    font-family: "Times New Roman", Times, serif !important;
+    font-family: Georgia, "Merriweather", serif !important;
     font-size: 12pt;
     line-height: 1.45;
   }
@@ -1187,7 +1213,7 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.4; }
   html.aw-print, html.aw-print body { page: aw; }
   .surat-sheet.surat-aw .surat-head { font-size: 16pt; margin-bottom: 12px; }
   .surat-sheet.surat-aw .surat-p { margin: 6px 0; }
-  .surat-sheet.surat-aw .surat-anak-tb { margin: 4px 0; font-size: 10pt; }
+  .surat-sheet.surat-aw .surat-anak-tb { margin: 4px 0; font-size: 11pt; }
   .surat-sheet.surat-aw .surat-anak-tb th,
   .surat-sheet.surat-aw .surat-anak-tb td { padding: 2px 4px; }
   .surat-sheet.surat-aw .aw-batas div { line-height: 1.45; }
@@ -1257,55 +1283,83 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.4; }
   }
 }
 
-/* ===== Cetak AHLI WARIS <= 4 anak: TERKUNCI PAS 1 HALAMAN =====
+/* ===== Cetak AHLI WARIS <= 4 anak: mengalir alami (tidak dipotong/tidak dikecilkan) =====
    body.aw-1pg menang atas body.multi-print (blok ini ditulis SETELAH blok
-   multi-print) dan mengunci persis 1 halaman seperti SPORADIK, apa pun
-   ukuran kertas printer (F4/A4/Letter): isi tidak pernah meluber ke halaman 2.
-   Tinggi kanvas = tinggi area isi halaman 'aw' (100vh - margin 2x1cm). */
+   multi-print). Font 12pt tidak pernah dikecilkan; bila isi lebih panjang
+   dari satu halaman, isi mengalir ke halaman 2 (perilaku normal seperti Word). */
 @media print {
   html:has(body.aw-1pg), body.aw-1pg {
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
   body.aw-1pg #suratBody,
   body.aw-1pg .surat-preview-col #suratBody {
-    height: calc(100vh - 2cm) !important;
-    max-height: calc(100vh - 2cm) !important;
-    overflow: hidden !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
   body.aw-1pg .surat-sheet.surat-aw {
-    height: 100% !important;
-    max-height: 100% !important;
-    /* min-height F4 (13in - 2cm) harus dinolkan: kalau tidak, lembar selalu
-       setinggi F4 (1172px) walau kertas printer Letter/A4 lebih pendek,
-       sehingga baris bawah (Saksi + Kepala Desa) terpotong oleh overflow. */
+    height: auto !important;
+    max-height: none !important;
     min-height: 0 !important;
-    overflow: hidden !important;
-    page-break-inside: avoid;
-    break-inside: avoid;
+    overflow: visible !important;
   }
 }
 
-/* ===== Cetak JUAL BELI & HIBAH: TERKUNCI PAS 1 HALAMAN =====
+/* ===== Cetak JUAL BELI & HIBAH: mengalir alami (tidak dipotong/tidak dikecilkan) =====
    body.fit-1pg (di-set JS saat template JUALBELI/HIBAH aktif): lembar
-   dikunci persis 1 halaman seperti SPORADIK (tanpa multi-print) dan
-   memakai gaya yang SAMA dengan pratinjau layar; JS auto-fit zoom menjamin
-   tetap 1 halaman walau printer memakai A4/Letter (isi tidak terpotong). */
+   memakai gaya yang SAMA dengan pratinjau layar. Font 12pt tidak pernah
+   dikecilkan; bila isi lebih panjang dari satu halaman, isi mengalir ke
+   halaman 2 (perilaku normal seperti Word/Google Docs). */
 @media print {
-  /* JUAL BELI & HIBAH: cetak = pratinjau layar, PERSIS sama.
-     Lembar memakai gaya yang sama dengan pratinjau (font 15px, line-height
-     1.55, padding 38px 46px, jarak tanda tangan 55px) lalu diskalakan
-     otomatis oleh JS auto-fit zoom agar selalu pas 1 halaman
-     (F4/A4/Letter) — isi tidak pernah meluber atau terpotong. */
-  body.fit-1pg .surat-sheet {
-    font-size: 15px;
-    line-height: 1.55;
-    padding: 38px 46px;
+  /* SPORADIK, JUAL BELI & HIBAH: MUTLAK PAS 1 HALAMAN (kertas 8.5x13in / F4) */
+  html:has(body.fit-1pg), body.fit-1pg {
+    height: 100% !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
-  body.fit-1pg .surat-sheet .surat-head { line-height: 1.3; }
-  body.fit-1pg .surat-sheet .surat-p { margin: 12px 0; }
-  body.fit-1pg .surat-sheet .surat-tb { margin: 6px 0; }
+  body.fit-1pg #suratBody,
+  body.fit-1pg .surat-preview-col #suratBody {
+    height: 100% !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  body.fit-1pg .surat-sheet {
+    font-size: 13.5px !important;
+    line-height: 1.4 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+  body.fit-1pg .surat-sheet .surat-head { line-height: 1.2; margin-top: 0 !important; margin-bottom: 4px !important; font-size: 13pt !important; }
+  body.fit-1pg .surat-sheet .surat-head-gap { height: 10px !important; }
+  body.fit-1pg .surat-sheet .surat-p { margin: 2.5px 0 !important; font-size: 12.5px !important; line-height: 1.35 !important; }
+  body.fit-1pg .surat-sheet .surat-tb { margin: 1px 0 !important; }
+  body.fit-1pg .surat-sheet .surat-tb td { font-size: 12.5px !important; padding: 0.5px 3px 0.5px 0 !important; line-height: 1.35 !important; }
+  body.fit-1pg .surat-sheet .surat-ttd-row { margin-top: 4px !important; }
+  body.fit-1pg .surat-sheet .surat-ttd-space,
+  body.fit-1pg .surat-sheet .aw-ttd-space { height: 52px !important; }
+  body.fit-1pg .surat-sheet .surat-tdd-spasi,
+  body.fit-1pg .surat-sheet .aw-saksi-space { height: 28px !important; }
+  body.fit-1pg .surat-sheet .aw-saksi-pair { padding: 0 35px !important; }
+  body.fit-1pg .surat-sheet .aw-saksi-satu { padding-left: 35px !important; }
+  body.fit-1pg .surat-sheet .aw-saksi-dua { padding-right: 35px !important; }
+  body.fit-1pg .surat-sheet .aw-footer { margin-top: 4px !important; }
+  body.fit-1pg .surat-sheet .surat-saksi { margin: 3px 0 !important; }
+  body.fit-1pg .surat-sheet .surat-saksi-baris { margin-bottom: 4px !important; padding: 0 35px !important; }
+  body.fit-1pg .surat-sheet .surat-reg { margin: 0 0 4px auto !important; text-align: left !important; }
+  body.fit-1pg .surat-sheet .surat-reg td { text-align: left !important; }
 }
 
 /* =============================================================
@@ -1507,11 +1561,12 @@ body.aw-1pg .surat-sheet.surat-aw .aw-batas div { line-height: 1.4; }
      Semua field TETAP dalam 1 container .se-grid.
      ============================================== */
   .se-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
   }
-  /* Field nama + autocomplete: lebar penuh (satu baris utuh) */
-  .se-field.se-ac { grid-column: 1 / -1; }
+  /* Field nama + autocomplete: biru lembut */
   .se-field.se-ac > span { color: #1d4ed8; letter-spacing: 0.4px; }
   .se-field.se-ac:not(.locked) input {
     background: linear-gradient(180deg, #f0f6ff, #e7f0ff);
@@ -2366,46 +2421,6 @@ html, body {
 #tab-dashboard .dash-block.wide {
   flex: 2 1 640px;
   width: 100% !important;
-}
-
-/* Master Tables Full Width 100% with Smooth Horizontal Scroll */
-.table-wrap {
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: auto !important;
-  border-radius: 12px;
-}
-table#dataTable, table#sporadikTable, table#uploadTable, table#keuTable {
-  width: 100% !important;
-  min-width: 100%;
-}
-
-/* Inline Grid Form Inputs 4-Column Full-Width on Desktop */
-.se-grid, #suratEditFields {
-  display: grid !important;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 12px 14px !important;
-  width: 100% !important;
-  max-width: 100% !important;
-}
-.se-field.se-ac, .se-field.se-full {
-  grid-column: 1 / -1 !important;
-}
-
-@media (max-width: 1100px) {
-  .se-grid, #suratEditFields {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-}
-@media (max-width: 640px) {
-  .se-grid, #suratEditFields {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-/* Ahli Waris Table & Form Full Width */
-.aw-table-wrap, .aw-table {
-  width: 100% !important;
   max-width: 100% !important;
 }
 
@@ -2436,14 +2451,12 @@ table#dataTable, table#sporadikTable, table#uploadTable, table#keuTable {
   .aw-table thead {
     display: table-header-group;
   }
-  .aw-table tr {
+.aw-table tr {
     page-break-inside: avoid;
     break-inside: avoid;
   }
 }
 
-" / *   F u l l - W i d t h   O v e r r i d e   -   S T A R T   * / "  
- " h t m l ,   b o d y   {   w i d t h :   1 0 0 %   ! i m p o r t a n t ;   m a x - w i d t h :   1 0 0 v w   ! i m p o r t a n t ;   m a r g i n :   0   ! i m p o r t a n t ;   p a d d i n g :   1 0 p x   1 6 p x   ! i m p o r t a n t ;   b o x - s i z i n g :   b o r d e r - b o x   ! i m p o r t a n t ;   b a c k g r o u n d - c o l o r :   # f 0 f 4 f 8   ! i m p o r t a n t ;   o v e r f l o w - x :   h i d d e n   ! i m p o r t a n t ;   } "  
 @media (max-width: 520px) {
   .login-modal-card { padding: 24px 20px 22px; }
 }
@@ -2575,26 +2588,162 @@ table#dataTable, table#sporadikTable, table#uploadTable, table#keuTable {
   min-width: 100%;
 }
 
-/* Inline Grid Form Inputs 4-Column Full-Width on Desktop */
-.se-grid, #suratEditFields {
-  display: grid !important;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 12px 14px !important;
+/* Clean Full-Width 1-Column Vertical Stack Layout for Surat Editor */
+#suratEditFields, .se-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
   width: 100% !important;
   max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding-bottom: 24px !important;
 }
-.se-field.se-ac, .se-field.se-full {
+
+/* Grouped Section Layout for Surat Editor */
+#suratEditFields {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding-bottom: 24px !important;
+}
+
+.se-group {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  /* Header seksi & grid field membentang penuh kiri-ke-kanan, walau induk
+     .se-grid memakai 2 kolom (grid item default hanya selebar 1 kolom). */
   grid-column: 1 / -1 !important;
 }
 
-@media (max-width: 1100px) {
-  .se-grid, #suratEditFields {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+.se-group-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  background: #eff6ff !important;
+  border-left: 4px solid #2563eb !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  color: #1e40af !important;
+  font-weight: 800 !important;
+  font-size: 11.5px !important;
+  letter-spacing: 0.4px !important;
+  text-transform: uppercase !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin-bottom: 10px !important;
+}
+
+.se-group-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px 14px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  align-items: start !important;
+}
+
+.se-field.se-full {
+  grid-column: 1 / -1 !important;
+}
+
+.se-chip {
+  margin-left: 6px !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  vertical-align: middle !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+.se-field.se-ac .se-chip { background: #dbeafe !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe !important; }
+.se-field.se-auto .se-chip { background: #f3f4f6 !important; color: #4b5563 !important; border: 1px solid #e5e7eb !important; }
+.se-field.se-manual .se-chip { background: #f1f5f9 !important; color: #64748b !important; border: 1px solid #cbd5e1 !important; }
+
+@media (max-width: 640px) {
+  .se-group-grid {
+    grid-template-columns: 1fr !important;
   }
 }
+
+.se-card-step {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-size: 10.5px !important;
+  font-weight: 800 !important;
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 6px !important;
+}
+
+.se-field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.se-field > span {
+  display: flex !important;
+  align-items: center !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
+  line-height: 22px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  letter-spacing: 0.3px !important;
+  text-transform: uppercase !important;
+  box-sizing: border-box !important;
+}
+
+.se-field input, .se-field select {
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  padding: 0 11px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  width: 100% !important;
+  font-size: 13px !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.se-field textarea {
+  min-height: 64px !important;
+  padding: 8px 11px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  width: 100% !important;
+  font-size: 13px !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-family: inherit !important;
+  resize: vertical !important;
+}
+
 @media (max-width: 640px) {
-  .se-grid, #suratEditFields {
-    grid-template-columns: 1fr !important;
+  #suratEditFields, .se-grid {
+    width: 100% !important;
   }
 }
 
@@ -2610,20 +2759,49 @@ table#dataTable, table#sporadikTable, table#uploadTable, table#keuTable {
 @media print {
   @page {
     size: 8.5in 13in portrait;
-    margin: 1cm 1.8cm;
+    margin: 1.5cm 1.8cm;
   }
   @page aw {
     size: 8.5in 13in portrait;
-    margin: 1cm 1.8cm;
+    margin: 1.5cm 1.8cm;
   }
   html, body {
-    width: 8.5in !important;
+    width: 100% !important;
+    max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
+    background: #fff !important;
   }
   .surat-sheet {
-    padding: 0.5cm 0 !important;
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    box-sizing: border-box !important;
+    background: #fff !important;
+    color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    font-size: 13.5px !important;
+    line-height: 1.4 !important;
   }
+  .surat-head { page-break-after: avoid; margin-top: 0 !important; margin-bottom: 10px !important; line-height: 1.25; font-size: 13.5pt !important; }
+  .surat-tb, .surat-tb tr { page-break-inside: avoid; break-inside: avoid; }
+  .surat-ttd-row, .surat-saksi, .aw-footer { page-break-inside: avoid; break-inside: avoid; }
+
+  /* ---- Spasi proporsional 1 halaman ---- */
+  .surat-sheet .surat-p { margin: 4px 0; font-size: 13.5px; line-height: 1.4; }
+  .surat-tb { margin: 1px 0; }
+  .surat-tb td { font-size: 13.5px; padding: 1px 4px 1px 0; line-height: 1.4; }
+  .surat-tdd-space { height: 38px; }
+  .surat-saksi-baris { margin-bottom: 10px; }
   .aw-table {
     page-break-inside: avoid;
     break-inside: avoid;
@@ -2853,100 +3031,463 @@ canvas, #chartDusun, #chartLayanan {
 }
 
 /* ==================================================
-   OPTIMASI TAMPILAN TOUCHSCREEN HP & TABLET (TAB KEUANGAN & FORM)
+   SURAT DOCS — KONTROL, FIELD, PREVIEW & RIWAYAT (DESAIN PREMIUM)
    ================================================== */
-@media screen and (max-width: 900px) {
-  /* 1. Penggedean Touch Target Tombol di HP & Tablet (Min Height 46px - 48px) */
-  .btn, .btn-action-primary, button.btn {
-    min-height: 46px !important;
-    padding: 12px 18px !important;
-    font-size: 14px !important;
-    font-weight: 700 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border-radius: 12px !important;
-  }
+.docs-layout {
+  display: grid;
+  grid-template-columns: 440px 1fr;
+  gap: 24px;
+  align-items: start;
+  width: 100%;
+}
 
-  /* 2. Form Inputs & Selects di HP: Font Size 16px Mencegah Auto-Zoom iOS Safari */
-  input, select, textarea, .form input, .field input, .se-field input {
-    min-height: 48px !important;
-    font-size: 16px !important;
-    padding: 12px 14px !important;
-    border-radius: 12px !important;
-  }
+.docs-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
-  /* 3. Toolbar Tab Keuangan di HP/Tablet: Tombol Stack Full-Width / Large Touch Grid */
-  #tab-keuangan .toolbar, .toolbar-container {
-    display: flex !important;
-    flex-direction: column !important;
-    width: 100% !important;
-    gap: 12px !important;
-    padding: 14px !important;
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 14px !important;
-  }
-  #tab-keuangan .toolbar button, .toolbar-container button, #btnTambahTransaksi, #btnCetakKeuangan, #btnCekTagihanBerkas, #btnImportKeuangan {
-    width: 100% !important;
-    min-height: 48px !important;
-    font-size: 14px !important;
-    font-weight: 700 !important;
-    justify-content: center !important;
-    border-radius: 12px !important;
-  }
+.docs-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
 
-  /* 4. Tab Navigasi Menu di HP: Smooth Touch Horizontal Scroll */
-  .tabs {
-    width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    padding: 6px !important;
-    gap: 8px !important;
-  }
-  .tabbtn {
-    min-height: 44px !important;
-    padding: 10px 16px !important;
-    font-size: 13px !important;
-    white-space: nowrap !important;
-  }
+.docs-step {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 
-  /* 5. Aksi Tabel Transaksi di HP: Tombol Touch Berukuran Besar */
-  #keuTable td:last-child, #dataTable td:last-child, #sporadikTable td:last-child {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-    width: 100% !important;
-    margin-top: 8px !important;
-    padding-top: 10px !important;
-    border-top: 1px dashed #cbd5e1 !important;
-  }
-  #keuTable td:last-child button, #dataTable td:last-child button, #sporadikTable td:last-child button {
-    flex: 1 1 calc(50% - 6px) !important;
-    min-height: 44px !important;
-    padding: 10px 14px !important;
-    font-size: 13px !important;
-    font-weight: 700 !important;
-    border-radius: 10px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
+.docs-step-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
 
-  /* 6. Modals di HP: Longgar & Nyaman Tangan */
-  dialog {
-    width: 96vw !important;
-    max-width: 96vw !important;
-    max-height: 94vh !important;
-    border-radius: 16px !important;
-  }
-  .modal-head {
-    padding: 16px 20px !important;
-  }
-  .form-actions button, .modal-body button {
-    min-height: 48px !important;
-    font-size: 15px !important;
-    font-weight: 700 !important;
-    width: 100% !important;
+.docs-step-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2E7D32;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3);
+}
+
+.docs-step-num-warn {
+  background: #f59e0b;
+  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);
+}
+
+.docs-step-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.2px;
+}
+
+.docs-step-head p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.docs-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.docs-btn-wide {
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+.docs-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.docs-field-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.docs-select-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.docs-select-input:focus {
+  border-color: #2E7D32;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
+}
+
+.docs-detect-result {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.docs-detect-box {
+  margin-top: 10px;
+}
+
+.ph-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.docs-field-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.docs-field-chip.ok {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.docs-field-chip.bad {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.docs-link-saved {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #1e40af;
+  margin-top: 4px;
+}
+
+/* Manual Fields Scroll Box */
+.docs-manual-scroll {
+  max-height: 350px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.docs-manual-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.docs-manual-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 10px;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.docs-manual-item.is-filled {
+  border-color: #a7f3d0;
+  background: #f0fdf4;
+}
+
+.docs-manual-item.is-empty {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.docs-manual-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.docs-manual-item input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+/* Card Live Google Docs */
+.docs-live-card {
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+.docs-live-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.docs-live-title h2 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.docs-live-sub {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.docs-live-sub code {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #0f172a;
+}
+
+.btn-mode {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-mode:hover:not(.active) {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.btn-mode.active {
+  background: #2E7D32 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(46, 125, 50, 0.35);
+}
+
+.docs-btn-sm {
+  padding: 6px 12px !important;
+  font-size: 12.5px !important;
+}
+
+.docs-live-iframe {
+  width: 100%;
+  height: 650px;
+  border: none;
+  border-radius: 0 0 16px 16px;
+  transition: height 0.25s ease;
+  background: #ffffff;
+  display: block;
+}
+
+.docs-live-iframe.tall {
+  height: 950px;
+}
+
+.docs-link-status-text {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.btn-xs-primary {
+  background: #E53935;
+  color: #ffffff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-xs-primary:hover {
+  background: #c62828;
+}
+
+.btn-jenis-dok {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-jenis-dok:hover:not(.active) {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn-jenis-dok.active {
+  background: #2E7D32 !important;
+  color: #ffffff !important;
+  border-color: #1B5E20 !important;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.35);
+}
+
+/* Card Preview Render HTML & Riwayat */
+.docs-preview-card, .docs-history-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.docs-preview-toolbar, .docs-preview-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.docs-preview-title h2, .docs-preview-head h2 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.docs-preview-actions, .docs-history-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.docs-status-collapsible {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.docs-status-summary {
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.docs-summary-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2E7D32;
+  background: #e8f5e9;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.docs-paper-wrapper {
+  background: #cbd5e1;
+  padding: 24px;
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.docs-paper-sheet {
+  background: #ffffff;
+  max-width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 24mm 20mm;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+}
+
+.docs-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.docs-history-table th {
+  background: #E53935 !important;
+  color: #ffffff !important;
+  font-weight: 800;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.docs-history-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 13px;
+}
+
+@media screen and (max-width: 1024px) {
+  .docs-layout {
+    grid-template-columns: 1fr;
   }
 }

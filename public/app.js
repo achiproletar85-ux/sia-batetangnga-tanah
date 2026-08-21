@@ -74,6 +74,7 @@
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal menghapus');
       await Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]);
+      if (isBendahara()) renderKeuanganDashboard();
       renderKeuanganTable();
     } catch(e) {
       alert(`Gagal menghapus: ${e.message}`);
@@ -168,6 +169,908 @@
     drawPager('pagerKeuangan', 'keuangan', filtered.length);
   }
 
+  // ===== DASHBOARD KEUANGAN (khusus Bendahara/Admin) =====
+  // Agregasi per bulan dari keuState. return: { key, label, masuk, keluar, saldoBulan, saldoKumulatif }
+  function keuMonthly() {
+    const BULAN_ID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const map = {};
+    keuState.forEach((t) => {
+      const d = new Date(t.tanggal);
+      if (isNaN(d.getTime())) return;
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      if (!map[key]) map[key] = { key, masuk: 0, keluar: 0 };
+      const isMasuk = String(t.jenis_transaksi || '').toLowerCase().includes('pemasukan');
+      const nom = Math.abs(Number(t.nominal || 0));
+      if (isMasuk) map[key].masuk += nom;
+      else map[key].keluar += nom;
+    });
+    const months = Object.keys(map).sort().map((key) => {
+      const [y, m] = key.split('-');
+      return {
+        key,
+        label: BULAN_ID[parseInt(m, 10) - 1] + ' ' + y,
+        masuk: map[key].masuk,
+        keluar: map[key].keluar,
+        saldoBulan: map[key].masuk - map[key].keluar
+      };
+    });
+    let kum = 0;
+    months.forEach((mo) => { kum += mo.saldoBulan; mo.saldoKumulatif = kum; });
+    return months;
+  }
+
+  // Grafik batang berkelompok: Pemasukan (hijau) vs Pengeluaran (merah) per bulan.
+  function keuBarBulanSVG(months) {
+    if (!months.length) return '<div class="chart-empty">Tidak ada data</div>';
+    const max = Math.max(1, ...months.flatMap((m) => [m.masuk, m.keluar]));
+    const charW = 7, barH = 12, groupGap = 12, pairGap = 3, top = 6;
+    const labelW = Math.min(120, Math.max(...months.map((m) => String(m.label).length)) * charW);
+    const left = 12 + labelW + 12;
+    const plotW = 380, valGap = 8, valPad = 56;
+    const W = left + plotW + valGap + valPad;
+    const H = top + months.length * (barH * 2 + pairGap + groupGap) + 6;
+    const bars = months.map((m, i) => {
+      const y = top + i * (barH * 2 + pairGap + groupGap);
+      const mk = Math.max(2, (m.masuk / max) * plotW);
+      const kl = Math.max(2, (m.keluar / max) * plotW);
+      return `
+        <text x="${left - 12}" y="${y + barH + 4}" text-anchor="end" class="ch-label">${esc(m.label)}</text>
+        <rect x="${left}" y="${y}" width="${mk}" height="${barH}" rx="3" fill="#34d399"><title>Pemasukan ${esc(m.label)}: ${formatRp(m.masuk)}</title></rect>
+        <text x="${left + mk + valGap}" y="${y + barH - 2}" class="ch-val">${formatRp(m.masuk)}</text>
+        <rect x="${left}" y="${y + barH + pairGap}" width="${kl}" height="${barH}" rx="3" fill="#fb7185"><title>Pengeluaran ${esc(m.label)}: ${formatRp(m.keluar)}</title></rect>
+        <text x="${left + kl + valGap}" y="${y + barH + pairGap + barH - 2}" class="ch-val">${formatRp(m.keluar)}</text>`;
+    }).join('');
+    return `<div class="pie-legend" style="flex-direction:row; margin-bottom:10px;">
+        <div class="pie-legend-item"><span class="pie-swatch" style="background:#34d399"></span><span class="pie-leg-text">Pemasukan</span></div>
+        <div class="pie-legend-item"><span class="pie-swatch" style="background:#fb7185"></span><span class="pie-leg-text">Pengeluaran</span></div>
+      </div>
+      <svg viewBox="0 0 ${W} ${H}" class="svg-chart" role="img" aria-label="Grafik batang pemasukan vs pengeluaran per bulan">${bars}</svg>`;
+  }
+
+  // Grafik garis: saldo kas kumulatif per bulan.
+  function keuLineSaldoSVG(months) {
+    if (!months.length) return '<div class="chart-empty">Tidak ada data</div>';
+    const W = 620, H = 240, padL = 56, padR = 18, padT = 16, padB = 34;
+    const vals = months.map((m) => m.saldoKumulatif);
+    const maxY = Math.max(1, ...vals);
+    const minY = Math.min(0, ...vals);
+    const span = Math.max(1, maxY - minY);
+    const dx = (W - padL - padR) / Math.max(1, months.length - 1);
+    const gx = (i) => padL + i * dx;
+    const py = (v) => padT + (H - padT - padB) * (1 - (v - minY) / span);
+    const coords = months.map((m, i) => `${gx(i).toFixed(1)},${py(m.saldoKumulatif).toFixed(1)}`);
+    const step = Math.max(1, Math.ceil(months.length / 7));
+    const yTicks = [0, 0.25, 0.5, 0.75, 1];
+    return `<svg viewBox="0 0 ${W} ${H}" class="svg-chart" role="img" aria-label="Grafik garis tren saldo kas">
+      ${yTicks.map((t) => {
+        const v = minY + span * t;
+        const y = padT + (H - padT - padB) * (1 - t);
+        return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" class="ch-grid"/>
+          <text x="${padL - 8}" y="${(y + 4).toFixed(1)}" class="ch-ytick" text-anchor="end">${formatRp(Math.round(v))}</text>`;
+      }).join('')}
+      ${months.map((m, i) => `<line x1="${gx(i).toFixed(1)}" y1="${padT}" x2="${gx(i).toFixed(1)}" y2="${H - padB}" class="ch-vgrid${i === months.length - 1 ? ' last' : ''}"/>`).join('')}
+      ${months.map((m, i) => i % step === 0
+        ? `<text x="${gx(i).toFixed(1)}" y="${H - padB + 16}" class="ch-x" text-anchor="${i === 0 ? 'start' : i === months.length - 1 ? 'end' : 'middle'}">${esc(m.label)}</text>` : '').join('')}
+      <polyline points="${coords.join(' ')}" fill="none" class="ch-line"/>
+      ${months.map((m, i) => `<circle cx="${gx(i).toFixed(1)}" cy="${py(m.saldoKumulatif).toFixed(1)}" r="3.5" class="ch-dot"><title>${esc(m.label)}: ${formatRp(m.saldoKumulatif)}</title></circle>`).join('')}
+    </svg>`;
+  }
+
+  // Tabel rekap per jenis transaksi (jumlah + nilai total).
+  function keuRekapJenisTable() {
+    const map = {};
+    keuState.forEach((t) => {
+      const j = String(t.jenis_transaksi || 'Lainnya').trim();
+      if (!map[j]) map[j] = { n: 0, val: 0 };
+      map[j].n++;
+      map[j].val += Math.abs(Number(t.nominal || 0));
+    });
+    const rows = Object.entries(map).sort((a, b) => b[1].val - a[1].val);
+    const totalVal = rows.reduce((s, [, v]) => s + v.val, 0);
+    return `
+      <table class="dt c1">
+        <thead><tr><th>Jenis</th><th>Jumlah</th><th>Nilai Total</th><th>Persen</th></tr></thead>
+        <tbody>
+          ${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v.n}</td><td class="num">${formatRp(v.val)}</td><td class="num">${totalVal ? ((v.val / totalVal) * 100).toFixed(1) : 0}%</td></tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // Tabel rekap per bulan (pemasukan, pengeluaran, saldo bulan, saldo kumulatif).
+  function keuRekapBulanTable(months) {
+    if (!months.length) return '<div class="chart-empty">Belum ada data transaksi.</div>';
+    return `
+      <table class="dt c1">
+        <thead><tr><th>Bulan</th><th>Pemasukan</th><th>Pengeluaran</th><th>Saldo Bulan</th><th>Saldo Kumulatif</th></tr></thead>
+        <tbody>
+          ${months.slice().reverse().map((m) => `
+            <tr>
+              <td><strong>${esc(m.label)}</strong></td>
+              <td class="num">${formatRp(m.masuk)}</td>
+              <td class="num">${formatRp(m.keluar)}</td>
+              <td class="num">${formatRp(m.saldoBulan)}</td>
+              <td class="num"><strong>${formatRp(m.saldoKumulatif)}</strong></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // Render seluruh dashboard keuangan berdasarkan keuState.
+  function renderKeuanganDashboard() {
+    const months = keuMonthly();
+    const totalPemasukan = months.reduce((s, m) => s + m.masuk, 0);
+    const totalPengeluaran = months.reduce((s, m) => s + m.keluar, 0);
+    const saldoAkhir = totalPemasukan - totalPengeluaran;
+
+    $('keuTotalPemasukan').textContent = formatRp(totalPemasukan);
+    $('keuTotalPengeluaran').textContent = formatRp(totalPengeluaran);
+    $('keuSaldoAkhir').textContent = formatRp(saldoAkhir);
+    $('keuJumlahTransaksi').textContent = keuState.length;
+
+    const now = new Date();
+    const nowKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    const cur = months.find((m) => m.key === nowKey) || { masuk: 0, keluar: 0 };
+    $('keuPemasukanBulanIni').textContent = formatRp(cur.masuk);
+    $('keuPengeluaranBulanIni').textContent = formatRp(cur.keluar);
+
+    $('keuChartBulan').innerHTML = keuBarBulanSVG(months);
+    $('keuChartSaldo').innerHTML = keuLineSaldoSVG(months);
+
+    // Pie: distribusi JUMLAH transaksi per jenis (bukan nilai).
+    const countPerJenis = {};
+    keuState.forEach((t) => {
+      const j = String(t.jenis_transaksi || 'Lainnya').trim();
+      countPerJenis[j] = (countPerJenis[j] || 0) + 1;
+    });
+    $('keuChartJenis').innerHTML = pieChartSVG(countPerJenis);
+
+    $('keuRekapJenis').innerHTML = keuRekapJenisTable();
+    $('keuRekapBulan').innerHTML = keuRekapBulanTable(months);
+  }
+
+  // ===== SURAT GOOGLE DOCS — placeholder {{...}} otomatis terdeteksi & diisi =====
+  let docsState = { docId: null, title: '', placeholders: [], lastRender: null, mode: 'preview', isTall: false, jenis: 'SPORADIK' };
+
+  function docsExtractDocId(input) {
+    const s = String(input || '').trim();
+    if (!s) return null;
+    let m = /\/document\/d\/([a-zA-Z0-9_-]+)/.exec(s);
+    if (m) return m[1];
+    if (/^[a-zA-Z0-9_-]{25,}$/.test(s)) return s;
+    return null;
+  }
+
+  function docsDocIdFromInput() {
+    const inp = String($('docsLink') ? $('docsLink').value : '').trim();
+    const extracted = docsExtractDocId(inp);
+    if (extracted) return extracted;
+    if (inp) return inp;
+    if (docsState.docId) return docsState.docId;
+    if (docsState.lastRender && docsState.lastRender.docId) return docsState.lastRender.docId;
+    const saved = $('docsLinkSavedVal') ? String($('docsLinkSavedVal').textContent || '').trim() : '';
+    const savedExtracted = docsExtractDocId(saved);
+    if (savedExtracted) return savedExtracted;
+    return saved || '';
+  }
+
+  function docsUpdateLiveIframe(docId) {
+    const id = docId || docsExtractDocId(docsDocIdFromInput());
+    const iframe = $('docsLiveIframe');
+    const emptyNotice = $('docsLiveEmptyNotice');
+    const openBtn = $('btnDocsLiveOpenTab');
+    const docIdDisplay = $('docsLiveDocIdDisplay');
+
+    if (!id) {
+      if (iframe) iframe.style.display = 'none';
+      if (emptyNotice) emptyNotice.style.display = 'flex';
+      if (openBtn) openBtn.style.display = 'none';
+      if (docIdDisplay) docIdDisplay.textContent = '-';
+      return;
+    }
+
+    if (emptyNotice) emptyNotice.style.display = 'none';
+    if (docIdDisplay) docIdDisplay.textContent = id;
+
+    const targetSrc = docsState.mode === 'edit'
+      ? `https://docs.google.com/document/d/${encodeURIComponent(id)}/edit`
+      : `https://docs.google.com/document/d/${encodeURIComponent(id)}/preview`;
+
+    if (iframe) {
+      iframe.style.display = 'block';
+      if (iframe.src !== targetSrc) {
+        iframe.src = targetSrc;
+      }
+    }
+    if (openBtn) {
+      openBtn.style.display = 'inline-flex';
+      openBtn.href = `https://docs.google.com/document/d/${encodeURIComponent(id)}/edit`;
+    }
+  }
+
+  function docsOnLinkInput() {
+    const val = String($('docsLink') ? $('docsLink').value : '').trim();
+    const id = docsExtractDocId(val);
+    const statusEl = $('docsLinkStatus');
+    const clearBtn = $('btnDocsClearInput');
+
+    if (clearBtn) clearBtn.style.display = val ? 'inline-block' : 'none';
+
+    if (statusEl) {
+      if (!val) {
+        statusEl.innerHTML = '<span style="color:var(--muted); font-size:12px;">Isi/tempel link Google Docs atau Dokumen ID di atas.</span>';
+      } else if (id) {
+        statusEl.innerHTML = `<span style="color:#059669; font-weight:600; font-size:12px;">✅ ID Dokumen: <code>${esc(id)}</code></span>`;
+      } else {
+        statusEl.innerHTML = '<span style="color:#dc2626; font-weight:600; font-size:12px;">⚠️ Format link / ID Google Docs belum valid</span>';
+      }
+    }
+
+    if (id) {
+      docsState.docId = id;
+    }
+    docsUpdateLiveIframe(id);
+  }
+
+  function docsSetMode(mode) {
+    docsState.mode = mode;
+    if ($('btnDocsModePreview')) $('btnDocsModePreview').classList.toggle('active', mode === 'preview');
+    if ($('btnDocsModeEdit')) $('btnDocsModeEdit').classList.toggle('active', mode === 'edit');
+    docsUpdateLiveIframe();
+  }
+
+  function docsToggleHeight() {
+    docsState.isTall = !docsState.isTall;
+    const iframe = $('docsLiveIframe');
+    if (iframe) iframe.classList.toggle('tall', docsState.isTall);
+    const btn = $('btnDocsToggleHeight');
+    if (btn) {
+      btn.title = docsState.isTall ? 'Perkecil Tinggi Layar' : 'Perbesar Tinggi Layar';
+      btn.innerHTML = `<i data-lucide="${docsState.isTall ? 'minimize-2' : 'maximize-2'}" style="width:14px; height:14px;"></i>`;
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+
+  function docsClearLinkInput() {
+    if ($('docsLink')) {
+      $('docsLink').value = '';
+      $('docsLink').focus();
+    }
+    docsOnLinkInput();
+  }
+
+  function docsUseSavedLink() {
+    const saved = $('docsLinkSavedVal') ? String($('docsLinkSavedVal').textContent || '').trim() : '';
+    if (!saved) return;
+    if ($('docsLink')) {
+      $('docsLink').value = saved;
+      $('docsLink').focus();
+    }
+    docsOnLinkInput();
+  }
+
+  // Muat link template tersimpan per jenis dokumen.
+  async function docsLoadTemplate(jenis) {
+    const targetJenis = jenis || docsState.jenis || 'SPORADIK';
+    try {
+      const res = await fetch(`/api/docs/template?jenis=${encodeURIComponent(targetJenis)}`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal memuat template.');
+      if (json.link) {
+        if ($('docsLinkSaved')) $('docsLinkSaved').style.display = 'block';
+        if ($('docsLinkSavedVal')) $('docsLinkSavedVal').textContent = json.link;
+        if ($('docsLink')) $('docsLink').value = json.link;
+      } else {
+        if ($('docsLinkSaved')) $('docsLinkSaved').style.display = 'none';
+        if ($('docsLinkSavedVal')) $('docsLinkSavedVal').textContent = '';
+        if ($('docsLink')) $('docsLink').value = '';
+      }
+      docsOnLinkInput();
+    } catch (e) {
+      console.warn('Gagal memuat template tersimpan:', e.message);
+      docsOnLinkInput();
+    }
+  }
+
+  async function docsSaveLink() {
+    const raw = String($('docsLink') ? $('docsLink').value : '').trim() || docsDocIdFromInput();
+    if (!raw) { alert('Tempel link Google Docs terlebih dahulu.'); return; }
+    const btn = $('btnDocsSaveLink');
+    busyBtn(btn, true, 'Menyimpan…');
+    try {
+      const res = await fetch('/api/docs/template', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link: raw, jenis: docsState.jenis || 'SPORADIK' })
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal menyimpan template.');
+      if ($('docsLinkSaved')) $('docsLinkSaved').style.display = 'block';
+      if ($('docsLinkSavedVal')) $('docsLinkSavedVal').textContent = json.link;
+      alert(`Template default untuk ${docsState.jenis || 'SPORADIK'} berhasil disimpan.`);
+    } catch (e) {
+      alert('Gagal menyimpan template: ' + e.message);
+    } finally {
+      busyBtn(btn, false);
+    }
+  }
+
+  async function docsDetect() {
+    const input = docsDocIdFromInput();
+    if (!input) { alert('Tempel link / ID Google Docs terlebih dahulu.'); return; }
+    const btn = $('btnDocsDetect');
+    busyBtn(btn, true, 'Membaca dokumen…');
+    try {
+      const res = await fetch('/api/docs/detect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link: input })
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal membaca dokumen.');
+      docsState.docId = json.docId;
+      docsState.title = json.title || '';
+      docsState.placeholders = json.placeholders || [];
+      docsUpdateLiveIframe(json.docId);
+
+      const chips = docsState.placeholders.length
+        ? docsState.placeholders.map((p) => `<span class="docs-field-chip ok">✅ {{${esc(p)}}}</span>`).join(' ')
+        : '<em>Tidak ada placeholder {{...}} ditemukan di dokumen ini.</em>';
+      $('docsDetectResult').innerHTML = `
+        <div style="font-weight:700; color:var(--text);">📄 ${esc(json.title || '(tanpa judul)')} — ${docsState.placeholders.length} placeholder.</div>
+        <div class="docs-detect-box">
+          <div class="ph-chips">${chips || '<em>Tidak ada placeholder {{...}} ditemukan.</em>'}</div>
+          ${json.preview ? `<details><summary style="cursor:pointer; font-weight:600;">Lihat pratinjau isi dokumen</summary><pre>${esc(json.preview)}</pre></details>` : ''}
+        </div>`;
+    } catch (e) {
+      $('docsDetectResult').innerHTML = `<span class="docs-field-chip bad">⚠️ ${esc(e.message)}</span>`;
+    } finally {
+      busyBtn(btn, false);
+    }
+  }
+
+  async function docsSaveGoogleConfig() {
+    const clientId = String($('docsCfgClientId') ? $('docsCfgClientId').value : '').trim();
+    const clientSecret = String($('docsCfgClientSecret') ? $('docsCfgClientSecret').value : '').trim();
+    const refreshToken = String($('docsCfgRefreshToken') ? $('docsCfgRefreshToken').value : '').trim();
+    const folderId = String($('docsCfgFolderId') ? $('docsCfgFolderId').value : '').trim();
+
+    if (!clientId && !clientSecret && !refreshToken && !folderId) {
+      alert('Isi minimal 1 data konfigurasi untuk disimpan.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/docs/google-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, clientSecret, refreshToken, folderId })
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal menyimpan konfigurasi.');
+      alert('Konfigurasi Google OAuth berhasil disimpan ke Supabase!');
+      docsStatus();
+    } catch (e) {
+      alert('Gagal menyimpan: ' + e.message);
+    }
+  }
+
+  async function docsStatus() {
+    const btn = $('btnDocsStatus');
+    const panel = $('docsStatusPanel');
+    busyBtn(btn, true, 'Memeriksa…');
+    panel.style.display = 'block';
+    $('docsStatusResult').innerHTML = 'Memeriksa konfigurasi Google…';
+    try {
+      const res = await fetch('/api/docs/status');
+      const json = await res.json();
+      if (!res.ok && !json.success) throw new Error(json.error || 'Gagal memeriksa status.');
+      const envRow = (label, ok) => `<span class="docs-field-chip ${ok ? 'ok' : 'bad'}">${ok ? '✅' : '❌'} ${label}</span>`;
+      const scopeChips = (json.scopes || []).length
+        ? json.scopes.map((s) => `<span class="docs-field-chip ${s.includes('docs') ? 'ok' : ''}" style="font-family:ui-monospace,Consolas,monospace;">${esc(s)}</span>`).join(' ')
+        : '<em style="color:var(--muted);">(kosong)</em>';
+      const docsState = json.docsApi === 'ACTIVE_OK' ? '✅ AKTIF & OK' : (json.docsApi === 'BLOCKED' ? '❌ DIBLOKIR' : '⚠️ ' + esc(json.docsApi || '-'));
+      $('docsStatusResult').innerHTML = `
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
+          ${envRow('GOOGLE_CLIENT_ID', json.env && json.env.GOOGLE_CLIENT_ID)}
+          ${envRow('GOOGLE_CLIENT_SECRET', json.env && json.env.GOOGLE_CLIENT_SECRET)}
+          ${envRow('GOOGLE_REFRESH_TOKEN', json.env && json.env.GOOGLE_REFRESH_TOKEN)}
+          ${envRow('GOOGLE_DRIVE_FOLDER_ID', json.env && json.env.GOOGLE_DRIVE_FOLDER_ID)}
+        </div>
+        <table class="dt c1" style="margin-bottom:12px;">
+          <tbody>
+            <tr><td><strong>Client ID</strong></td><td class="num">${esc(json.clientId || '-')}</td></tr>
+            <tr><td><strong>Scope refresh token</strong></td><td class="num" style="text-align:left; white-space:normal; word-break:break-word;">${scopeChips}</td></tr>
+            <tr><td><strong>Scope documents</strong></td><td class="num">${json.hasDocumentsScope ? '✅ ADA' : '❌ TIDAK ADA'}</td></tr>
+            <tr><td><strong>Google Docs API</strong></td><td class="num">${docsState}</td></tr>
+            <tr><td><strong>Siap digunakan</strong></td><td class="num">${json.docsReady ? '✅ YA — silakan uji Deteksi Placeholder' : '❌ BELUM'}</td></tr>
+          </tbody>
+        </table>
+        ${json.docsApiError ? `<div class="docs-field-chip bad" style="white-space:normal; margin-bottom:8px;">⚠️ ${esc(json.docsApiError)}</div>` : ''}
+        <p style="margin-top:6px; color:var(--muted); font-size:12.5px;">${esc(json.note || '')}</p>
+        ${(!json.env.GOOGLE_CLIENT_ID || !json.env.GOOGLE_CLIENT_SECRET || !json.env.GOOGLE_REFRESH_TOKEN) ? `
+        <div style="margin-top:14px; padding:12px; background:#fff; border:1px solid #e2e8f0; border-radius:10px;">
+          <h4 style="margin:0 0 8px; font-size:13px; color:#1e293b;">⚙️ Form Atur Kredensial Google OAuth (Simpan ke Supabase)</h4>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <input id="docsCfgClientId" type="text" placeholder="GOOGLE_CLIENT_ID (contoh: 123...apps.googleusercontent.com)" class="docs-select-input" style="font-size:12px;" />
+            <input id="docsCfgClientSecret" type="password" placeholder="GOOGLE_CLIENT_SECRET" class="docs-select-input" style="font-size:12px;" />
+            <input id="docsCfgRefreshToken" type="password" placeholder="GOOGLE_REFRESH_TOKEN (1//04...)" class="docs-select-input" style="font-size:12px;" />
+            <input id="docsCfgFolderId" type="text" placeholder="GOOGLE_DRIVE_FOLDER_ID (opsional)" class="docs-select-input" style="font-size:12px;" />
+            <button id="btnDocsSaveConfig" class="btn primary" style="font-size:12px; padding:8px 12px; justify-content:center;">💾 Simpan Kredensial Ke Supabase</button>
+          </div>
+        </div>
+        ` : ''}`;
+
+      if ($('btnDocsSaveConfig')) {
+        $('btnDocsSaveConfig').addEventListener('click', docsSaveGoogleConfig);
+      }
+    } catch (e) {
+      $('docsStatusResult').innerHTML = `<span class="docs-field-chip bad">⚠️ ${esc(e.message)}</span>`;
+    } finally {
+      busyBtn(btn, false);
+    }
+  }
+
+  async function docsRender() {
+    const input = docsDocIdFromInput();
+    const idReg = String($('docsIdReg').value || '').trim();
+    if (!input) { alert('Tempel link / ID Google Docs terlebih dahulu.'); return; }
+    if (!idReg) { alert('Isi ID pendaftaran terlebih dahulu.'); return; }
+    await docsRenderCore(input, idReg, docsCollectManual());
+  }
+
+  // Kumpulkan nilai field manual yang sudah diisi pengguna.
+  function docsCollectManual() {
+    const out = {};
+    const fields = $('docsManualFields');
+    if (!fields) return out;
+    fields.querySelectorAll('input[data-ph]').forEach((el) => {
+      const v = String(el.value || '').trim();
+      if (v) out[el.dataset.ph] = v;
+    });
+    return out;
+  }
+
+  // Hitung umur (tahun) dari tanggal lahir ISO (YYYY-MM-DD); '' bila kosong/tidak valid.
+  function docsAgeFromTgl(tglISO) {
+    if (!tglISO) return '';
+    const b = new Date(String(tglISO).slice(0, 10) + 'T00:00:00');
+    if (isNaN(b.getTime())) return '';
+    const now = new Date();
+    let age = now.getFullYear() - b.getFullYear();
+    const m = now.getMonth() - b.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+    return age >= 0 ? String(age) : '';
+  }
+
+  // Ikutkan field umur saksi: begitu tanggal lahir saksi diisi/diubah di panel,
+  // umur saksi langsung terisi otomatis (tanpa menunggu klik Render Ulang).
+  function docsBindSaksiUmurAuto() {
+    const box = $('docsManualFields');
+    if (!box) return;
+    [1, 2].forEach((n) => {
+      const dateInp = box.querySelector(`input[data-ph="saksi${n}_tanggal_lahir"]`);
+      const umurInp = box.querySelector(`input[data-ph="umur_saksi${n}"]`);
+      if (!dateInp || !umurInp) return;
+      const fill = () => {
+        const age = docsAgeFromTgl(dateInp.value);
+        umurInp.value = age;
+        const item = umurInp.closest('.docs-manual-item');
+        if (item) {
+          const lbl = item.querySelector('.docs-manual-label');
+          if (lbl) lbl.innerHTML = (age ? '🟢' : '🔴') + ' {{umur_saksi' + n + '}}';
+          item.classList.toggle('is-filled', !!age);
+          item.classList.toggle('is-empty', !age);
+        }
+      };
+      dateInp.addEventListener('input', fill);
+      dateInp.addEventListener('change', fill);
+      fill();
+    });
+  }
+
+  // Tampilkan SEMUA placeholder sebagai input di panel kiri (nilai otomatis
+  // sudah terisi; yang kosong tinggal dilengkapi). Agar semua field kelihatan.
+  function docsShowManualFields(fields) {
+    const panel = $('docsManualPanel');
+    const box = $('docsManualFields');
+    if (!panel || !box) return;
+    if (!fields || !fields.length) { panel.style.display = 'none'; box.innerHTML = ''; return; }
+    panel.style.display = 'block';
+    const sd = (docsState.lastRender && docsState.lastRender.saksiDates) || {};
+    const hasSaksi1 = fields.some((f) => /saksi1/i.test(f.key));
+    const hasSaksi2 = fields.some((f) => /saksi2/i.test(f.key));
+    const saksiDateBlock = (hasSaksi1 || hasSaksi2) ? `
+      <div class="docs-manual-saksi">
+        <div class="docs-manual-saksi-title">📅 Tanggal Lahir Saksi (isi untuk hitung umur otomatis)</div>
+        ${hasSaksi1 ? `
+        <div class="docs-manual-item is-empty">
+          <label class="docs-manual-label">📅 Tanggal Lahir Saksi 1</label>
+          <input type="date" data-ph="saksi1_tanggal_lahir" value="${esc(sd.saksi1_tanggal_lahir || '')}" />
+        </div>` : ''}
+        ${hasSaksi2 ? `
+        <div class="docs-manual-item is-empty">
+          <label class="docs-manual-label">📅 Tanggal Lahir Saksi 2</label>
+          <input type="date" data-ph="saksi2_tanggal_lahir" value="${esc(sd.saksi2_tanggal_lahir || '')}" />
+        </div>` : ''}
+      </div>` : '';
+    box.innerHTML = saksiDateBlock + fields.map((f) => {
+      const isFilled = f.status === 'filled' && f.value;
+      return `
+      <div class="docs-manual-item ${isFilled ? 'is-filled' : 'is-empty'}">
+        <label class="docs-manual-label">${isFilled ? '🟢' : '🔴'} {{${esc(f.key)}}}</label>
+        <input data-ph="${esc(f.key)}" value="${esc(f.value || '')}" placeholder="Isi ${esc(f.key)}…" />
+      </div>`;
+    }).join('');
+    docsBindSaksiUmurAuto();
+    if (!box.dataset.hasLiveListener) {
+      box.dataset.hasLiveListener = 'true';
+      box.addEventListener('input', (e) => {
+        const inp = e.target.closest('input[data-ph]');
+        if (!inp || inp.type === 'date') return;
+        const item = inp.closest('.docs-manual-item');
+        if (!item) return;
+        const val = String(inp.value || '').trim();
+        item.classList.toggle('is-filled', !!val);
+        item.classList.toggle('is-empty', !val);
+        const lbl = item.querySelector('.docs-manual-label');
+        if (lbl) lbl.innerHTML = `${val ? '🟢' : '🔴'} {{${esc(inp.dataset.ph)}}}`;
+      });
+    }
+  }
+
+  async function docsRenderCore(input, idReg, extraValues) {
+    const btn = $('btnDocsRender');
+    busyBtn(btn, true, 'Merender surat…');
+    try {
+      const res = await fetch('/api/docs/render', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link: input, idReg, extraValues: extraValues || {} })
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal merender surat.');
+      docsState.lastRender = json;
+      docsState.lastRender.idReg = idReg;
+      $('docsTitle').textContent = '· ' + (json.title || '');
+      const statusHtml = [
+        ...(json.filled || []).map((f) => `<span class="docs-field-chip ok">✅ {{${esc(f)}}}</span>`),
+        ...(json.missing || []).map((f) => `<span class="docs-field-chip bad">⚠️ {{${esc(f)}}} — kosong</span>`)
+      ].join(' ');
+      $('docsFieldStatus').innerHTML = statusHtml || '<em style="font-size:12px; color:var(--muted);">Tidak ada placeholder.</em>';
+      if ($('docsFieldStatusSummaryText')) {
+        const nFilled = (json.filled || []).length;
+        const nMissing = (json.missing || []).length;
+        $('docsFieldStatusSummaryText').textContent = `${nFilled} Terisi ${nMissing ? ('• ' + nMissing + ' Perlu Diisi') : '• Lengkap ✅'}`;
+      }
+      $('docsPreview').innerHTML = json.html;
+      $('docsPreviewCard').hidden = false;
+      $('docsPreviewCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      docsShowManualFields(json.fields);
+    } catch (e) {
+      $('docsRenderInfo').innerHTML = `<span class="docs-field-chip bad">⚠️ ${esc(e.message)}</span>`;
+    } finally {
+      busyBtn(btn, false);
+    }
+  }
+
+  function docsPrint() {
+    if (!docsState.lastRender) return;
+    // Hasil dari Generate = dokumen Google asli -> buka di tab baru (cetak dari Google Docs).
+    if (docsState.lastRender.url) {
+      window.open(docsState.lastRender.url, '_blank', 'noopener');
+      return;
+    }
+    const win = window.open('', '_blank', 'width=900,height=1200');
+    if (!win) { alert('Browser memblokir pop-up. Izinkan pop-up untuk mencetak surat.'); return; }
+    win.document.write(`<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>${esc(docsState.lastRender.title || 'Surat')}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Georgia, 'Times New Roman', Times, serif; margin: 0; padding: 24px; color: #000; font-size: 12pt; line-height: 1.55; }
+  .docs-body { max-width: 210mm; margin: 0 auto; }
+  .docs-body p { margin: 8px 0; text-align: justify; }
+  table.doc-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11pt; }
+  table.doc-table th, table.doc-table td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top; }
+  table.doc-table th { background: #eee; }
+  @media print { body { padding: 12px; } }
+</style>
+</head>
+<body>
+  <div class="docs-body">${docsState.lastRender.html}</div>
+</body>
+</html>`);
+    win.document.close();
+    setTimeout(() => { win.focus(); win.print(); }, 250);
+  }
+
+  // Salin dokumen Google asli & isi placeholder LANGSUNG di dalam dokumen Google,
+  // lalu buka hasilnya di tab baru (format asli Google Docs terjaga).
+  async function docsGenerate() {
+    const input = docsDocIdFromInput();
+    const idReg = String($('docsIdReg').value || '').trim();
+    if (!input) { alert('Tempel link / ID Google Docs terlebih dahulu.'); return; }
+    if (!idReg) { alert('Isi ID pendaftaran terlebih dahulu.'); return; }
+    const btn = $('btnDocsGenerate');
+    busyBtn(btn, true, 'Membuat dokumen…');
+    try {
+      const res = await fetch('/api/docs/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link: input, idReg, extraValues: docsCollectManual() })
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal membuat dokumen.');
+      docsState.lastRender = {
+        title: json.title,
+        docId: json.docId,
+        idReg: idReg,
+        url: json.url,
+        filled: json.filled || [],
+        missing: json.missing || [],
+        html: ''
+      };
+      $('docsTitle').textContent = '· ' + (json.title || '');
+      const statusHtml = [
+        ...(json.filled || []).map((f) => `<span class="docs-field-chip ok">✅ {{${esc(f)}}} terisi</span>`),
+        ...(json.missing || []).map((f) => `<span class="docs-field-chip bad">⚠️ {{${esc(f)}}} — kosong</span>`)
+      ].join(' ');
+      $('docsFieldStatus').innerHTML = statusHtml || '<em style="font-size:12px; color:var(--muted);">Tidak ada placeholder.</em>';
+      if ($('docsFieldStatusSummaryText')) {
+        const nFilled = (json.filled || []).length;
+        const nMissing = (json.missing || []).length;
+        $('docsFieldStatusSummaryText').textContent = `${nFilled} Terisi ${nMissing ? ('• ' + nMissing + ' Perlu Diisi') : '• Lengkap ✅'}`;
+      }
+      $('docsPreview').innerHTML = `<div class="docs-generate-done">
+        <p><strong>✅ Dokumen Google berhasil dibuat.</strong> Placeholder diisi langsung di dalam dokumen Google (format asli terjaga).</p>
+        <div style="margin:14px 0;">
+          <iframe src="${esc('https://docs.google.com/document/d/' + encodeURIComponent(json.docId) + '/preview')}" class="docs-live-frame" title="Preview Dokumen Google"></iframe>
+        </div>
+        <p><a class="btn" style="background:#1a73e8; color:#fff; text-decoration:none; display:inline-flex; align-items:center; gap:6px;" href="${esc(json.url)}" target="_blank" rel="noopener">
+          <i data-lucide="external-link" style="width:15px; height:15px;"></i> Buka Dokumen Google (tab baru)
+        </a></p>
+      </div>`;
+      $('docsPreviewCard').hidden = false;
+      $('docsPreviewCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      docsShowManualFields(json.fields);
+    } catch (e) {
+      $('docsRenderInfo').innerHTML = `<span class="docs-field-chip bad">⚠️ ${esc(e.message)}</span>`;
+    } finally {
+      busyBtn(btn, false);
+    }
+  }
+
+  async function docsSave() {
+    if (!docsState.lastRender) { alert('Render surat terlebih dahulu.'); return; }
+    const btn = $('btnDocsSave');
+    busyBtn(btn, true, 'Menyimpan…');
+    try {
+      const res = await fetch('/api/docs/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          link: docsDocIdFromInput(),
+          docId: docsState.lastRender.docId || null,
+          url: docsState.lastRender.url || null,
+          idReg: docsState.lastRender.idReg,
+          title: docsState.lastRender.title,
+          html: docsState.lastRender.html || '',
+          filled: docsState.lastRender.filled || [],
+          missing: docsState.lastRender.missing || []
+        })
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal menyimpan riwayat.');
+      renderDocsHistory();
+      alert('Surat berhasil disimpan ke riwayat.');
+    } catch (e) {
+      alert('Gagal menyimpan: ' + e.message);
+    } finally {
+      busyBtn(btn, false);
+    }
+  }
+
+  async function renderDocsHistory() {
+    const body = $('docsHistoryBody');
+    if (!body) return;
+    body.innerHTML = '';
+    try {
+      const res = await fetch('/api/docs/history');
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal memuat riwayat.');
+      const rows = json.data || [];
+      $('docsHistoryEmpty').hidden = rows.length > 0;
+      const canDel = isBendahara();
+      rows.slice(0, 50).forEach((r) => {
+        const tr = document.createElement('tr');
+        const tgl = r.created_at ? fmtTglDate(r.created_at) : '-';
+        tr.innerHTML = `
+          <td>${esc(tgl)}</td>
+          <td><strong>${esc(r.id_registrasi || '-')}</strong></td>
+          <td class="wrap">${esc(r.judul || 'Surat')}</td>
+          <td>${esc(r.created_by || '-')}</td>
+          <td>
+            <div class="docs-history-actions">
+              ${r.generated_doc_id ? `<button class="btn" data-docs-open="${esc(r.id)}" style="background:#1a73e8; border:1px solid #1557b0; color:#ffffff; font-weight:600; padding:4px 8px; font-size:12px;">📄 Google</button>` : ''}
+              <button class="btn" data-docs-view="${esc(r.id)}" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-weight:600; padding:4px 8px; font-size:12px;">👁 Lihat</button>
+              <button class="btn" data-docs-print="${esc(r.id)}" style="background:#15803d; border:1px solid #166534; color:#ffffff; font-weight:600; padding:4px 8px; font-size:12px;">🖨 Cetak</button>
+              ${canDel ? `<button class="btn danger" data-docs-del="${esc(r.id)}" style="padding:4px 8px; font-size:12px;">🗑</button>` : ''}
+            </div>
+          </td>`;
+        body.appendChild(tr);
+      });
+    } catch (e) {
+      $('docsHistoryEmpty').hidden = false;
+      $('docsHistoryEmpty').textContent = 'Gagal memuat riwayat: ' + e.message;
+    }
+  }
+
+  async function docsLoadHistory(id) {
+    try {
+      const res = await fetch('/api/docs/history');
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal memuat riwayat.');
+      const rec = (json.data || []).find((r) => r.id === id);
+      if (!rec) throw new Error('Riwayat tidak ditemukan.');
+      docsState.lastRender = {
+        title: rec.judul,
+        docId: rec.generated_doc_id || rec.doc_id,
+        idReg: rec.id_registrasi,
+        url: rec.generated_doc_id ? ('https://docs.google.com/document/d/' + encodeURIComponent(rec.generated_doc_id) + '/edit') : null,
+        filled: rec.filled || [],
+        missing: rec.missing || [],
+        html: rec.html_content || ''
+      };
+      $('docsTitle').textContent = '· ' + (rec.judul || 'Surat') + ' (riwayat)';
+      $('docsFieldStatus').innerHTML = [
+        ...(rec.filled || []).map((f) => `<span class="docs-field-chip ok">✅ {{${esc(f)}}}</span>`),
+        ...(rec.missing || []).map((f) => `<span class="docs-field-chip bad">⚠️ {{${esc(f)}}} — kosong</span>`)
+      ].join(' ');
+      if ($('docsFieldStatusSummaryText')) {
+        const nFilled = (rec.filled || []).length;
+        const nMissing = (rec.missing || []).length;
+        $('docsFieldStatusSummaryText').textContent = `${nFilled} Terisi ${nMissing ? ('• ' + nMissing + ' Perlu Diisi') : '• Lengkap ✅'}`;
+      }
+      if (rec.generated_doc_id) {
+        const url = 'https://docs.google.com/document/d/' + encodeURIComponent(rec.generated_doc_id) + '/edit';
+        $('docsPreview').innerHTML = `<div class="docs-generate-done">
+          <p><strong>Dokumen Google: ${esc(rec.judul || 'Surat')}</strong></p>
+          <div style="margin:14px 0;">
+            <iframe src="${esc('https://docs.google.com/document/d/' + encodeURIComponent(rec.generated_doc_id) + '/preview')}" class="docs-live-frame" title="Preview Dokumen Google"></iframe>
+          </div>
+          <p><a class="btn" style="background:#1a73e8; color:#fff; text-decoration:none; display:inline-flex; align-items:center; gap:6px;" href="${esc(url)}" target="_blank" rel="noopener">
+            <i data-lucide="external-link" style="width:15px; height:15px;"></i> Buka Dokumen Google
+          </a></p>
+        </div>`;
+      } else {
+        $('docsPreview').innerHTML = rec.html_content || '';
+      }
+      $('docsPreviewCard').hidden = false;
+      $('docsPreviewCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      alert('Gagal memuat riwayat: ' + e.message);
+    }
+  }
+
+  async function docsDeleteHistory(id) {
+    if (!confirm('Hapus riwayat surat ini?')) return;
+    try {
+      const res = await fetch('/api/docs/history/' + encodeURIComponent(id), { method: 'DELETE' });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal menghapus.');
+      renderDocsHistory();
+    } catch (e) {
+      alert('Gagal menghapus: ' + e.message);
+    }
+  }
+
+  async function docsOpenHistory(id) {
+    try {
+      const res = await fetch('/api/docs/history');
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal memuat riwayat.');
+      const rec = (json.data || []).find((r) => r.id === id);
+      if (!rec || !rec.generated_doc_id) { alert('Riwayat tidak memiliki dokumen Google.'); return; }
+      const url = 'https://docs.google.com/document/d/' + encodeURIComponent(rec.generated_doc_id) + '/edit';
+      window.open(url, '_blank', 'noopener');
+    } catch (e) {
+      alert('Gagal membuka dokumen: ' + e.message);
+    }
+  }
+
+  function docsPrintHistory(id) {
+    fetch('/api/docs/history').then((res) => res.json()).then((json) => {
+      const rec = (json.data || []).find((r) => r.id === id);
+      if (!rec) { alert('Riwayat tidak ditemukan.'); return; }
+      if (rec.generated_doc_id) {
+        const url = 'https://docs.google.com/document/d/' + encodeURIComponent(rec.generated_doc_id) + '/edit';
+        window.open(url, '_blank', 'noopener');
+        return;
+      }
+      const win = window.open('', '_blank', 'width=900,height=1200');
+      if (!win) { alert('Browser memblokir pop-up. Izinkan pop-up untuk mencetak surat.'); return; }
+      win.document.write(`<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>${esc(rec.judul || 'Surat')}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Georgia, 'Times New Roman', Times, serif; margin: 0; padding: 24px; color: #000; font-size: 12pt; line-height: 1.55; }
+  .docs-body { max-width: 210mm; margin: 0 auto; }
+  .docs-body p { margin: 8px 0; text-align: justify; }
+  table.doc-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11pt; }
+  table.doc-table th, table.doc-table td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top; }
+  table.doc-table th { background: #eee; }
+  @media print { body { padding: 12px; } }
+</style>
+</head>
+<body>
+  <div class="docs-body">${rec.html_content || ''}</div>
+</body>
+</html>`);
+      win.document.close();
+      setTimeout(() => { win.focus(); win.print(); }, 250);
+    }).catch((e) => alert('Gagal memuat riwayat: ' + e.message));
+  }
+
+  function initDocsTab() {
+    $('btnDocsDetect').addEventListener('click', docsDetect);
+    $('btnDocsStatus').addEventListener('click', docsStatus);
+    $('btnDocsStatusClose').addEventListener('click', () => { $('docsStatusPanel').style.display = 'none'; });
+    $('btnDocsSaveLink').addEventListener('click', docsSaveLink);
+    $('btnDocsRender').addEventListener('click', docsRender);
+    $('btnDocsRenderManual').addEventListener('click', docsRender);
+    $('btnDocsGenerate').addEventListener('click', docsGenerate);
+    $('btnDocsPrint').addEventListener('click', docsPrint);
+    $('btnDocsSave').addEventListener('click', docsSave);
+    $('btnDocsHistoryClear').addEventListener('click', renderDocsHistory);
+    $('btnDocsClearLink').addEventListener('click', docsClearLinkInput);
+    if ($('btnDocsClearInput')) $('btnDocsClearInput').addEventListener('click', docsClearLinkInput);
+    if ($('btnDocsUseSaved')) $('btnDocsUseSaved').addEventListener('click', docsUseSavedLink);
+    if ($('btnDocsModePreview')) $('btnDocsModePreview').addEventListener('click', () => docsSetMode('preview'));
+    if ($('btnDocsModeEdit')) $('btnDocsModeEdit').addEventListener('click', () => docsSetMode('edit'));
+    if ($('btnDocsToggleHeight')) $('btnDocsToggleHeight').addEventListener('click', docsToggleHeight);
+    $('btnDocsSample').addEventListener('click', () => {
+      if ($('docsLink')) $('docsLink').value = 'https://docs.google.com/document/d/REPLACE_WITH_DOC_ID/edit';
+      if ($('docsLink')) $('docsLink').focus();
+      docsOnLinkInput();
+    });
+    $('docsIdReg').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); docsRender(); } });
+    if ($('docsLink')) {
+      $('docsLink').addEventListener('input', docsOnLinkInput);
+      $('docsLink').addEventListener('change', docsOnLinkInput);
+      $('docsLink').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); docsDetect(); } });
+    }
+    const jenisGrid = $('docsJenisGrid');
+    if (jenisGrid) {
+      jenisGrid.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-jenis-dok');
+        if (!btn) return;
+        jenisGrid.querySelectorAll('.btn-jenis-dok').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        docsState.jenis = btn.dataset.jenis || 'SPORADIK';
+        docsLoadTemplate(docsState.jenis);
+      });
+    }
+    docsLoadTemplate(docsState.jenis);
+    const body = $('docsHistoryBody');
+    if (body) {
+      body.addEventListener('click', (e) => {
+        const o = e.target.closest('[data-docs-open]');
+        if (o) { docsOpenHistory(o.dataset.docsOpen); return; }
+        const v = e.target.closest('[data-docs-view]');
+        if (v) { docsLoadHistory(v.dataset.docsView); return; }
+        const p = e.target.closest('[data-docs-print]');
+        if (p) { docsPrintHistory(p.dataset.docsPrint); return; }
+        const d = e.target.closest('[data-docs-del]');
+        if (d) { docsDeleteHistory(d.dataset.docsDel); }
+      });
+    }
+  }
+
   function openCekTbPanel() {
     fetchPemohonList();
     $('cekTbPanel').style.display = 'block';
@@ -244,11 +1147,70 @@
     try { return JSON.parse(String(v)); } catch (_) { return null; }
   }
 
+  function formatNamaTitle(str) {
+    if (!str) return '';
+    let s = String(str).trim();
+    if (!s) return '';
+
+    let upperStr = s.toUpperCase();
+
+    const titleReplacements = [
+      [/\bDRA\./gi, 'Dra.'],
+      [/\bDRS\./gi, 'Drs.'],
+      [/\bDR\./gi, 'Dr.'],
+      [/\bDRG\./gi, 'drg.'],
+      [/\bDRH\./gi, 'drh.'],
+      [/\bIR\./gi, 'Ir.'],
+      [/\bHJ\./gi, 'Hj.'],
+      [/\bHJH\./gi, 'Hjh.'],
+      [/\bPROF\./gi, 'Prof.'],
+      [/\bK\.H\./gi, 'K.H.'],
+      [/\bKH\./gi, 'K.H.'],
+      [/\bS\.PD\./gi, 'S.Pd.'],
+      [/\bM\.PD\./gi, 'M.Pd.'],
+      [/\bS\.E\./gi, 'S.E.'],
+      [/\bM\.M\./gi, 'M.M.'],
+      [/\bS\.T\./gi, 'S.T.'],
+      [/\bM\.T\./gi, 'M.T.'],
+      [/\bS\.SI\./gi, 'S.Si.'],
+      [/\bM\.SI\./gi, 'M.Si.'],
+      [/\bS\.H\./gi, 'S.H.'],
+      [/\bM\.H\./gi, 'M.H.'],
+      [/\bS\.KOM\./gi, 'S.Kom.'],
+      [/\bM\.KOM\./gi, 'M.Kom.'],
+      [/\bS\.SOS\./gi, 'S.Sos.'],
+      [/\bM\.SOS\./gi, 'M.Sos.'],
+      [/\bS\.K\.M\./gi, 'S.K.M.'],
+      [/\bM\.KES\./gi, 'M.Kes.'],
+      [/\bS\.AG\./gi, 'S.Ag.'],
+      [/\bM\.AG\./gi, 'M.Ag.'],
+      [/\bS\.IP\./gi, 'S.IP.'],
+      [/\bPH\.D\./gi, 'Ph.D.'],
+      [/\bM\.SC\./gi, 'M.Sc.'],
+      [/\bB\.SC\./gi, 'B.Sc.'],
+      [/\bS\.KED\./gi, 'S.Ked.']
+    ];
+
+    for (const [regex, replacement] of titleReplacements) {
+      upperStr = upperStr.replace(regex, replacement);
+    }
+    return upperStr;
+  }
+
+  function fmtTerbilangParens(v) {
+    if (!v) return '( ...................................... )';
+    let s = String(v).trim();
+    if (!s) return '( ...................................... )';
+    s = s.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '');
+    return `(${s})`;
+  }
+
   // ===== CETAK LAPORAN REKAPITULASI KEUANGAN & KAS DESA (HEMAT TINTA & ALAMAT) =====
-  function cetakLaporanKeuangan() {
-    if (!isBendahara()) {
-      alert('Akses Ditolak: Cetak Laporan Keuangan hanya dapat diakses oleh Bendahara atau Admin Desa.');
-      return;
+  async function cetakLaporanKeuangan() {
+    if (!keuState || !keuState.length) {
+      if (typeof loadKeuangan === 'function') {
+        try { await loadKeuangan(); } catch (_) {}
+      }
     }
     if (!keuState || !keuState.length) {
       alert('Belum ada data transaksi keuangan yang dapat dicetak.');
@@ -310,8 +1272,8 @@
         }
       }
 
-      if ((!namaPemohon || !alamatPemohon) && t.id_permohonan && state.data && Array.isArray(state.data)) {
-        const p = state.data.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
+      if ((!namaPemohon || !alamatPemohon) && t.id_permohonan && typeof allData !== 'undefined' && Array.isArray(allData)) {
+        const p = allData.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
         if (p) {
           if (!namaPemohon) namaPemohon = p.nama_pemohon || p.nama || p.id_pendaftaran || '';
           if (!alamatPemohon) alamatPemohon = p.alamat || p.alamat_tanah || (p.dusun ? `Dusun ${p.dusun}, Batetangnga` : '');
@@ -323,15 +1285,15 @@
       const idReg = t.id_permohonan || t.id_pendaftaran || '';
       let subjek = '-';
       if (namaPemohon && namaPemohon !== '-') {
-        subjek = `<b>${escFill(namaPemohon)}</b>${idReg ? `<br><span style="color:#444; font-size:8pt;">(${escFill(idReg)})</span>` : ''}`;
+        subjek = `<b>${escFill(namaPemohon)}</b>${idReg ? `<br><span style="color:#444; font-size:10pt;">(${escFill(idReg)})</span>` : ''}`;
       } else if (idReg) {
         subjek = `<b>${escFill(idReg)}</b>`;
       }
 
       // Eco Ink-Saving Badge
       const badgeJenis = isMasuk 
-        ? `<span style="border:1px solid #1b5e20; color:#1b5e20; padding:1px 5px; font-weight:bold; font-size:8pt;">PEMASUKAN</span>`
-        : `<span style="border:1px solid #b71c1c; color:#b71c1c; padding:1px 5px; font-weight:bold; font-size:8pt;">PENGELUARAN</span>`;
+        ? `<span style="border:1px solid #1b5e20; color:#1b5e20; padding:1px 5px; font-weight:bold; font-size:10pt;">PEMASUKAN</span>`
+        : `<span style="border:1px solid #b71c1c; color:#b71c1c; padding:1px 5px; font-weight:bold; font-size:10pt;">PENGELUARAN</span>`;
 
       const masukStr = isMasuk ? `+ ${formatRp(nom)}` : '-';
       const keluarStr = !isMasuk ? `- ${formatRp(nom)}` : '-';
@@ -360,24 +1322,24 @@
   <title>Laporan Keuangan Kas Desa Batetangnga</title>
   <style>
     @page { size: 8.5in 13in portrait; margin: 0.8cm 1.2cm; }
-    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 9.5pt; color: #000; background: #fff; margin: 0; padding: 10px; }
+    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 12pt; color: #000; background: #fff; margin: 0; padding: 10px; }
     .kop-wrap { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 12px; }
     .kop-logo { width: 50px; height: 50px; object-fit: contain; }
     .kop-text { text-align: center; flex: 1; margin: 0 10px; }
-    .kop-text h4 { margin: 0; font-size: 9.5pt; text-transform: uppercase; font-weight: 700; }
-    .kop-text h3 { margin: 2px 0; font-size: 11pt; text-transform: uppercase; font-weight: 800; }
-    .kop-text p { margin: 0; font-size: 8.5pt; font-style: italic; }
+    .kop-text h4 { margin: 0; font-size: 11pt; text-transform: uppercase; font-weight: 700; }
+    .kop-text h3 { margin: 2px 0; font-size: 12pt; text-transform: uppercase; font-weight: 800; }
+    .kop-text p { margin: 0; font-size: 11pt; font-style: italic; }
     
     .doc-head { text-align: center; margin: 10px 0 14px 0; }
-    .doc-head h2 { margin: 0; font-size: 11.5pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; }
-    .doc-head p { margin: 2px 0 0 0; font-size: 8.5pt; font-weight: 600; }
+    .doc-head h2 { margin: 0; font-size: 12pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; }
+    .doc-head p { margin: 2px 0 0 0; font-size: 11pt; font-weight: 600; }
     
     .sum-grid { display: flex; gap: 8px; margin-bottom: 14px; }
     .sum-card { flex: 1; border: 1px solid #000; padding: 6px 8px; border-radius: 4px; text-align: center; background: #fff; }
-    .sum-lbl { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; }
-    .sum-val { font-size: 10.5pt; font-weight: 800; margin-top: 2px; }
+    .sum-lbl { font-size: 11pt; font-weight: 700; text-transform: uppercase; }
+    .sum-val { font-size: 12pt; font-weight: 800; margin-top: 2px; }
     
-    table.rpt-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 8.5pt; }
+    table.rpt-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 11pt; }
     table.rpt-table th { background: #fff; color: #000; border: 1px solid #000; padding: 5px 4px; text-align: center; font-weight: 700; text-transform: uppercase; }
     table.rpt-table td { border: 1px solid #000; padding: 5px 6px; vertical-align: top; }
     .num-col { text-align: right; font-weight: 600; white-space: nowrap; }
@@ -386,9 +1348,9 @@
     
     .sig-row { display: flex; justify-content: space-between; margin-top: 24px; page-break-inside: avoid; }
     .sig-box { text-align: center; width: 42%; }
-    .sig-date { margin-bottom: 45px; font-size: 9pt; }
-    .sig-name { font-weight: 800; text-decoration: underline; font-size: 9.5pt; }
-    .sig-title { font-size: 8.5pt; }
+    .sig-date { margin-bottom: 45px; font-size: 11pt; }
+    .sig-name { font-weight: 800; text-decoration: underline; font-size: 12pt; }
+    .sig-title { font-size: 11pt; }
   </style>
 </head>
 <body>
@@ -447,7 +1409,7 @@
       </tr>
       <tr class="tfoot-total">
         <td colspan="6" style="text-align:right; padding:5px 8px;">SALDO AKHIR KAS BERSIH :</td>
-        <td colspan="2" class="num-col" style="text-align:center; font-size:10pt;">${formatRp(saldoAkhir)}</td>
+        <td colspan="2" class="num-col" style="text-align:center; font-size:12pt;">${formatRp(saldoAkhir)}</td>
       </tr>
     </tfoot>
   </table>
@@ -471,13 +1433,32 @@
 </body>
 </html>`;
 
-    const win = window.open('', '_blank');
-    if (win) {
-      win.document.write(htmlContent);
-      win.document.close();
-    } else {
-      alert('Pop-up terblokir oleh browser. Harap izinkan pop-up untuk mencetak laporan.');
-    }
+    try {
+      const win = window.open('', '_blank');
+      if (win && !win.closed) {
+        win.document.write(htmlContent);
+        win.document.close();
+        return;
+      }
+    } catch (_) {}
+
+    const frame = document.createElement('iframe');
+    frame.style.position = 'fixed';
+    frame.style.right = '0';
+    frame.style.bottom = '0';
+    frame.style.width = '0';
+    frame.style.height = '0';
+    frame.style.border = '0';
+    document.body.appendChild(frame);
+    const frameDoc = frame.contentWindow.document;
+    frameDoc.open();
+    frameDoc.write(htmlContent);
+    frameDoc.close();
+    setTimeout(() => {
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+      setTimeout(() => { try { document.body.removeChild(frame); } catch (_) {} }, 1500);
+    }, 500);
   }
 
   window.cetakLaporanKeuangan = cetakLaporanKeuangan;
@@ -592,22 +1573,22 @@
         }
       }
 
-      if (!namaPemohon && t.id_permohonan && state.data && Array.isArray(state.data)) {
-        const p = state.data.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
+      if (!namaPemohon && t.id_permohonan && typeof allData !== 'undefined' && Array.isArray(allData)) {
+        const p = allData.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
         if (p) namaPemohon = p.nama_pemohon || p.nama || p.id_pendaftaran || '';
       }
 
       const idReg = t.id_permohonan || t.id_pendaftaran || '';
       let subjek = '-';
       if (namaPemohon && namaPemohon !== '-') {
-        subjek = `<b>${escFill(namaPemohon)}</b>${idReg ? `<br><span style="color:#666; font-size:8pt;">(${escFill(idReg)})</span>` : ''}`;
+        subjek = `<b>${escFill(namaPemohon)}</b>${idReg ? `<br><span style="color:#666; font-size:10pt;">(${escFill(idReg)})</span>` : ''}`;
       } else if (idReg) {
         subjek = `<b>${escFill(idReg)}</b>`;
       }
 
       const badgeJenis = isMasuk 
-        ? `<span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:3px 8px; border-radius:4px; font-weight:800; font-size:8.5pt; display:inline-block;">PEMASUKAN</span>`
-        : `<span style="background:#ffebee; color:#b71c1c; border:1px solid #ef9a9a; padding:3px 8px; border-radius:4px; font-weight:800; font-size:8.5pt; display:inline-block;">PENGELUARAN</span>`;
+        ? `<span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:3px 8px; border-radius:4px; font-weight:800; font-size:10pt; display:inline-block;">PEMASUKAN</span>`
+        : `<span style="background:#ffebee; color:#b71c1c; border:1px solid #ef9a9a; padding:3px 8px; border-radius:4px; font-weight:800; font-size:10pt; display:inline-block;">PENGELUARAN</span>`;
 
       const masukStr = isMasuk ? `<strong style="color:#1b5e20;">+ ${formatRp(nom)}</strong>` : '-';
       const keluarStr = !isMasuk ? `<strong style="color:#b71c1c;">- ${formatRp(nom)}</strong>` : '-';
@@ -635,27 +1616,27 @@
   <title>Laporan Keuangan Kas Desa Batetangnga - ${namaBulan} ${targetYear}</title>
   <style>
     @page { size: 8.5in 13in portrait; margin: 1cm 1.5cm; }
-    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #111; margin: 0; padding: 10px; }
+    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 12pt; color: #111; margin: 0; padding: 10px; }
     .kop-wrap { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px; }
     .kop-logo { width: 55px; height: 55px; object-fit: contain; }
     .kop-text { text-align: center; flex: 1; margin: 0 10px; }
-    .kop-text h4 { margin: 0; font-size: 10pt; text-transform: uppercase; font-weight: 700; }
-    .kop-text h3 { margin: 2px 0; font-size: 11.5pt; text-transform: uppercase; font-weight: 800; color: #2E7D32; }
-    .kop-text p { margin: 0; font-size: 8.5pt; font-style: italic; color: #333; }
+    .kop-text h4 { margin: 0; font-size: 11pt; text-transform: uppercase; font-weight: 700; }
+    .kop-text h3 { margin: 2px 0; font-size: 12pt; text-transform: uppercase; font-weight: 800; color: #2E7D32; }
+    .kop-text p { margin: 0; font-size: 11pt; font-style: italic; color: #333; }
     
     .doc-head { text-align: center; margin: 14px 0 16px 0; }
     .doc-head h2 { margin: 0; font-size: 12pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; color: #E53935; }
-    .doc-head p { margin: 3px 0 0 0; font-size: 9.5pt; font-weight: 700; color: #1b5e20; }
+    .doc-head p { margin: 3px 0 0 0; font-size: 11pt; font-weight: 700; color: #1b5e20; }
     
     .sum-grid { display: flex; gap: 10px; margin-bottom: 16px; }
     .sum-card { flex: 1; border: 1px solid #000; padding: 8px; border-radius: 6px; text-align: center; }
     .sum-card.in { background: #e8f5e9; }
     .sum-card.out { background: #ffebee; }
     .sum-card.bal { background: #fffde7; }
-    .sum-lbl { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #333; }
-    .sum-val { font-size: 11pt; font-weight: 800; margin-top: 2px; }
+    .sum-lbl { font-size: 11pt; font-weight: 700; text-transform: uppercase; color: #333; }
+    .sum-val { font-size: 12pt; font-weight: 800; margin-top: 2px; }
     
-    table.rpt-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 9pt; }
+    table.rpt-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11pt; }
     table.rpt-table th { background: #f1f5f9; color: #000; border: 1px solid #000; padding: 6px 4px; text-align: center; font-weight: 700; }
     table.rpt-table td { border: 1px solid #000; padding: 5px 6px; vertical-align: top; }
     .num-col { text-align: right; font-weight: 600; white-space: nowrap; }
@@ -664,9 +1645,9 @@
     
     .sig-row { display: flex; justify-content: space-between; margin-top: 28px; page-break-inside: avoid; }
     .sig-box { text-align: center; width: 42%; }
-    .sig-date { margin-bottom: 50px; font-size: 9.5pt; }
-    .sig-name { font-weight: 800; text-decoration: underline; font-size: 10pt; }
-    .sig-title { font-size: 9pt; }
+    .sig-date { margin-bottom: 50px; font-size: 11pt; }
+    .sig-name { font-weight: 800; text-decoration: underline; font-size: 12pt; }
+    .sig-title { font-size: 11pt; }
   </style>
 </head>
 <body>
@@ -782,8 +1763,8 @@
         }
       }
 
-      if (!namaPemohon && t.id_permohonan && state.data && Array.isArray(state.data)) {
-        const p = state.data.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
+      if (!namaPemohon && t.id_permohonan && typeof allData !== 'undefined' && Array.isArray(allData)) {
+        const p = allData.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
         if (p) namaPemohon = p.nama_pemohon || p.nama || p.id_pendaftaran || '';
       }
 
@@ -826,7 +1807,7 @@
           <td style="text-align:center;">${p.jumlahTrx} Transaksi</td>
           <td>${ket}</td>
           <td class="num-col" style="color:#1b5e20; font-weight:800;">${formatRp(p.totalBayar)}</td>
-          <td style="text-align:center;"><span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:2px 8px; border-radius:4px; font-weight:800; font-size:8pt;">LUNAS</span></td>
+          <td style="text-align:center;"><span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:2px 8px; border-radius:4px; font-weight:800; font-size:10pt;">LUNAS</span></td>
         </tr>
       `;
     }).join('');
@@ -840,19 +1821,19 @@
   <title>Laporan Keuangan Per Pemohon & Total Pembayaran Lunas</title>
   <style>
     @page { size: 8.5in 13in portrait; margin: 1cm 1.5cm; }
-    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #111; margin: 0; padding: 10px; }
+    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 12pt; color: #111; margin: 0; padding: 10px; }
     .kop-wrap { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px; }
     .kop-logo { width: 55px; height: 55px; object-fit: contain; }
     .kop-text { text-align: center; flex: 1; margin: 0 10px; }
-    .kop-text h4 { margin: 0; font-size: 10pt; text-transform: uppercase; font-weight: 700; }
-    .kop-text h3 { margin: 2px 0; font-size: 11.5pt; text-transform: uppercase; font-weight: 800; color: #2E7D32; }
-    .kop-text p { margin: 0; font-size: 8.5pt; font-style: italic; color: #333; }
+    .kop-text h4 { margin: 0; font-size: 11pt; text-transform: uppercase; font-weight: 700; }
+    .kop-text h3 { margin: 2px 0; font-size: 12pt; text-transform: uppercase; font-weight: 800; color: #2E7D32; }
+    .kop-text p { margin: 0; font-size: 11pt; font-style: italic; color: #333; }
     
     .doc-head { text-align: center; margin: 14px 0 16px 0; }
     .doc-head h2 { margin: 0; font-size: 12pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; color: #7c3aed; }
-    .doc-head p { margin: 3px 0 0 0; font-size: 9pt; font-weight: 600; color: #444; }
+    .doc-head p { margin: 3px 0 0 0; font-size: 11pt; font-weight: 600; color: #444; }
     
-    table.rpt-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 9pt; }
+    table.rpt-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11pt; }
     table.rpt-table th { background: #7c3aed; color: #ffffff; border: 1px solid #000; padding: 7px 4px; text-align: center; font-weight: 700; }
     table.rpt-table td { border: 1px solid #000; padding: 6px 7px; vertical-align: top; }
     .num-col { text-align: right; font-weight: 600; white-space: nowrap; }
@@ -860,9 +1841,9 @@
     
     .sig-row { display: flex; justify-content: space-between; margin-top: 28px; page-break-inside: avoid; }
     .sig-box { text-align: center; width: 42%; }
-    .sig-date { margin-bottom: 50px; font-size: 9.5pt; }
-    .sig-name { font-weight: 800; text-decoration: underline; font-size: 10pt; }
-    .sig-title { font-size: 9pt; }
+    .sig-date { margin-bottom: 50px; font-size: 11pt; }
+    .sig-name { font-weight: 800; text-decoration: underline; font-size: 12pt; }
+    .sig-title { font-size: 11pt; }
   </style>
 </head>
 <body>
@@ -966,8 +1947,8 @@
       }
     }
 
-    if (!namaPemohon && t.id_permohonan && state.data && Array.isArray(state.data)) {
-      const p = state.data.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
+    if (!namaPemohon && t.id_permohonan && typeof allData !== 'undefined' && Array.isArray(allData)) {
+      const p = allData.find(x => String(x.id) === String(t.id_permohonan) || String(x.id_pendaftaran || '') === String(t.id_permohonan));
       if (p) namaPemohon = p.nama_pemohon || p.nama || p.id_pendaftaran || '';
     }
 
@@ -981,26 +1962,26 @@
   <title>Kwitansi Pembayaran - ${escFill(idReg)}</title>
   <style>
     @page { size: 8.5in 5.5in landscape; margin: 0.8cm 1.2cm; }
-    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #111; margin: 0; padding: 15px; }
+    body { font-family: "Inter", "Segoe UI", Arial, sans-serif; font-size: 12pt; color: #111; margin: 0; padding: 15px; }
     .kwitansi-box { border: 2px solid #0f172a; padding: 18px; border-radius: 8px; background: #fff; }
     .kop-wrap { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 12px; }
     .kop-logo { width: 50px; height: 50px; object-fit: contain; }
     .kop-text { text-align: center; flex: 1; margin: 0 10px; }
-    .kop-text h4 { margin: 0; font-size: 9.5pt; text-transform: uppercase; font-weight: 700; }
-    .kop-text h3 { margin: 2px 0; font-size: 11pt; text-transform: uppercase; font-weight: 800; color: #2E7D32; }
-    .kop-text p { margin: 0; font-size: 8pt; font-style: italic; color: #333; }
+    .kop-text h4 { margin: 0; font-size: 11pt; text-transform: uppercase; font-weight: 700; }
+    .kop-text h3 { margin: 2px 0; font-size: 12pt; text-transform: uppercase; font-weight: 800; color: #2E7D32; }
+    .kop-text p { margin: 0; font-size: 11pt; font-style: italic; color: #333; }
     
-    .kw-title { text-align: center; font-size: 13pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; color: #1b5e20; margin: 10px 0 16px 0; }
+    .kw-title { text-align: center; font-size: 14pt; font-weight: 800; text-transform: uppercase; text-decoration: underline; color: #1b5e20; margin: 10px 0 16px 0; }
     
-    table.kw-table { width: 100%; border-collapse: collapse; font-size: 10pt; line-height: 1.8; margin-bottom: 16px; }
+    table.kw-table { width: 100%; border-collapse: collapse; font-size: 12pt; line-height: 1.8; margin-bottom: 16px; }
     table.kw-table td { padding: 4px 6px; vertical-align: top; }
     
     .box-rupiah { border: 2px solid #2E7D32; background: #e8f5e9; color: #1b5e20; padding: 8px 18px; font-size: 14pt; font-weight: 800; border-radius: 6px; display: inline-block; }
     
     .sig-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 14px; }
     .sig-box { text-align: center; width: 220px; }
-    .sig-date { font-size: 9pt; margin-bottom: 45px; }
-    .sig-name { font-weight: 800; text-decoration: underline; font-size: 9.5pt; }
+    .sig-date { font-size: 11pt; margin-bottom: 45px; }
+    .sig-name { font-weight: 800; text-decoration: underline; font-size: 12pt; }
   </style>
 </head>
 <body>
@@ -1267,23 +2248,23 @@
 <title>Nota Pelunasan ${esc(pm.nama || pm.id || '')}</title>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: 'Times New Roman', Times, serif; margin: 0; padding: 24px; color: #000; }
+  body { font-family: 'Times New Roman', Times, serif; margin: 0; padding: 24px; color: #000; font-size: 12pt; }
   .kop { text-align: center; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 14px; }
-  .kop h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
-  .kop h2 { margin: 2px 0 0; font-size: 14px; font-weight: normal; }
-  .kop p { margin: 2px 0 0; font-size: 11px; }
-  .judul { text-align: center; font-size: 16px; font-weight: bold; text-transform: uppercase; margin: 10px 0 4px; }
-  .sub { text-align: center; font-size: 12px; margin-bottom: 18px; }
-  table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
+  .kop h1 { margin: 0; font-size: 22px; letter-spacing: 1px; }
+  .kop h2 { margin: 2px 0 0; font-size: 16px; font-weight: normal; }
+  .kop p { margin: 2px 0 0; font-size: 13px; }
+  .judul { text-align: center; font-size: 18px; font-weight: bold; text-transform: uppercase; margin: 10px 0 4px; }
+  .sub { text-align: center; font-size: 14px; margin-bottom: 18px; }
+  table.data { width: 100%; border-collapse: collapse; font-size: 15px; margin-bottom: 16px; }
   table.data td { padding: 3px 4px; vertical-align: top; }
   table.data td.k { width: 210px; font-weight: bold; }
-  table.trx { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0 16px; }
+  table.trx { width: 100%; border-collapse: collapse; font-size: 14px; margin: 10px 0 16px; }
   table.trx th, table.trx td { border: 1px solid #000; padding: 5px 6px; }
   table.trx th { background: #eee; text-align: left; }
   .num { text-align: right; white-space: nowrap; }
-  .total-lunas { margin: 14px 0; padding: 10px 14px; border: 2px solid #000; display: inline-block; font-size: 14px; font-weight: bold; }
-  .terbilang { font-size: 13px; margin-bottom: 28px; }
-  .ttd { display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px; }
+  .total-lunas { margin: 14px 0; padding: 10px 14px; border: 2px solid #000; display: inline-block; font-size: 16px; font-weight: bold; }
+  .terbilang { font-size: 15px; margin-bottom: 28px; }
+  .ttd { display: flex; justify-content: space-between; margin-top: 50px; font-size: 14px; }
   .ttd > div { text-align: center; width: 45%; }
   .ttd .sp { height: 70px; }
   .ttd .garis { border-top: 1px solid #000; width: 100%; margin-top: 4px; }
@@ -1442,6 +2423,7 @@
       
       closeTrxModal();
       await Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]);
+      if (isBendahara()) renderKeuanganDashboard();
       renderKeuanganTable();
 
     } catch(e) {
@@ -1484,21 +2466,14 @@
   }
   function updateKeuPermissions() {
     const canInput = isBendahara();
-    const setVisible = (id, show) => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = show ? '' : 'none';
-    };
-    // Hanya Bendahara (atau Admin) yang boleh melihat ringkasan, tabel, mencetak laporan, & menginput transaksi keuangan.
-    setVisible('btnTambahTransaksi', canInput);
-    setVisible('btnImportKeuangan', canInput);
-    setVisible('btnCetakKeuangan', canInput);
-    setVisible('keuRingkasan', canInput);
-    setVisible('keuSearchInput', canInput);
-    setVisible('keuTableWrap', canInput);
-    setVisible('keuEmpty', canInput);
-    setVisible('pagerKeuangan', canInput);
+    // Hanya Bendahara (atau Admin) yang boleh melihat seluruh dashboard keuangan
+    // (ringkasan, grafik, rekap, tabel, cetak, & input transaksi).
+    const dash = document.getElementById('keuDashboard');
+    if (dash) dash.hidden = !canInput;
+
     // Cek Tagihan & Berkas tetap tersedia untuk semua user.
-    setVisible('btnCekTagihanBerkas', true);
+    const cekBtn = document.getElementById('btnCekTagihanBerkas');
+    if (cekBtn) cekBtn.style.display = '';
 
     if (!canInput) {
       const body = document.getElementById('keuBody');
@@ -1927,7 +2902,7 @@ hideChangePwMsg();
   // Struktur data_raw berbeda per jenis layanan (HIBAH/JUALBELI/AHLIWARIS).
   // Dipakai fillSporadik (pratinjau & panel lengkapi) agar konsisten.
   function sporadikRoles(layanan, raw, r) {
-    const upper = (s) => String(s ?? '').toUpperCase();
+    const upper = (s) => formatNamaTitle(s);
     const L = String(layanan || '').toUpperCase();
     let pk1, pk2;
     if (L === 'JUALBELI') {
@@ -2634,27 +3609,27 @@ hideChangePwMsg();
         </div>
 
         <div class="form-box">
-          <div class="field-grid">
+          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
             ${secs(TAMBAH_SECTIONS.pemohon)}
           </div>
         </div>
 
         <div class="form-box">
-          <div class="field-grid">
+          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
             ${secs(TAMBAH_SECTIONS[currentEditLayanan] || [])}
-            <div id="editAnakWrap" class="field full"></div>
+            <div id="editAnakWrap" class="field full" style="grid-column: 1 / -1 !important;"></div>
           </div>
         </div>
 
         <div class="form-box">
-          <div class="field-grid">
+          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
             ${secs(TAMBAH_SECTIONS.tanah)}
           </div>
         </div>
 
         <div class="form-box">
-          <div class="field-grid">
-            <div class="field full"><label>Catatan Admin</label><textarea id="ed_catatan" rows="3">${esc(r.catatan_admin || '')}</textarea></div>
+          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
+            <div class="field full" style="grid-column: 1 / -1 !important;"><label>Catatan Admin</label><textarea id="ed_catatan" rows="3">${esc(r.catatan_admin || '')}</textarea></div>
           </div>
         </div>
 
@@ -3403,8 +4378,46 @@ hideChangePwMsg();
       key === 'saksi1_nama' || key === 'saksi2_nama' ||
       (isSp && (key === 'saksi1_umur' || key === 'saksi2_umur' || key === 'saksi1_tmpl' || key === 'saksi2_tmpl'));
 
-    const rows = fields.map(([key, label]) => {
-      if (key === 'tgl_surat') return ''; // diatur lewat kontrol Tanggal Surat.
+    const FULL_WIDTH_KEYS = new Set([]);
+
+    const SECTION_SPECS = {
+      SPORADIK: [
+        { title: '<span class="se-card-step">1</span> 👤 DATA PIHAK PERTAMA (PEMOHON)', keys: ['nama_pihak_pertama', 'nik_pihak_pertama', 'ttl_pihak_pertama', 'pekerjaan_pihak_pertama', 'layanan', 'alamat_pihak_pertama'] },
+        { title: '<span class="se-card-step">2</span> 🏞️ DATA TANAH & LOKASI', keys: ['nib', 'jenis_tanah', 'luas', 'dusun', 'rt', 'rw', 'pihak_kedua', 'tahun_pemberian'] },
+        { title: '<span class="se-card-step">3</span> 🗺️ BATAS-BATAS BIDANG TANAH', keys: ['batas_utara', 'batas_timur', 'batas_selatan', 'batas_barat'] },
+        { title: '<span class="se-card-step">4</span> 👥 DATA SAKSI PERTAMA (SAKSI 1)', keys: ['saksi1_nama', 'saksi1_tmpl', 'saksi1_ttl', 'saksi1_umur', 'saksi1_pekerjaan', 'saksi1_alamat'] },
+        { title: '<span class="se-card-step">5</span> 👥 DATA SAKSI KEDUA (SAKSI 2)', keys: ['saksi2_nama', 'saksi2_tmpl', 'saksi2_ttl', 'saksi2_umur', 'saksi2_pekerjaan', 'saksi2_alamat'] }
+      ],
+      HIBAH: [
+        { title: '<span class="se-card-step">1</span> 👤 DATA PIHAK PERTAMA (PEMBERI HIBAH)', keys: ['pemberi_nama', 'pemberi_tempat_lahir', 'pemberi_tanggal_lahir', 'pemberi_umur', 'pemberi_pekerjaan', 'pemberi_alamat'] },
+        { title: '<span class="se-card-step">2</span> 👤 DATA PIHAK KEDUA (PENERIMA HIBAH)', keys: ['penerima_nama', 'penerima_tempat_lahir', 'penerima_tanggal_lahir', 'penerima_umur', 'penerima_pekerjaan', 'penerima_alamat'] },
+        { title: '<span class="se-card-step">3</span> 🏞️ DATA OBJEK TANAH & LOKASI', keys: ['jenis_tanah', 'luas_tanah', 'dusun', 'tahun_pemberian', 'alamat_tanah'] },
+        { title: '<span class="se-card-step">4</span> 🗺️ BATAS-BATAS BIDANG TANAH', keys: ['batas_utara', 'batas_timur', 'batas_selatan', 'batas_barat'] },
+        { title: '<span class="se-card-step">5</span> 👥 DATA SAKSI-SAKSI', keys: ['saksi1_nama', 'saksi2_nama'] }
+      ],
+      JUALBELI: [
+        { title: '<span class="se-card-step">1</span> 👤 DATA PIHAK PERTAMA (PENJUAL TANAH)', keys: ['penjual_nama', 'penjual_tempat_lahir', 'penjual_tanggal_lahir', 'penjual_umur', 'penjual_pekerjaan', 'penjual_alamat'] },
+        { title: '<span class="se-card-step">2</span> 👤 DATA PIHAK KEDUA (PEMBELI TANAH)', keys: ['pembeli_nama', 'pembeli_tempat_lahir', 'pembeli_tanggal_lahir', 'pembeli_umur', 'pembeli_pekerjaan', 'pembeli_alamat'] },
+        { title: '<span class="se-card-step">3</span> 🏞️ DATA OBJEK TANAH & LOKASI', keys: ['jenis_tanah', 'luas_tanah', 'dusun', 'tahun_pemberian', 'alamat_tanah'] },
+        { title: '<span class="se-card-step">4</span> 💰 NILAI PEMBELIAN & TERBILANG', keys: ['harga_pembelian', 'harga_terbilang'] },
+        { title: '<span class="se-card-step">5</span> 🗺️ BATAS-BATAS BIDANG TANAH', keys: ['batas_utara', 'batas_timur', 'batas_selatan', 'batas_barat'] },
+        { title: '<span class="se-card-step">6</span> 👥 DATA SAKSI-SAKSI', keys: ['saksi1_nama', 'saksi2_nama'] }
+      ],
+      AHLIWARIS: [
+        { title: '<span class="se-card-step">1</span> ⚰️ DATA ALMARHUM / ALMARHUMAH & PASANGAN', keys: ['almarhum_nama', 'pasangan_nama', 'tahun_meninggal', 'jumlah_anak'] },
+        { title: '<span class="se-card-step">2</span> 👤 DATA PEMOHON WARIS & OBJEK TANAH', keys: ['nama_pemohon', 'jenis_tanah', 'luas_tanah', 'dusun', 'alamat_tanah'] },
+        { title: '<span class="se-card-step">3</span> 🗺️ BATAS-BATAS BIDANG TANAH', keys: ['batas_utara', 'batas_timur', 'batas_selatan', 'batas_barat'] },
+        { title: '<span class="se-card-step">4</span> 👥 DATA SAKSI-SAKSI', keys: ['saksi1_nama', 'saksi2_nama'] }
+      ]
+    };
+
+    const fieldMap = new Map(fields.map(([k, l]) => [k, l]));
+    const renderedKeys = new Set();
+
+    const renderSingleField = (key) => {
+      if (key === 'tgl_surat' || key === 'no_surat' || !fieldMap.has(key)) return '';
+      renderedKeys.add(key);
+      const label = fieldMap.get(key);
       const val = String(st.fill[key] ?? '');
       const locked = lockedSet.has(key) || (!forceEditable(key) && val.trim() !== '');
       const rawKey = locked ? '' : rawKeyFor(key);
@@ -3420,44 +4433,79 @@ hideChangePwMsg();
         : isManualLetter(key);
       const chip = isAcName ? '🔍 Cari Data' : (isAutoField ? '⚡ Otomatis' : '');
       const placeholder = isAcName ? 'Ketik Nama untuk Cari Data Warga...' : (isManualField ? 'Isi manual...' : '');
-      const variant = isAcName ? 'ac' : (isAutoField ? 'auto' : (isManualField ? 'manual' : ''));
+
+      const isFull = FULL_WIDTH_KEYS.has(key) || isTextarea;
+      const classList = ['se-field'];
+      if (locked) classList.push('locked');
+      if (isFull) classList.push('se-full');
+      if (isAcName) classList.push('se-ac');
+      else if (isAutoField) classList.push('se-auto');
+      else if (isManualField) classList.push('se-manual');
+
+      const colSpanStyle = isFull ? 'grid-column: 1 / -1 !important;' : 'grid-column: span 1 !important;';
+
       return `
-        <label class="se-field${locked ? ' locked' : ''}${variant ? ' se-' + variant : ''}">
-          <span>${chip ? chip + ' · ' : ''}${esc(label)}</span>
+        <label class="${classList.join(' ')}" style="${colSpanStyle} display: flex; flex-direction: column; gap: 4px; width: 100%;">
+          <span>${esc(label)}${chip ? ` <small class="se-chip">${chip}</small>` : ''}</span>
           ${isTextarea
-            ? `<textarea data-fill-key="${key}" data-raw-key="${rawKey}" rows="3" ${placeholder && !locked ? 'placeholder="' + placeholder + '"' : ''} ${locked ? 'readonly title="Terkunci (sudah terisi / otomatis)"' : ''}>${esc(inpVal)}</textarea>`
+            ? `<textarea data-fill-key="${key}" data-raw-key="${rawKey}" rows="1" ${placeholder && !locked ? 'placeholder="' + placeholder + '"' : ''} ${locked ? 'readonly title="Terkunci (sudah terisi / otomatis)"' : ''}>${esc(inpVal)}</textarea>`
             : `<input type="${isDate ? 'date' : 'text'}" data-fill-key="${key}" data-raw-key="${rawKey}"
              ${autoAgeMap[key] ? 'data-auto-age="' + autoAgeMap[key] + '"' : ''}
              ${placeholder && !locked ? 'placeholder="' + placeholder + '"' : ''}
              value="${esc(inpVal)}" ${locked ? 'readonly title="Terkunci (sudah terisi / otomatis)"' : ''} />`}
         </label>`;
+    };
+
+    const specs = SECTION_SPECS[t] || [];
+    let fieldsHtml = specs.map((sec) => {
+      const fieldItems = sec.keys.map((k) => renderSingleField(k)).filter(Boolean);
+      if (!fieldItems.length) return '';
+      return `
+        <div class="se-group" style="display: flex; flex-direction: column; width: 100%; margin-bottom: 16px;">
+          <div class="se-group-head">${sec.title}</div>
+          <div class="se-group-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important; align-items: start !important;">${fieldItems.join('')}</div>
+        </div>`;
     }).join('');
+
+    const leftoverKeys = fields.map(([k]) => k).filter((k) => k !== 'tgl_surat' && k !== 'no_surat' && !renderedKeys.has(k));
+    if (leftoverKeys.length) {
+      const leftoverItems = leftoverKeys.map((k) => renderSingleField(k)).filter(Boolean);
+      fieldsHtml += `
+        <div class="se-group" style="display: flex; flex-direction: column; width: 100%; margin-bottom: 16px;">
+          <div class="se-group-head">📋 INFORMASI LAINNYA</div>
+          <div class="se-group-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important; align-items: start !important;">${leftoverItems.join('')}</div>
+        </div>`;
+    }
 
     // AHLIWARIS: blok anak / ahli waris (jumlah mengikuti fill.jumlah_anak).
     let extra = '';
     if (t === 'AHLIWARIS') {
       const n = Math.max(0, Math.min(20, parseInt(String(st.fill.jumlah_anak || '0').replace(/\D/g, ''), 10) || 0));
-      const anakRows = [];
+      const anakGroups = [];
       for (let i = 1; i <= n; i++) {
         const base = 'anak_' + i;
-        anakRows.push(`
-          <div class="se-anak-title">Anak ${i}</div>
-          <label class="se-field"><span>Nama Anak ${i}</span>
-            <input type="text" data-fill-key="${base}_nama" data-raw-key="${base}_nama" value="${esc(st.fill[base + '_nama'] || '')}" placeholder="Ketik nama..." /></label>
-          <label class="se-field"><span>Tempat Lahir Anak ${i}</span>
-            <input type="text" data-fill-key="${base}_tempat_lahir" data-raw-key="${base}_tempat_lahir" value="${esc(st.fill[base + '_tempat_lahir'] || '')}" placeholder="Isi manual..." /></label>
-          <label class="se-field"><span>Tanggal Lahir Anak ${i}</span>
-            <input type="date" data-fill-key="${base}_tanggal_lahir" data-raw-key="${base}_tanggal_lahir" value="${esc(toBirthISO(st.fill[base + '_tanggal_lahir'] || ''))}" /></label>
-          <label class="se-field"><span>Pekerjaan Anak ${i}</span>
-            <input type="text" data-fill-key="${base}_pekerjaan" data-raw-key="${base}_pekerjaan" value="${esc(st.fill[base + '_pekerjaan'] || '')}" placeholder="Isi manual..." /></label>
-          <label class="se-field"><span>Alamat Anak ${i}</span>
-            <textarea data-fill-key="${base}_alamat" data-raw-key="${base}_alamat" rows="2" placeholder="Isi manual...">${esc(st.fill[base + '_alamat'] || '')}</textarea></label>
+        anakGroups.push(`
+          <div class="se-group">
+            <div class="se-group-head">👦 ANAK / AHLI WARIS KE-${i}</div>
+            <div class="se-group-grid">
+              <label class="se-field"><span>Nama Anak ${i}</span>
+                <input type="text" data-fill-key="${base}_nama" data-raw-key="${base}_nama" value="${esc(st.fill[base + '_nama'] || '')}" placeholder="Ketik nama..." /></label>
+              <label class="se-field"><span>Tempat Lahir</span>
+                <input type="text" data-fill-key="${base}_tempat_lahir" data-raw-key="${base}_tempat_lahir" value="${esc(st.fill[base + '_tempat_lahir'] || '')}" placeholder="Isi manual..." /></label>
+              <label class="se-field"><span>Tanggal Lahir</span>
+                <input type="date" data-fill-key="${base}_tanggal_lahir" data-raw-key="${base}_tanggal_lahir" value="${esc(toBirthISO(st.fill[base + '_tanggal_lahir'] || ''))}" /></label>
+              <label class="se-field"><span>Pekerjaan Anak ${i}</span>
+                <input type="text" data-fill-key="${base}_pekerjaan" data-raw-key="${base}_pekerjaan" value="${esc(st.fill[base + '_pekerjaan'] || '')}" placeholder="Isi manual..." /></label>
+              <label class="se-field"><span>Alamat Anak ${i}</span>
+                <textarea data-fill-key="${base}_alamat" data-raw-key="${base}_alamat" rows="1" placeholder="Isi manual...">${esc(st.fill[base + '_alamat'] || '')}</textarea></label>
+            </div>
+          </div>
         `);
       }
-      if (n > 0) extra = `<div class="se-anak-head">👨‍👩‍👧‍👦 Daftar Anak / Ahli Waris (${n})</div>` + anakRows.join('');
+      if (n > 0) extra = anakGroups.join('');
     }
 
-    fieldsEl.innerHTML = rows + extra;
+    fieldsEl.innerHTML = fieldsHtml + extra;
     fieldsEl.querySelectorAll('input, textarea').forEach((inp) => {
       inp.addEventListener('input', () => {
         const fk = inp.dataset.fillKey;
@@ -3691,7 +4739,7 @@ hideChangePwMsg();
     // mengalir ke halaman 2 (aw-2pg), <= 4 anak tetap terkunci 1 halaman.
     // SPORADIK tetap terkunci pas 1 halaman (kertas 8.5x13in).
     document.body.classList.toggle('multi-print', t === 'AHLIWARIS');
-    document.body.classList.toggle('fit-1pg', t === 'JUALBELI' || t === 'HIBAH');
+    document.body.classList.toggle('fit-1pg', t === 'JUALBELI' || t === 'HIBAH' || t === 'SPORADIK');
     // Ahli Waris memakai halaman bernama 'aw' (margin + footer halaman).
     // Class dipasang di <html> agar seluruh konten memakai page: aw dan
     // tidak memicu pecah halaman kosong di awal (beda nama halaman = break paksa).
@@ -3732,49 +4780,47 @@ hideChangePwMsg();
     return s + ' Tahun';
   }
 
-  // Format luas agar memuat satuan baku "Meter Persegi (m²)" tepat sekali
-  // (menghapus satuan lama yang mungkin ikut terbawa data, mis. "M2" / "tertruncat").
-  function fmtLuas(v) {
-    const s = String(v ?? '').trim();
-    if (!s) return '';
-    const bare = s.replace(/\s*\(?\s*(?:m\^?2|m²|meter\s*persegi)\s*\)?\s*$/i, '');
-    return (bare || '').replace(/\s+$/, '') + ' Meter Persegi (m²)';
+  function fmtLuasBare(v) {
+    if (!v) return '....................';
+    let s = String(v ?? '').trim();
+    if (!s) return '....................';
+    s = s.replace(/\s*\(?\s*(?:m\^?2|m²|meter\s*persegi)\s*\)?\s*$/gi, '').trim();
+    return s || '....................';
   }
 
-  // Urutan & label semua field SPORADIK untuk panel review data.
   const SPORADIK_FIELD_LABELS = [
-    ['no_surat', 'Nomor Surat (opsional)'],
+    ['no_surat', 'Nomor Surat'],
     ['nama_pihak_pertama', 'Nama Pihak Pertama'],
-    ['ttl_pihak_pertama', 'Tempat/Tanggal Lahir Pihak Pertama'],
+    ['nik_pihak_pertama', 'NIK Pihak Pertama'],
+    ['ttl_pihak_pertama', 'Tempat / Tanggal Lahir'],
     ['pekerjaan_pihak_pertama', 'Pekerjaan Pihak Pertama'],
-    ['nik_pihak_pertama', 'Nomor KTP (NIK)'],
+    ['layanan', 'Jenis Layanan'],
     ['alamat_pihak_pertama', 'Alamat Pihak Pertama'],
+    ['nib', 'N.I.B. (dikunci)'],
+    ['jenis_tanah', 'Jenis / Penggunaan Tanah'],
     ['luas', 'Luas Tanah'],
     ['dusun', 'Dusun'],
     ['rt', 'RT'],
     ['rw', 'RW'],
-    ['nib', 'N.I.B. (dikunci)'],
-    ['jenis_tanah', 'Jenis Tanah / Dipergunakan untuk'],
+    ['pihak_kedua', 'Pihak Kedua / Pemberi'],
+    ['tahun_pemberian', 'Tahun Pemberian'],
     ['batas_utara', 'Batas Utara'],
     ['batas_timur', 'Batas Timur'],
     ['batas_selatan', 'Batas Selatan'],
     ['batas_barat', 'Batas Barat'],
-    ['pihak_kedua', 'Pihak Kedua / Pemberi'],
-    ['layanan', 'Jenis Layanan'],
-    ['tahun_pemberian', 'Tahun Pemberian'],
     ['saksi1_nama', 'Nama Saksi 1'],
-    ['saksi1_tmpl', 'Tempat Lahir Saksi 1 (helper)'],
-    ['saksi1_ttl', 'Tanggal Lahir Saksi 1 (auto Umur)'],
-    ['saksi1_umur', 'Umur Saksi 1 (bisa manual)'],
+    ['saksi1_tmpl', 'Tempat Lahir Saksi 1'],
+    ['saksi1_ttl', 'Tanggal Lahir Saksi 1'],
+    ['saksi1_umur', 'Umur Saksi 1'],
     ['saksi1_pekerjaan', 'Pekerjaan Saksi 1'],
     ['saksi1_alamat', 'Alamat Saksi 1'],
     ['saksi2_nama', 'Nama Saksi 2'],
-    ['saksi2_tmpl', 'Tempat Lahir Saksi 2 (helper)'],
-    ['saksi2_ttl', 'Tanggal Lahir Saksi 2 (auto Umur)'],
-    ['saksi2_umur', 'Umur Saksi 2 (bisa manual)'],
+    ['saksi2_tmpl', 'Tempat Lahir Saksi 2'],
+    ['saksi2_ttl', 'Tanggal Lahir Saksi 2'],
+    ['saksi2_umur', 'Umur Saksi 2'],
     ['saksi2_pekerjaan', 'Pekerjaan Saksi 2'],
     ['saksi2_alamat', 'Alamat Saksi 2'],
-    ['tgl_surat', 'Tanggal Surat (pilih manual)']
+    ['tgl_surat', 'Tanggal Surat']
   ];
 
   function renderSporadikPreview(f) {
@@ -3848,21 +4894,22 @@ hideChangePwMsg();
       <div class="surat-head">
         SURAT PERNYATAAN PENGUASAAN FISIK<br>BIDANG TANAH (SPORADIK)
       </div>
+      <div class="surat-head-gap" style="height: 18px;"></div>
       <p class="surat-p">Yang bertanda tangan dibawah ini :</p>
       ${T[0]}${T[1]}
       ${T[2]}${T[3]}${T[4]}
-      <p class="surat-p">Dengan ini menerangkan bahwa saya dengan itikad baik telah menguasai sebidang tanah seluas <b>${escFill(fmtLuas(f.luas))}</b> yang terletak di Dusun <b>${escFill(f.dusun)}</b> RT : <b>${escFill(f.rt)}</b> RW : <b>${escFill(f.rw)}</b> Desa/<s>Kelurahan</s> : Batetangnga. Kecamatan Binuang Kabupaten Polewali Mandar.</p>
+      <p class="surat-p">Dengan ini menerangkan bahwa saya dengan itikad baik telah menguasai sebidang tanah seluas <b>${escFill(fmtLuasBare(f.luas))}</b> Meter Persegi (m²) yang terletak di Dusun <b>${escFill(f.dusun)}</b> RT : <b>${escFill(f.rt)}</b> RW : <b>${escFill(f.rw)}</b> Desa/<s>Kelurahan</s> : Batetangnga. Kecamatan Binuang Kabupaten Polewali Mandar.</p>
       ${T[6]}${T[7]}${T[8]}${T[9]}
       <p class="surat-p">Bidang tanah tersebut saya peroleh dari <b>${escFill(f.pihak_kedua)}</b> berdasarkan surat keterangan <b>${escFill(f.layanan)}</b> yang dikuasai sejak tahun <b>${escFill(f.tahun_pemberian)}</b> yang sampai saat ini saya kuasai secara terus menerus, tidak dijadikan / menjadi jaminan sesuatu hutang dan tidak dalam sengketa. Pernyataan ini disaksikan oleh :</p>
       ${T[11]}
       <p class="surat-p">Surat Pernyataan ini saya buat dengan sebenarnya dengan penuh tanggung jawab dan saya bersedia untuk mengangkat sumpah bila diperlukan. Apabila pernyataan ini tidak benar saya bersedia dituntut dihadapan pejabat yang berwenang.</p>
+      <p class="surat-p surat-tgl-line">Batetangnga, ${escFill(f.tgl_surat)}</p>
       <div class="surat-ttd-row">
         <div></div>
         <div class="surat-ttd">
-          <div>Batetangnga, ${escFill(f.tgl_surat)}</div>
           <div>Yang membuat pernyataan,</div>
           <div class="surat-baris-3">
-            <div class="surat-materai">Materai 10.000</div>
+            <div class="surat-materai">Materai<br>Rp. 10.000,-</div>
             <div class="surat-tdd-spasi"></div>
           </div>
           <div class="surat-tdd-nama">( <b>${escFill(f.nama_pihak_pertama)}</b> )</div>
@@ -3879,11 +4926,11 @@ hideChangePwMsg();
           <div class="surat-saksi-kanan">( ...................................... )</div>
         </div>
       </div>
-      ${T[12]}
       <div class="surat-ttd-row">
         <div></div>
         <div class="surat-ttd">
-          <div>Mengetahui Kepala Desa Batetangnga</div>
+          ${T[12]}
+          <div style="margin-top: 4px;">Mengetahui Kepala Desa Batetangnga</div>
           <div class="surat-ttd-space"></div>
           <div><b>(SUMAILA DAMANG)</b></div>
         </div>
@@ -3951,7 +4998,7 @@ hideChangePwMsg();
   // ===== Fill per layanan (nilai isian surat) =====
   function fillJualBeli(r, info) {
     const raw = info;
-    const upper = (s) => String(s ?? '').toUpperCase();
+    const upper = (s) => formatNamaTitle(s);
     const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     const umur = (tanggalKey, umurKey) => umurFromTgl(raw[tanggalKey]) || raw[umurKey] || '';
     return {
@@ -3983,7 +5030,7 @@ hideChangePwMsg();
 
   function fillAhliWaris(r, info) {
     const raw = info;
-    const upper = (s) => String(s ?? '').toUpperCase();
+    const upper = (s) => formatNamaTitle(s);
     const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     const n = parseInt(raw.jumlah_anak || '0', 10) || 0;
     const out = {
@@ -4019,7 +5066,7 @@ hideChangePwMsg();
 
   function fillHibah(r, info) {
     const raw = info;
-    const upper = (s) => String(s ?? '').toUpperCase();
+    const upper = (s) => formatNamaTitle(s);
     const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     const umur = (tanggalKey, umurKey) => umurFromTgl(raw[tanggalKey]) || raw[umurKey] || '';
     return {
@@ -4204,13 +5251,13 @@ hideChangePwMsg();
     const ttd2 = (kiriTitle, kiriNama, kananTitle, kananNama) => `
       <div class="surat-ttd-row letter-ttd">
         <div class="surat-ttd surat-ttd-left">
-          <div>${kiriTitle}</div>
-          <div class="surat-ttd-space"></div>
-          <div>( <b>${escFill(kiriNama)}</b> )</div>
+          <div class="surat-ttd-header">${kiriTitle}</div>
+          <div class="surat-ttd-space-box"></div>
+          <div class="surat-tdd-nama">( <b>${escFill(kiriNama)}</b> )</div>
         </div>
         <div class="surat-ttd surat-ttd-right">
-          <div>${kananTitle}</div>
-          <div class="surat-baris-3">
+          <div class="surat-ttd-header">${kananTitle}</div>
+          <div class="surat-ttd-space-box surat-baris-3">
             <div class="surat-materai">Materai<br>Rp. 10.000,-</div>
             <div class="surat-tdd-spasi"></div>
           </div>
@@ -4220,6 +5267,7 @@ hideChangePwMsg();
 
     b.innerHTML = `
       <div class="surat-head">SURAT PERNYATAAN PENGOPERAN/PENGALIAN HAK</div>
+      <div class="surat-head-gap" style="height: 18px;"></div>
       <p class="surat-p">Yang bertanda tangan dibawah ini :</p>
       <table class="surat-tb"><tbody>
         ${pRow('N a m a', f.penjual_nama, true)}
@@ -4235,14 +5283,14 @@ hideChangePwMsg();
         ${pRow('Alamat', f.pembeli_alamat)}
       </tbody></table>
       <p class="surat-p">Selanjunya disebut <b>Pihak Kedua</b></p>
-      <p class="surat-p">Pihak Pertama dengan ini menyatakan telah melakukan Pengoperan Hak Atas sebidang tanah <b>${escFill(f.jenis_tanah)}</b> seluas Kurang Lebih <b>${escFill(f.luas_tanah)}</b> Meter Persegi yang terletak di <b>${escFill(f.alamat_tanah)}</b> Dusun <b>${escFill(f.dusun)}</b> Desa Batetangnga Kecamatan Binuang, Kabupaten Polewali Mandar kepada Pihak Kedua pada tahun <b>${escFill(f.tahun_pemberian)}</b> dengan batas-batas sebagai berikut :</p>
+      <p class="surat-p">Pihak Pertama dengan ini menyatakan telah melakukan Pengoperan Hak Atas sebidang tanah <b>${escFill(f.jenis_tanah)}</b> seluas Kurang Lebih <b>${escFill(fmtLuasBare(f.luas_tanah))}</b> Meter Persegi (m²) yang terletak di <b>${escFill(f.alamat_tanah)}</b> Dusun <b>${escFill(f.dusun)}</b> Desa Batetangnga Kecamatan Binuang, Kabupaten Polewali Mandar kepada Pihak Kedua pada tahun <b>${escFill(f.tahun_pemberian)}</b> dengan batas-batas sebagai berikut :</p>
       <table class="surat-tb"><tbody>
         <tr><td class="lbl">Utara</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_utara)}</b></td></tr>
         <tr><td class="lbl">Timur</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_timur)}</b></td></tr>
         <tr><td class="lbl">Selatan</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_selatan)}</b></td></tr>
         <tr><td class="lbl">Barat</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_barat)}</b></td></tr>
       </tbody></table>
-      <p class="surat-p">dan Pihak Kedua menerima Pengalihan Hak Milik Tanah tersebut dari Pihak Pertama dengan Senilai <b>${escFill(fmtHarga(f.harga_pembelian))}</b> <b>${escFill(f.harga_terbilang)}</b>, Pihak Kedua telah melunasi Pembelian Tanah tersebut dan Pihak Pertama mengaku telah menerima seluruh biaya Pembelian atas tanah tersebut.</p>
+      <p class="surat-p">dan Pihak Kedua menerima Pengalihan Hak Milik Tanah tersebut dari Pihak Pertama dengan Senilai <b>${escFill(fmtHarga(f.harga_pembelian))}</b> <b>${escFill(fmtTerbilangParens(f.harga_terbilang))}</b>, Pihak Kedua telah melunasi Pembelian Tanah tersebut dan Pihak Pertama mengaku telah menerima seluruh biaya Pembelian atas tanah tersebut.</p>
       <p class="surat-p">Demikian Pernyataan Pengalihan Hak Milik tanah ini kami buat dan kami tanda tangani bersama dihadapan 2 orang Saksi yang tersebut namanya dibawah ini untuk dipergunakan seperlunya dan sebagai bukti dikemudian hari.</p>
       <p class="surat-p surat-tgl-line">Batetangnga, ${escFill(f.tgl_surat)}</p>
       ${ttd2('Pihak Kedua<br>Yang Menerima Pengoperan,', f.pembeli_nama, 'Pihak Pertama<br>Yang Melakukan Pengoperan,', f.penjual_nama)}
@@ -4310,18 +5358,21 @@ hideChangePwMsg();
       ? `<div class="aw-anak-list">${anakList.join('')}</div>`
       : '';
     const ttdBlock = ttdRows.length
-      ? `<div class="aw-ttd-para">Para Ahli Waris,</div>
-         <div class="aw-ttd-rows">${ttdRows.join('')}</div>`
+      ? `<div class="aw-ttd-wrap">
+           <div class="aw-ttd-para">Para Ahli Waris,</div>
+           <div class="aw-ttd-rows">${ttdRows.join('')}</div>
+         </div>`
       : '';
 
     b.innerHTML = `
       <div class="surat-head">SURAT KETERANGAN dan PERNYATAAN AHLI WARIS</div>
+      <div class="surat-head-gap" style="height: 18px;"></div>
       <p class="surat-p aw-intro">Kami yang bertanda tangan dibawah ini adalah para ahli waris dari Almarhum/mah :</p>
       <p class="surat-p aw-nama">= &nbsp;<b>${escFill(f.almarhum_nama)}</b>&nbsp; =</p>
       <p class="surat-p aw-jus">menerangkan dengan sesungguhnya dan sanggup diangkat sumpah, bahwa Almarhumah/Mah <b>${escFill(f.almarhum_nama)}</b>, yang telah meninggal dunia di Desa /Kel Batetangnga, pada Tahun <b>${escFill(f.tahun_meninggal)}</b> dari perkawinannya dengan Istri/Suami: <b>${escFill(f.pasangan_nama)}</b> dilahirkan (<b>${escFill(f.jumlah_anak)}</b> (<b>${escFill(f.jumlah_anak_terbilang)}</b>) Orang anak yaitu :</p>
       ${daftar}
       <p class="surat-p aw-jus">Demikian kami Anak dengan jumlah <b>${escFill(f.jumlah_anak)}</b> (<b>${escFill(f.jumlah_anak_terbilang)}</b>) anak adalah ahli waris dari mendiang <b>${escFill(f.almarhum_nama)}</b>, telah sepakat untuk membagi harta warisan dengan pembagian sebagai berikut :</p>
-      <p class="surat-p aw-jus">Memberikan kepada ahli waris An. <b>${escFill(f.nama_pemohon)}</b>, atas seluruh harta warisan berupa tanah <b>${escFill(f.jenis_tanah)}</b> seluas ± <b>${escFill(f.luas_tanah)}</b> M² yang terletak di <b>${escFill(f.alamat_tanah)}</b> Dusun <b>${escFill(f.dusun)}</b> Desa Batetangnga, Kecamatan Binuang, Kabupaten Polewali Mandar, dengan batas-batas sbb :</p>
+      <p class="surat-p aw-jus">Memberikan kepada ahli waris An. <b>${escFill(f.nama_pemohon)}</b>, atas seluruh harta warisan berupa tanah <b>${escFill(f.jenis_tanah)}</b> seluas ± <b>${escFill(fmtLuasBare(f.luas_tanah))}</b> Meter Persegi (m²) yang terletak di <b>${escFill(f.alamat_tanah)}</b> Dusun <b>${escFill(f.dusun)}</b> Desa Batetangnga, Kecamatan Binuang, Kabupaten Polewali Mandar, dengan batas-batas sbb :</p>
       <div class="aw-batas">
         <div><span class="aw-bt-lbl">Sebelah Utara</span>: Berbatasan dengan <b>${escFill(f.batas_utara)}</b></div>
         <div><span class="aw-bt-lbl">Sebelah Timur</span>: Barbatasan denga <b>${escFill(f.batas_timur)}</b></div>
@@ -4371,13 +5422,13 @@ hideChangePwMsg();
     const ttd2 = (kiriTitle, kiriNama, kananTitle, kananNama) => `
       <div class="surat-ttd-row letter-ttd">
         <div class="surat-ttd surat-ttd-left">
-          <div>${kiriTitle}</div>
-          <div class="surat-ttd-space"></div>
-          <div>( <b>${escFill(kiriNama)}</b> )</div>
+          <div class="surat-ttd-header">${kiriTitle}</div>
+          <div class="surat-ttd-space-box"></div>
+          <div class="surat-tdd-nama">( <b>${escFill(kiriNama)}</b> )</div>
         </div>
         <div class="surat-ttd surat-ttd-right">
-          <div>${kananTitle}</div>
-          <div class="surat-baris-3">
+          <div class="surat-ttd-header">${kananTitle}</div>
+          <div class="surat-ttd-space-box surat-baris-3">
             <div class="surat-materai">Materai<br>Rp. 10.000,-</div>
             <div class="surat-tdd-spasi"></div>
           </div>
@@ -4387,6 +5438,7 @@ hideChangePwMsg();
 
     b.innerHTML = `
       <div class="surat-head">SURAT PERNYATAAN PEMBERIAN/HIBAH</div>
+      <div class="surat-head-gap" style="height: 18px;"></div>
       <p class="surat-p">Yang bertanda tangan dibawah ini :</p>
       <table class="surat-tb"><tbody>
         ${pRow('N a m a', f.pemberi_nama, true)}
@@ -4404,7 +5456,7 @@ hideChangePwMsg();
         ${pRow('Alamat', f.penerima_alamat)}
       </tbody></table>
       <p class="surat-p">Selanjutnya disebut <b>PIHAK KEDUA</b></p>
-      <p class="surat-p">Pihak Pertama dengan ini memberikan/Menghibahkan Sebidang <b>${escFill(f.jenis_tanah)}</b> seluas <b>${escFill(f.luas_tanah)}</b> Meter Persegi yang terletak di <b>${escFill(f.alamat_tanah)}</b> Dusun <b>${escFill(f.dusun)}</b> Desa Batetangnga Kecamatan Binuang Kabupaten Polewali Mandar Kepada Pihak Kedua Pada tahun <b>${escFill(f.tahun_pemberian)}</b> Dengan batas-batas sebagai berikut :</p>
+      <p class="surat-p">Pihak Pertama dengan ini memberikan/Menghibahkan Sebidang <b>${escFill(f.jenis_tanah)}</b> seluas <b>${escFill(fmtLuasBare(f.luas_tanah))}</b> Meter Persegi (m²) yang terletak di <b>${escFill(f.alamat_tanah)}</b> Dusun <b>${escFill(f.dusun)}</b> Desa Batetangnga Kecamatan Binuang Kabupaten Polewali Mandar Kepada Pihak Kedua Pada tahun <b>${escFill(f.tahun_pemberian)}</b> Dengan batas-batas sebagai berikut :</p>
       <table class="surat-tb"><tbody>
         <tr><td class="lbl">Utara</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_utara)}</b></td></tr>
         <tr><td class="lbl">Timur</td><td>:</td><td>Berbatasan dengan <b>${escFill(f.batas_timur)}</b></td></tr>
@@ -4445,20 +5497,24 @@ hideChangePwMsg();
   const TEMPLATE_FIELDS = {
     SPORADIK: SPORADIK_FIELD_LABELS,
     JUALBELI: [
-      ['no_surat', 'Nomor Surat (opsional)'],
+      ['no_surat', 'Nomor Surat'],
       ['penjual_nama', 'Nama Penjual (Pihak Pertama)'],
+      ['penjual_tempat_lahir', 'Tempat Lahir'],
+      ['penjual_tanggal_lahir', 'Tanggal Lahir'],
       ['penjual_umur', 'Umur Penjual'],
       ['penjual_pekerjaan', 'Pekerjaan Penjual'],
-      ['penjual_alamat', 'Alamat Penjual'],
+      ['penjual_alamat', 'Alamat Lengkap Penjual'],
       ['pembeli_nama', 'Nama Pembeli (Pihak Kedua)'],
+      ['pembeli_tempat_lahir', 'Tempat Lahir'],
+      ['pembeli_tanggal_lahir', 'Tanggal Lahir'],
       ['pembeli_umur', 'Umur Pembeli'],
       ['pembeli_pekerjaan', 'Pekerjaan Pembeli'],
-      ['pembeli_alamat', 'Alamat Pembeli'],
-      ['jenis_tanah', 'Jenis Tanah'],
-      ['luas_tanah', 'Luas Tanah (angka saja)'],
-      ['alamat_tanah', 'Alamat Tanah'],
+      ['pembeli_alamat', 'Alamat Lengkap Pembeli'],
+      ['jenis_tanah', 'Jenis / Penggunaan Tanah'],
+      ['luas_tanah', 'Luas Tanah'],
+      ['alamat_tanah', 'Alamat Objek Tanah'],
       ['dusun', 'Dusun'],
-      ['tahun_pemberian', 'Tahun'],
+      ['tahun_pemberian', 'Tahun Penguasaan'],
       ['batas_utara', 'Batas Utara'],
       ['batas_timur', 'Batas Timur'],
       ['batas_selatan', 'Batas Selatan'],
@@ -4467,19 +5523,19 @@ hideChangePwMsg();
       ['harga_terbilang', 'Terbilang Harga'],
       ['saksi1_nama', 'Nama Saksi 1'],
       ['saksi2_nama', 'Nama Saksi 2'],
-      ['tgl_surat', 'Tanggal Surat (pilih manual)']
+      ['tgl_surat', 'Tanggal Surat']
     ],
     AHLIWARIS: [
-      ['no_surat', 'Nomor Surat (opsional)'],
-      ['almarhum_nama', 'Nama Almarhum/Almarhumah'],
-      ['pasangan_nama', 'Nama Istri/Suami'],
+      ['no_surat', 'Nomor Surat'],
+      ['almarhum_nama', 'Nama Almarhum / Almarhumah'],
+      ['pasangan_nama', 'Nama Istri / Suami'],
       ['tahun_meninggal', 'Tahun Meninggal'],
       ['jumlah_anak', 'Jumlah Anak'],
       ['jumlah_anak_terbilang', 'Jumlah Anak (terbilang)'],
       ['nama_pemohon', 'Nama Pemohon (Ahli Waris)'],
-      ['jenis_tanah', 'Jenis Tanah'],
-      ['luas_tanah', 'Luas Tanah (angka saja)'],
-      ['alamat_tanah', 'Alamat Tanah'],
+      ['jenis_tanah', 'Jenis / Penggunaan Tanah'],
+      ['luas_tanah', 'Luas Tanah'],
+      ['alamat_tanah', 'Alamat Objek Tanah'],
       ['dusun', 'Dusun'],
       ['batas_utara', 'Batas Utara'],
       ['batas_timur', 'Batas Timur'],
@@ -4487,34 +5543,34 @@ hideChangePwMsg();
       ['batas_barat', 'Batas Barat'],
       ['saksi1_nama', 'Nama Saksi 1'],
       ['saksi2_nama', 'Nama Saksi 2'],
-      ['tgl_surat', 'Tanggal Surat (pilih manual)']
+      ['tgl_surat', 'Tanggal Surat']
     ],
     HIBAH: [
-      ['no_surat', 'Nomor Surat (opsional)'],
+      ['no_surat', 'Nomor Surat'],
       ['pemberi_nama', 'Nama Pemberi (Pihak Pertama)'],
-      ['pemberi_tempat_lahir', 'Tempat Lahir Pemberi'],
-      ['pemberi_tanggal_lahir', 'Tanggal Lahir Pemberi (auto Umur)'],
+      ['pemberi_tempat_lahir', 'Tempat Lahir'],
+      ['pemberi_tanggal_lahir', 'Tanggal Lahir'],
       ['pemberi_umur', 'Umur Pemberi'],
       ['pemberi_pekerjaan', 'Pekerjaan Pemberi'],
-      ['pemberi_alamat', 'Alamat Pemberi'],
+      ['pemberi_alamat', 'Alamat Lengkap Pemberi'],
       ['penerima_nama', 'Nama Penerima (Pihak Kedua)'],
-      ['penerima_tempat_lahir', 'Tempat Lahir Penerima'],
-      ['penerima_tanggal_lahir', 'Tanggal Lahir Penerima (auto Umur)'],
+      ['penerima_tempat_lahir', 'Tempat Lahir'],
+      ['penerima_tanggal_lahir', 'Tanggal Lahir'],
       ['penerima_umur', 'Umur Penerima'],
       ['penerima_pekerjaan', 'Pekerjaan Penerima'],
-      ['penerima_alamat', 'Alamat Penerima'],
-      ['jenis_tanah', 'Jenis Tanah'],
-      ['luas_tanah', 'Luas Tanah (angka saja)'],
-      ['alamat_tanah', 'Alamat Tanah'],
+      ['penerima_alamat', 'Alamat Lengkap Penerima'],
+      ['jenis_tanah', 'Jenis / Penggunaan Tanah'],
+      ['luas_tanah', 'Luas Tanah'],
+      ['alamat_tanah', 'Alamat Objek Tanah'],
       ['dusun', 'Dusun'],
-      ['tahun_pemberian', 'Tahun'],
+      ['tahun_pemberian', 'Tahun Pemberian'],
       ['batas_utara', 'Batas Utara'],
       ['batas_timur', 'Batas Timur'],
       ['batas_selatan', 'Batas Selatan'],
       ['batas_barat', 'Batas Barat'],
       ['saksi1_nama', 'Nama Saksi 1'],
       ['saksi2_nama', 'Nama Saksi 2'],
-      ['tgl_surat', 'Tanggal Surat (pilih manual)']
+      ['tgl_surat', 'Tanggal Surat']
     ]
   };
 
@@ -4587,8 +5643,9 @@ hideChangePwMsg();
     $('tab-sporadik').hidden = name !== 'sporadik';
     $('tab-uploads').hidden = name !== 'uploads';
     $('tab-keuangan').hidden = name !== 'keuangan';
+    $('tab-suratdocs').hidden = name !== 'suratdocs';
     activeTab = name;
-    $('tbTitle').textContent = ({ dashboard: 'Dashboard', pendaftaran: 'Pendaftaran', sporadik: 'Surat SPORADIK', uploads: 'Uploads', keuangan: 'Keuangan' }[name] || name);
+    $('tbTitle').textContent = ({ dashboard: 'Dashboard', pendaftaran: 'Pendaftaran', sporadik: 'Surat SPORADIK', uploads: 'Uploads', keuangan: 'Keuangan', suratdocs: 'Surat Google Docs' }[name] || name);
     if (name === 'pendaftaran') pageState.pendaftaran.p = 1;
     else if (name === 'sporadik') pageState.sporadik.p = 1;
     else if (name === 'uploads') pageState.uploads.p = 1;
@@ -4605,9 +5662,16 @@ hideChangePwMsg();
     else if (activeTab === 'uploads') showTab('uploads', renderUploads);
     else if (activeTab === 'keuangan') {
         updateKeuPermissions();
+        if (!isBendahara()) return;
         Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]).then(() => {
+            renderKeuanganDashboard();
             renderKeuanganTable();
         });
+    }
+    else if (activeTab === 'suratdocs') {
+        fetchPemohonList();
+        renderDocsHistory();
+        docsUpdateLiveIframe();
     }
   }
 
@@ -4680,7 +5744,9 @@ hideChangePwMsg();
       { id: 'batas_barat', label: 'Barat' },
       { sec: '👥 Saksi' },
       { id: 'saksi1_nama', label: 'Saksi 1' },
-      { id: 'saksi2_nama', label: 'Saksi 2' }
+      { id: 'saksi1_tanggal_lahir', label: 'Tanggal Lahir Saksi 1', type: 'date' },
+      { id: 'saksi2_nama', label: 'Saksi 2' },
+      { id: 'saksi2_tanggal_lahir', label: 'Tanggal Lahir Saksi 2', type: 'date' }
     ]
   };
 
@@ -4725,7 +5791,8 @@ hideChangePwMsg();
       const inpMode = f.digits ? ' inputmode="numeric"' : '';
       inp = `<input type="${type}" id="${p}${f.id}" value="${esc(v)}"${f.min != null ? ` min="${f.min}"` : ''}${f.max != null ? ` max="${f.max}"` : ''}${ro}${f.price ? ' data-price="1"' : ''}${maxLen}${inpMode}${f.req ? ' required' : ''}${synced}>${umurHint}`;
     }
-    return `<div class="${cls}${f.sync ? ' locked' : ''}"><label>${esc(f.label)}${f.req ? ' *' : ''}</label>${inp}${lockHint}</div>`;
+    const colStyle = f.full ? 'grid-column: 1 / -1 !important;' : 'grid-column: span 1 !important;';
+    return `<div class="${cls}${f.sync ? ' locked' : ''}" style="${colStyle} display: flex; flex-direction: column; width: 100%;"><label>${esc(f.label)}${f.req ? ' *' : ''}</label>${inp}${lockHint}</div>`;
   }
 
   function tambahSeksiHtml(sections, prefix, raw) {
@@ -4833,20 +5900,20 @@ hideChangePwMsg();
         </div>
 
         <div class="form-box">
-          <div class="field-grid">
+          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
             ${tambahSeksiHtml(TAMBAH_SECTIONS.pemohon)}
           </div>
         </div>
 
         <div class="form-box">
-          <div class="field-grid">
+          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
             ${tambahSeksiHtml(TAMBAH_SECTIONS[tambahLayanan] || [])}
-            <div id="tambahAnakWrap" class="field full"></div>
+            <div id="tambahAnakWrap" class="field full" style="grid-column: 1 / -1 !important;"></div>
           </div>
         </div>
 
         <div class="form-box">
-          <div class="field-grid">
+          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
             ${tambahSeksiHtml(TAMBAH_SECTIONS.tanah)}
           </div>
         </div>
@@ -5316,18 +6383,18 @@ hideChangePwMsg();
     if (!w) { alert('Pop-up diblokir. Izinkan pop-up lalu coba lagi.'); return; }
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
       <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #0f172a; }
-        h2 { font-size: 18px; margin: 0 0 4px; }
-        .rk-sub { font-size: 13px; margin: 16px 0 6px; }
-        .rk-meta { font-size: 11px; color: #64748b; margin-bottom: 14px; }
-        table { border-collapse: collapse; width: 100%; font-size: 11px; margin-bottom: 12px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #0f172a; font-size: 12pt; }
+        h2 { font-size: 20px; margin: 0 0 4px; }
+        .rk-sub { font-size: 15px; margin: 16px 0 6px; }
+        .rk-meta { font-size: 13px; color: #64748b; margin-bottom: 14px; }
+        table { border-collapse: collapse; width: 100%; font-size: 12pt; margin-bottom: 12px; }
         th { background: #1e293b; color: #fff; padding: 7px 6px; text-align: left; border: 1px solid #334155; }
         td { padding: 6px; border: 1px solid #cbd5e1; vertical-align: top; }
         .rk-no { width: 34px; text-align: center; }
         .rk-center { text-align: center; }
-        .rk-mono { font-family: Consolas, monospace; font-size: 10.5px; }
-        .rk-small { font-size: 10px; }
-        tr.rk-group td { background: #eef2ff; font-weight: 700; color: #4338ca; font-size: 11.5px; }
+        .rk-mono { font-family: Consolas, monospace; font-size: 11pt; }
+        .rk-small { font-size: 11pt; }
+        tr.rk-group td { background: #eef2ff; font-weight: 700; color: #4338ca; font-size: 13px; }
         tr.rk-diukur td { background: #d1fae5; }
         tr.rk-tolak td { background: #fee2e2; }
         @media print { body { padding: 12px; } }
@@ -5457,41 +6524,21 @@ hideChangePwMsg();
 
   initAuth();
   initKeuangan();
+  initDocsTab();
 
-  // ===== Cetak 1 Halaman (AHLI WARIS <= 4 anak + JUAL BELI/HIBAH): JAMINAN pas 1 halaman =====
-  // Beberapa printer/browser melayout di kertas A4/Letter (bukan F4 8.5x13in)
-  // sehingga isi surat bisa meluber ke halaman 2 walau pratinjau layar tampak
-  // muat. Saat masuk mode cetak, ukur area isi halaman yang SEBENARNYA dipakai
-  // lalu perkecil lembar (zoom) secukupnya agar selalu tercetak persis 1 halaman.
-  // AHLI WARIS >= 5 anak (body.aw-2pg) tidak disentuh — tetap 2 halaman.
+  // ===== Cetak pas 1 halaman: JANGAN susutkan lembar di mode cetak =====
+  // Dulu lembar di-zoom < 1 agar pas 1 halaman, tetapi itu MEMBATALKAN
+  // kenaikan ukuran font: font diperbesar -> konten lebih tinggi -> zoom
+  // dikurangi -> hasil cetak tetap kecil. Sekarang font cetak dikunci 12pt
+  // (16px) dan lembar TIDAK pernah dikecilkan; jika isi lebih panjang dari
+  // satu halaman, isi mengalir ke halaman 2 (perilaku standar seperti Word).
   (function wireAwPrintFit() {
     if (typeof window.matchMedia !== 'function') return;
     const mq = window.matchMedia('print');
     const handler = (e) => {
       const sheet = document.querySelector('#suratBody .surat-sheet');
       if (!sheet) return;
-      // Hanya mode 1 halaman: AHLI WARIS <= 4 anak (aw-1pg) & JUAL BELI/HIBAH
-      // (fit-1pg). AHLI WARIS >= 5 anak (aw-2pg) tetap 2 halaman.
-      if (!document.body.classList.contains('aw-1pg') && !document.body.classList.contains('fit-1pg')) { sheet.style.zoom = ''; return; }
-      if (!e.matches) { sheet.style.zoom = ''; return; }
-      let probe = document.getElementById('print-fit-probe');
-      if (!probe) {
-        probe = document.createElement('div');
-        probe.id = 'print-fit-probe';
-        probe.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;visibility:hidden;pointer-events:none;';
-        document.body.appendChild(probe);
-      }
-      // Area isi = tinggi #suratBody (calc(100vh - 2cm)). Probe fixed mengukur
-      // SELURUH halaman (termasuk margin) sehingga lembar bisa 76px lebih tinggi
-      // dari container dan baris bawahnya terpotong — pakai #suratBody.
-      const bodyEl = document.getElementById('suratBody');
-      const availH = bodyEl ? bodyEl.clientHeight : probe.offsetHeight;
-      // Tinggi isi sebenarnya: scrollHeight menangkap konten yang meluber dari
-      // kotak yang dikunci 1 halaman (offsetHeight saja bisa menutupi overflow).
-      const sheetH = Math.max(sheet.offsetHeight, sheet.scrollHeight);
-      if (availH > 0 && sheetH > availH) {
-        sheet.style.zoom = String((availH / sheetH).toFixed(4));
-      }
+      sheet.style.zoom = '';
     };
     if (mq.addEventListener) mq.addEventListener('change', handler);
     else if (mq.addListener) mq.addListener(handler);

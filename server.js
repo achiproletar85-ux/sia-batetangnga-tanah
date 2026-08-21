@@ -13,6 +13,7 @@ const TABLE_DB = 'permohonan_surat_tanah';
 const TABLE_UP = 'permohonan_uploads';
 const TABLE_TRX = 'transaksi_keuangan';
 const TABLE_SET = 'pengaturan_app';
+const TABLE_DOCS = 'surat_terbit';
 // Tab transaksi keuangan (Google Sheet, publik "Anyone with link can view").
 const KEUANGAN_SHEET_URL = process.env.KEUANGAN_SHEET_URL ||
   'https://docs.google.com/spreadsheets/d/1KK7EUwdZe7jRfuymJ43GLH3zf7uKoouQwJx2QSfxlwc/export?format=csv&gid=1798420765';
@@ -749,8 +750,8 @@ app.get('/api/pemohon/:id/tagihan-berkas', requireAuth, async (req, res) => {
 });
 
 
-// GET /api/keuangan/ringkasan -> Ringkasan total keuangan
-app.get('/api/keuangan/ringkasan', async (req, res) => {
+// GET /api/keuangan/ringkasan -> Ringkasan total keuangan (khusus Bendahara/Admin)
+app.get('/api/keuangan/ringkasan', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
     const { data, error } = await supabase.from(TABLE_TRX).select('jenis_transaksi, nominal');
     if (error) throw error;
@@ -779,8 +780,8 @@ app.get('/api/keuangan/ringkasan', async (req, res) => {
   }
 });
 
-// GET /api/keuangan/transaksi -> Daftar semua transaksi dengan filter (dibaca oleh aplikasi)
-app.get('/api/keuangan/transaksi', async (req, res) => {
+// GET /api/keuangan/transaksi -> Daftar semua transaksi dengan filter (khusus Bendahara/Admin)
+app.get('/api/keuangan/transaksi', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
     const { order = 'desc', id_permohonan } = req.query;
     let query = supabase.from(TABLE_TRX)
@@ -829,11 +830,14 @@ app.post('/api/keuangan/transaksi', requireAuth, requireRole('bendahara'), async
   }
 });
 
+// Helper untuk mendapatkan variabel Google OAuth (prioritas process.env, fallback ke Supabase pengaturan_app).
+async function getGoogleEnv(key) {
+  if (process.env[key]) return process.env[key];
+  const val = await getPengaturan(key, '');
+  return val ? String(val).trim() : null;
+}
+
 // ---------- Upload bukti ke Google Drive ----------
-// File biner TIDAK disimpan di Supabase. Jalur: OAuth pribadi (refresh token)
-// dari akun Google pemilik folder -> upload langsung ke Google Drive API v3.
-// Env yang dibutuhkan:
-//   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, GOOGLE_DRIVE_FOLDER_ID
 app.post('/api/keuangan/upload-bukti', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
     const { fileName, fileData } = req.body;
@@ -848,8 +852,11 @@ app.post('/api/keuangan/upload-bukti', requireAuth, requireRole('bendahara'), as
       return res.status(413).json({ success: false, error: 'Ukuran file melebihi 8 MB.' });
     }
 
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_REFRESH_TOKEN || !process.env.GOOGLE_DRIVE_FOLDER_ID) {
-      return res.status(500).json({ success: false, error: 'Konfigurasi upload Google belum diatur di .env' });
+    const clientId = await getGoogleEnv('GOOGLE_CLIENT_ID');
+    const refreshToken = await getGoogleEnv('GOOGLE_REFRESH_TOKEN');
+    const folderId = await getGoogleEnv('GOOGLE_DRIVE_FOLDER_ID');
+    if (!clientId || !refreshToken || !folderId) {
+      return res.status(500).json({ success: false, error: 'Konfigurasi upload Google belum diatur di .env atau Supabase' });
     }
     const url = await uploadToDrive(fileName || 'bukti_' + Date.now() + '.jpg', mime, bytes);
     res.json({ success: true, url });
@@ -860,13 +867,20 @@ app.post('/api/keuangan/upload-bukti', requireAuth, requireRole('bendahara'), as
 });
 
 async function googleAccessToken() {
+  const clientId = await getGoogleEnv('GOOGLE_CLIENT_ID');
+  const clientSecret = await getGoogleEnv('GOOGLE_CLIENT_SECRET');
+  const refreshToken = await getGoogleEnv('GOOGLE_REFRESH_TOKEN');
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error('Konfigurasi OAuth Google belum diatur di .env atau Supabase (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN)');
+  }
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
       grant_type: 'refresh_token'
     })
   });
@@ -875,9 +889,107 @@ async function googleAccessToken() {
   return j.access_token;
 }
 
+// POST /api/docs/google-config -> simpan/update kredensial Google OAuth ke Supabase (hanya Admin).
+app.post('/api/docs/google-config', requireAuth, requireRole('admin'), async (req, res) => {
+  try {
+    const { clientId, clientSecret, refreshToken, folderId } = req.body || {};
+    const items = [];
+    if (clientId) items.push({ kunci: 'GOOGLE_CLIENT_ID', nilai: String(clientId).trim(), updated_at: new Date().toISOString() });
+    if (clientSecret) items.push({ kunci: 'GOOGLE_CLIENT_SECRET', nilai: String(clientSecret).trim(), updated_at: new Date().toISOString() });
+    if (refreshToken) items.push({ kunci: 'GOOGLE_REFRESH_TOKEN', nilai: String(refreshToken).trim(), updated_at: new Date().toISOString() });
+    if (folderId) items.push({ kunci: 'GOOGLE_DRIVE_FOLDER_ID', nilai: String(folderId).trim(), updated_at: new Date().toISOString() });
+
+    if (items.length === 0) {
+      return res.status(400).json({ success: false, error: 'Tidak ada data konfigurasi yang diisi.' });
+    }
+
+    const { error } = await supabase.from(TABLE_SET).upsert(items, { onConflict: 'kunci' });
+    if (error) throw error;
+    res.json({ success: true, message: 'Konfigurasi OAuth Google berhasil disimpan ke Supabase.' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/docs/status -> Diagnostik konfigurasi Google (env/Supabase + scope refresh token + status Docs API).
+app.get('/api/docs/status', requireAuth, requireRole('admin'), async (req, res) => {
+  try {
+    const clientId = await getGoogleEnv('GOOGLE_CLIENT_ID');
+    const clientSecret = await getGoogleEnv('GOOGLE_CLIENT_SECRET');
+    const refreshToken = await getGoogleEnv('GOOGLE_REFRESH_TOKEN');
+    const folderId = await getGoogleEnv('GOOGLE_DRIVE_FOLDER_ID');
+
+    const report = {
+      success: true,
+      env: {
+        GOOGLE_CLIENT_ID: Boolean(clientId),
+        GOOGLE_CLIENT_SECRET: Boolean(clientSecret),
+        GOOGLE_REFRESH_TOKEN: Boolean(refreshToken),
+        GOOGLE_DRIVE_FOLDER_ID: Boolean(folderId)
+      },
+      clientId: clientId ? String(clientId).slice(0, 12) + '…' : null,
+      scopes: [],
+      docsApi: null,
+      docsApiError: null,
+      note: ''
+    };
+
+    if (!report.env.GOOGLE_CLIENT_ID || !report.env.GOOGLE_CLIENT_SECRET || !report.env.GOOGLE_REFRESH_TOKEN) {
+      report.note = 'Konfigurasi OAuth Google belum lengkap di .env atau tabel pengaturan Supabase.';
+      return res.json(report);
+    }
+
+    // 1) Refresh token -> access token.
+    const token = await googleAccessToken();
+
+    // 2) Lihat scope access token (tokeninfo). Field scope = spasi-terpisah.
+    const ti = await fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(token));
+    const tiJ = await ti.json();
+    if (tiJ && tiJ.scope) {
+      report.scopes = String(tiJ.scope).split(' ').filter(Boolean);
+      report.note = 'Scope saat ini: ' + report.scopes.join(', ');
+    } else {
+      report.note = 'Tidak bisa membaca scope dari tokeninfo: ' + JSON.stringify(tiJ);
+    }
+
+    // 3) Uji Docs API dengan docId dummy (format ID valid). Error membedakan:
+    //    - 403 "has not been used"/"disabled" -> API belum aktif / scope kurang
+    //    - 404 -> API aktif & scope OK, tapi dokumen tidak ada (bukan masalah config)
+    const dummyId = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const docsRes = await fetch('https://docs.googleapis.com/v1/documents/' + dummyId, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const docsJ = await docsRes.json();
+    const msg = docsJ && docsJ.error ? docsJ.error.message : '';
+    if (docsRes.status === 404) {
+      report.docsApi = 'ACTIVE_OK'; // API aktif, scope cocok; dokumen dummy tidak ada.
+      report.note += ' | Docs API AKTIF & scope documents OK (dummy doc 404 = wajar).';
+    } else if (docsRes.status === 403) {
+      report.docsApi = 'BLOCKED';
+      report.docsApiError = msg;
+      report.note += ' | Docs API/scope belum siap: ' + msg;
+    } else {
+      report.docsApi = 'UNKNOWN (' + docsRes.status + ')';
+      report.docsApiError = msg;
+      report.note += ' | Respon tak terduga dari Docs API: ' + msg;
+    }
+
+    // Scope documents wajib ada.
+    report.hasDocumentsScope = report.scopes.some((s) =>
+      s === 'https://www.googleapis.com/auth/documents' ||
+      s === 'https://www.googleapis.com/auth/documents.readonly' ||
+      s.endsWith('/auth/documents'));
+    report.docsReady = report.docsApi === 'ACTIVE_OK' && report.hasDocumentsScope;
+
+    res.json(report);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 async function uploadToDrive(fileName, mime, bytes) {
   const token = await googleAccessToken();
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  const folderId = await getGoogleEnv('GOOGLE_DRIVE_FOLDER_ID');
   const boundary = 'sia_batetangnga_' + Date.now();
 
   const metadata = JSON.stringify({ name: fileName, parents: [folderId] });
@@ -916,6 +1028,592 @@ async function uploadToDrive(fileName, mime, bytes) {
 
   return up.webViewLink || ('https://drive.google.com/file/d/' + up.id + '/view');
 }
+
+// ============================================================
+// SURAT GOOGLE DOCS — render placeholder {{...}} dari Google Docs
+// Sumber data: Google Docs API (refresh token yang sama dengan Drive).
+// Placeholder otomatis terdeteksi dari isi dokumen: {{nama_field}}.
+// ============================================================
+function extractDocId(input) {
+  const s = String(input || '').trim();
+  if (!s) return null;
+  // https://docs.google.com/document/d/<ID>/edit
+  let m = /\/document\/d\/([a-zA-Z0-9_-]+)/.exec(s);
+  if (m) return m[1];
+  // Hanya ID polos (panjang 25-80, tanpa spasi).
+  if (/^[a-zA-Z0-9_-]{25,}$/.test(s)) return s;
+  return null;
+}
+
+// Ekstrak ID pendaftaran REG-XXXXXX dari teks acak / pilihan datalist.
+function extractRegId(input) {
+  const s = String(input || '').trim();
+  if (!s) return '';
+  const m = s.match(/REG-[A-Za-z0-9_-]+/i);
+  if (m) return m[0].toUpperCase();
+  if (/^\d+$/.test(s)) return 'REG-' + s;
+  return s.toUpperCase();
+}
+
+async function fetchDocContent(docId) {
+  const token = await googleAccessToken();
+  const res = await fetch('https://docs.googleapis.com/v1/documents/' + encodeURIComponent(docId), {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  const j = await res.json();
+  if (!res.ok) {
+    const err = j && j.error && j.error.message ? j.error.message : (j.message || 'Gagal membaca dokumen');
+    // Scope yang umum hilang saat refresh token dibuat hanya utk Drive.
+    if (res.status === 403 || res.status === 401) {
+      throw new Error('Akses dokumen ditolak. Pastikan refresh token memiliki scope https://www.googleapis.com/auth/documents dan dokumen boleh diakses akun tersebut. (' + err + ')');
+    }
+    throw new Error(err);
+  }
+  return j;
+}
+
+// Gabungkan textRun dalam satu paragraph menjadi satu teks (placeholder utuh).
+function paragraphText(p) {
+  if (!p || !p.elements) return '';
+  const joined = p.elements.map((el) => (el.textRun ? (el.textRun.content || '') : '')).join('');
+  // Bersihkan karakter kontrol Google Docs (penomoran otomatis, pemisah tab, dll).
+  return joined.replace(/[\u000b\u0000\u0001-\u0008\u000e-\u001f\u007f]/g, '').replace(/\t/g, ' ');
+}
+
+// Salin dokumen Google Docs via Drive API (file asli digandakan, placeholder tetap utuh).
+async function copyDriveDoc(docId, newName) {
+  const token = await googleAccessToken();
+  const res = await fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(docId) + '/copy', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: newName })
+  });
+  const j = await res.json();
+  if (!res.ok) {
+    const err = j && j.error && j.error.message ? j.error.message : 'Gagal menggandakan dokumen';
+    throw new Error('Gagal menggandakan dokumen di Drive: ' + err);
+  }
+  return j.id;
+}
+
+// Isi placeholder langsung DI DALAM dokumen Google (batchUpdate replaceAllText).
+// Format/layout asli tetap terjaga karena hanya teks diganti.
+async function fillDocText(docId, replacements) {
+  const token = await googleAccessToken();
+  const requests = replacements.map((r) => ({
+    replaceAllText: {
+      containsText: { text: r.from, matchCase: false },
+      replaceText: r.to
+    }
+  }));
+  const res = await fetch('https://docs.googleapis.com/v1/documents/' + encodeURIComponent(docId) + ':batchUpdate', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requests })
+  });
+  const j = await res.json();
+  if (!res.ok) {
+    const err = j && j.error && j.error.message ? j.error.message : 'Gagal mengisi dokumen';
+    if (res.status === 403 || res.status === 401) {
+      throw new Error('Akses dokumen ditolak. Pastikan refresh token memiliki scope https://www.googleapis.com/auth/documents dan dokumen boleh diakses akun tersebut. (' + err + ')');
+    }
+    throw new Error('Gagal mengisi placeholder di dokumen: ' + err);
+  }
+  return j;
+}
+
+// Ekstrak daftar placeholder unik (urutan kemunculan pertama).
+function extractPlaceholders(text) {
+  const seen = [];
+  const re = /\{\{\s*([^{}]+?)\s*\}\}/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const key = m[1].trim();
+    if (!seen.includes(key)) seen.push(key);
+  }
+  return seen;
+}
+
+// Normalisasi nama field placeholder: huruf kecil, tanpa spasi/underscore/titik.
+function normKey(k) {
+  return String(k).trim().toLowerCase().replace(/[\s_\-./\\]+/g, '');
+}
+
+// Tanggal ISO -> "5 Februari 2026" (id-ID, tanpa hari).
+function fmtIdDate(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return String(v).trim();
+  const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  return d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+// Kumpulkan seluruh nilai yang bisa dipakai placeholder dari satu pendaftaran.
+async function buildDocValues(record, extraValues) {
+  let dr = {};
+  try { dr = typeof record.data_raw === 'string' ? JSON.parse(record.data_raw || '{}') : (record.data_raw || {}); } catch (_) {}
+  const values = {};
+  const set = (k, v) => { if (v !== undefined && v !== null && String(v) !== '') values[normKey(k)] = String(v); };
+
+  // Kolom top-level permohonan.
+  set('id', record.id);
+  set('id_registrasi', record.id);
+  set('id_pendaftaran', record.id);
+  set('reg', record.id);
+  set('nama', record.nama);
+  set('nama_pemohon', record.nama);
+  set('layanan', record.layanan);
+  set('jenis_layanan', record.layanan);
+  set('status_berkas', record.status_berkas);
+  set('pembayaran', record.pembayaran);
+  set('hp', record.hp);
+  set('no_hp', record.hp);
+
+  // Semua field dari data_raw.
+  Object.keys(dr).forEach((k) => {
+    let v = dr[k];
+    if (typeof v === 'object') { try { v = JSON.stringify(v); } catch (_) {} }
+    set(k, v);
+  });
+
+  // Nilai dinamis tanggal cetak, hari, dan bulan Indonesia.
+  const now = new Date();
+  const namaHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][now.getDay()];
+  const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][now.getMonth()];
+  set('hari', namaHari);
+  set('hari_ini', namaHari);
+  set('bulan', namaBulan);
+  set('bulan_angka', String(now.getMonth() + 1));
+  set('tanggal', now.toISOString());
+  set('tanggal_cetak', now.toISOString());
+  set('tanggal_sekarang', now.toISOString());
+  set('tanggal_ini', now.toISOString());
+  set('tahun', String(now.getFullYear()));
+
+  // Hitung umur pemohon dari tanggal lahir (HIBAH: penerima, JUALBELI: pembeli).
+  // Utamakan umur yang tersimpan dari tab Surat Sporadik (penerima_umur dsb.).
+  const ageFrom = (tglISO) => {
+    if (!tglISO) return '';
+    const b = new Date(String(tglISO).slice(0, 10) + 'T00:00:00');
+    if (isNaN(b.getTime())) return '';
+    let age = now.getFullYear() - b.getFullYear();
+    const m = now.getMonth() - b.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+    return age >= 0 ? String(age) : '';
+  };
+  const umurTersimpan = dr.pemohon_umur || dr.penerima_umur || dr.pembeli_umur || dr.pemberi_umur || dr.penjual_umur;
+  const umurPemohon = umurTersimpan ? String(umurTersimpan).trim() : ageFrom(dr.penerima_tanggal_lahir || dr.pembeli_tanggal_lahir || dr.tanggal_lahir || dr.pemberi_tanggal_lahir);
+  if (umurPemohon) set('umur_pemohon', umurPemohon);
+
+  // Umur saksi: utamakan nilai tersimpan (tab Surat Sporadik / input manual),
+  // lalu hitung dari TTL yang diisi (data_raw maupun extraValues panel manual).
+  const umurSaksi = (s) => {
+    const saved = (extraValues && (extraValues[s + '_umur'] || extraValues[s + '_ttl'])) || dr[s + '_umur'];
+    if (saved) return String(saved).trim();
+    const ttl = (extraValues && extraValues[s + '_tanggal_lahir']) || dr[s + '_ttl'] || dr[s + '_tanggal_lahir'] || dr[s + '_tanggallahir'] || dr[s + '_tgl'];
+    return ageFrom(ttl);
+  };
+  [['umur_saksi1', 'saksi1'], ['umur_saksi2', 'saksi2']].forEach(([ph, s]) => {
+    const u = umurSaksi(s);
+    if (u) set(ph, u);
+  });
+
+  // Konfigurasi desa (nama_desa, kecamatan, kabupaten, kepala_desa, jabatan).
+  const cfgKeys = ['nama_desa', 'kecamatan', 'kabupaten', 'provinsi', 'kepala_desa', 'jabatan_kepala_desa', 'alamat_kantor_desa'];
+  for (const k of cfgKeys) {
+    const raw = await getPengaturan(k, '');
+    if (raw) set(k, raw);
+  }
+
+  // Penggabungan TTL jika tempat & tanggal lahir tersedia
+  const tmpt = values[normKey('tempat_lahir')] || dr.tempat_lahir || dr.penerima_tempat_lahir || dr.pembeli_tempat_lahir;
+  const tglLhr = values[normKey('tanggal_lahir')] || dr.tanggal_lahir || dr.penerima_tanggal_lahir || dr.pembeli_tanggal_lahir;
+  const ttlCombined = (tmpt && tglLhr) ? (tmpt + ', ' + fmtIdDate(tglLhr)) : '';
+
+  // Alias umum agar placeholder fleksibel (mis. {{nama}} / {{nama_lengkap}}).
+  const alias = {
+    nama_lengkap: values[normKey('nama')],
+    nama_pemohon: values[normKey('nama')] || dr.nama_pemohon || dr.penerima_nama,
+    nik: values[normKey('nik')] || dr.nik,
+    nokk: values[normKey('no_kk')] || dr.no_kk || dr.nokk,
+    dusun: values[normKey('dusun')] || dr.dusun,
+    alamat: values[normKey('alamat')] || dr.alamat,
+    alamat_pemohon: values[normKey('alamat')] || dr.alamat || dr.penerima_alamat,
+    tempat_lahir: tmpt || '',
+    tanggal_lahir: tglLhr || '',
+    ttl: ttlCombined || values[normKey('ttl')] || dr.ttl,
+    tempat_tanggal_lahir: ttlCombined || values[normKey('tempat_tanggal_lahir')] || dr.tempat_tanggal_lahir,
+    pekerjaan: values[normKey('pekerjaan')] || dr.pekerjaan || dr.penerima_pekerjaan,
+    pekerjaan_pemohon: values[normKey('pekerjaan')] || dr.penerima_pekerjaan || dr.pekerjaan,
+    status_bayar: values[normKey('status_bayar')] || dr.status_bayar || record.pembayaran,
+    luas_tanah: values[normKey('luas_tanah')] || dr.luas_tanah || dr.luas,
+    luas: values[normKey('luas_tanah')] || dr.luas_tanah || dr.luas,
+    jenis_tanah: values[normKey('jenis_tanah')] || dr.jenis_tanah,
+    alamat_tanah: values[normKey('alamat_tanah')] || dr.alamat_tanah,
+    asal_tanah: values[normKey('asal_tanah')] || dr.asal_tanah || dr.alamat_tanah,
+    // Batas tanah: placeholder pendek -> kolom batas_*.
+    utara: values[normKey('batas_utara')] || dr.batas_utara,
+    timur: values[normKey('batas_timur')] || dr.batas_timur,
+    selatan: values[normKey('batas_selatan')] || dr.batas_selatan,
+    barat: values[normKey('batas_barat')] || dr.batas_barat,
+    batas_utara: values[normKey('batas_utara')] || dr.batas_utara,
+    batas_timur: values[normKey('batas_timur')] || dr.batas_timur,
+    batas_selatan: values[normKey('batas_selatan')] || dr.batas_selatan,
+    batas_barat: values[normKey('batas_barat')] || dr.batas_barat,
+    // Saksi.
+    nama_saksi1: values[normKey('saksi1_nama')] || dr.saksi1_nama,
+    saksi1_nama: values[normKey('saksi1_nama')] || dr.saksi1_nama,
+    saksi1_nik: values[normKey('saksi1_nik')] || dr.saksi1_nik,
+    saksi1_pekerjaan: values[normKey('saksi1_pekerjaan')] || dr.saksi1_pekerjaan,
+    saksi1_alamat: values[normKey('saksi1_alamat')] || dr.saksi1_alamat,
+    nama_saksi2: values[normKey('saksi2_nama')] || dr.saksi2_nama,
+    saksi2_nama: values[normKey('saksi2_nama')] || dr.saksi2_nama,
+    saksi2_nik: values[normKey('saksi2_nik')] || dr.saksi2_nik,
+    saksi2_pekerjaan: values[normKey('saksi2_pekerjaan')] || dr.saksi2_pekerjaan,
+    saksi2_alamat: values[normKey('saksi2_alamat')] || dr.saksi2_alamat,
+    // Nomor surat tercetak (disimpan dengan prefix underscore oleh GAS).
+    nomor_surat: values[normKey('_nomorSuratTercetak')] || dr._nomorSuratTercetak || dr.nomor_surat,
+    // Tahun pembelian/pemberian (tergantung layanan).
+    tahun_pembelian: values[normKey('tahun_pembelian')] || dr.tahun_pembelian || dr.tahun_pemberian,
+    tahun_pemberian: values[normKey('tahun_pemberian')] || dr.tahun_pemberian || dr.tahun_pembelian,
+    tanggal_surat: fmtIdDate(now),
+    tanggal: fmtIdDate(now),
+    nama_desa: values[normKey('nama_desa')] || '',
+    kecamatan: values[normKey('kecamatan')] || '',
+    kabupaten: values[normKey('kabupaten')] || '',
+    provinsi: values[normKey('provinsi')] || ''
+  };
+  Object.keys(alias).forEach((k) => { if (alias[k]) values[normKey(k)] = alias[k]; });
+
+  // Pihak konteks berdasarkan jenis layanan (Hibah / Jual Beli / Ahli Waris)
+  const lay = String(record.layanan || '').toLowerCase();
+  if (lay.includes('hibah')) {
+    if (!values[normKey('nama_penerima')]) set('nama_penerima', record.nama);
+    if (!values[normKey('penerima_nama')]) set('penerima_nama', record.nama);
+  } else if (lay.includes('jual') || lay.includes('beli')) {
+    if (!values[normKey('nama_pembeli')]) set('nama_pembeli', record.nama);
+    if (!values[normKey('pembeli_nama')]) set('pembeli_nama', record.nama);
+  }
+
+  // Nilai manual dari input pengguna (panel "field kosong") — menang atas alias.
+  if (extraValues && typeof extraValues === 'object') {
+    Object.keys(extraValues).forEach((k) => {
+      const v = extraValues[k];
+      if (v !== undefined && v !== null && String(v).trim() !== '') values[normKey(k)] = String(v);
+    });
+  }
+
+  return values;
+}
+
+// Ganti placeholder {{key}} di dalam teks menggunakan nilai yang tersedia.
+// Kembalikan { text, filled: [keys], missing: [keys] }.
+function fillPlaceholders(text, values) {
+  let out = text;
+  const found = extractPlaceholders(text);
+  const filled = [];
+  const missing = [];
+  found.forEach((key) => {
+    const k = normKey(key);
+    let val = values[k];
+    // Beberapa alias: tanggal_lahir dsb. Bisa berformat ISO -> ubah ke id-ID.
+    if (val !== undefined && val !== null && val !== '') {
+      if (key.toLowerCase().includes('tanggal') && /^\d{4}-\d{2}-\d{2}(T|$)/.test(String(val))) {
+        val = fmtIdDate(val);
+      }
+      // Ganti placeholder walau ada spasi di dalam kurung: {{nama}} / {{ nama }}.
+      const escKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp('\\{\\{\\s*' + escKey + '\\s*\\}\\}', 'g');
+      out = out.replace(re, val);
+      filled.push(key);
+    } else {
+      missing.push(key);
+    }
+  });
+  return { text: out, filled, missing };
+}
+
+// Ubah struktur Google Docs (paragraph + tabel) menjadi HTML sederhana.
+function docToHtml(doc, values) {
+  const parts = [];
+  const content = doc.body && doc.body.content ? doc.body.content : [];
+  for (const el of content) {
+    if (el.paragraph) {
+      const raw = paragraphText(el.paragraph);
+      const { text, filled, missing } = fillPlaceholders(raw, values);
+      parts.push({ filled, missing, html: '<p>' + escHtml(text).replace(/\n/g, '<br/>') + '</p>' });
+    } else if (el.table) {
+      const rows = el.table.tableRows || [];
+      let tbl = '<table class="doc-table">';
+      const tblFilled = [];
+      const tblMissing = [];
+      rows.forEach((r, ri) => {
+        tbl += '<tr>';
+        (r.tableCells || []).forEach((c) => {
+          const cellText = (c.content || []).map((x) => x.paragraph ? paragraphText(x.paragraph) : '').join('');
+          const { text, filled, missing } = fillPlaceholders(cellText, values);
+          tbl += (ri === 0 ? '<th>' : '<td>') + escHtml(text).replace(/\n/g, '<br/>') + (ri === 0 ? '</th>' : '</td>');
+          tblFilled.push(...filled);
+          tblMissing.push(...missing);
+        });
+        tbl += '</tr>';
+      });
+      tbl += '</table>';
+      parts.push({ filled: tblFilled, missing: tblMissing, html: tbl });
+    }
+  }
+  const filled = [...new Set(parts.flatMap((p) => p.filled))];
+  const missing = [...new Set(parts.flatMap((p) => p.missing))];
+  return { html: parts.map((p) => p.html).join('\n'), filled, missing, title: doc.title || '' };
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+// Kunci pengaturan untuk menyimpan link/ID template Google Docs (disimpan sekali, bisa diubah).
+const TEMPLATE_DOCS_KEY = 'google_docs_template_link';
+
+// GET /api/docs/template -> ambil link template Google Docs yang tersimpan (dukung per jenis dokumen).
+app.get('/api/docs/template', requireAuth, async (req, res) => {
+  try {
+    const jenis = String(req.query.jenis || '').trim();
+    const key = (jenis && jenis !== 'default') ? `${TEMPLATE_DOCS_KEY}_${jenis}` : TEMPLATE_DOCS_KEY;
+    let link = await getPengaturan(key, '');
+    // Fallback ke template default jika per jenis belum diset
+    if (!link && key !== TEMPLATE_DOCS_KEY) {
+      link = await getPengaturan(TEMPLATE_DOCS_KEY, '');
+    }
+    res.json({ success: true, link: String(link || ''), jenis: jenis || 'default' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// PUT /api/docs/template -> simpan / ubah link template Google Docs (dukung per jenis dokumen).
+app.put('/api/docs/template', requireAuth, requireRole('bendahara'), async (req, res) => {
+  try {
+    const link = String((req.body && (req.body.link || req.body.url)) || '').trim();
+    const jenis = String((req.body && req.body.jenis) || '').trim();
+    if (!link) return res.status(400).json({ success: false, error: 'Link/ID Google Docs tidak valid.' });
+    const key = (jenis && jenis !== 'default') ? `${TEMPLATE_DOCS_KEY}_${jenis}` : TEMPLATE_DOCS_KEY;
+    const { error } = await supabase.from(TABLE_SET).upsert(
+      { kunci: key, nilai: link, updated_at: new Date().toISOString() },
+      { onConflict: 'kunci' }
+    );
+    if (error) throw error;
+    res.json({ success: true, link, jenis: jenis || 'default' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// POST /api/docs/detect -> deteksi placeholder dari link/ID Google Docs (tanpa data pendaftaran).
+app.post('/api/docs/detect', requireAuth, async (req, res) => {
+  try {
+    const docId = extractDocId(req.body && (req.body.link || req.body.docId || req.body.url));
+    if (!docId) return res.status(400).json({ success: false, error: 'Link/ID Google Docs tidak valid.' });
+    const doc = await fetchDocContent(docId);
+    const fullText = (doc.body.content || []).map((el) => {
+      if (el.paragraph) return paragraphText(el.paragraph);
+      return '';
+    }).join('\n');
+    const placeholders = extractAllPlaceholders(doc);
+    res.json({ success: true, docId, title: doc.title || '', placeholders, preview: fullText.slice(0, 1500) });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// POST /api/docs/render -> isi placeholder dari data pendaftaran terpilih.
+app.post('/api/docs/render', requireAuth, async (req, res) => {
+  try {
+    const docId = extractDocId(req.body && (req.body.link || req.body.docId || req.body.url));
+    const idRegRaw = String((req.body && req.body.idReg) || '').trim();
+    const idReg = extractRegId(idRegRaw);
+    if (!docId) return res.status(400).json({ success: false, error: 'Link/ID Google Docs tidak valid.' });
+    if (!idReg) return res.status(400).json({ success: false, error: 'ID pendaftaran wajib diisi.' });
+
+    const { data: record, error } = await supabase.from(TABLE_DB).select('*').eq('id', idReg).maybeSingle();
+    if (error) throw error;
+    if (!record) return res.status(404).json({ success: false, error: 'Pendaftaran tidak ditemukan: ' + idReg });
+
+    const doc = await fetchDocContent(docId);
+    const values = await buildDocValues(record, req.body && req.body.extraValues);
+    const result = docToHtml(doc, values);
+
+    // Tanggal lahir saksi dari data_raw / extraValues (untuk input date di panel kiri).
+    let dr = {};
+    try { dr = typeof record.data_raw === 'string' ? JSON.parse(record.data_raw || '{}') : (record.data_raw || {}); } catch (_) {}
+    const ex = (req.body && req.body.extraValues) || {};
+    const saksiDates = {
+      saksi1_tanggal_lahir: ex.saksi1_tanggal_lahir || dr.saksi1_tanggal_lahir || dr.saksi1_ttl || dr.saksi1_tanggallahir || '',
+      saksi2_tanggal_lahir: ex.saksi2_tanggal_lahir || dr.saksi2_tanggal_lahir || dr.saksi2_ttl || dr.saksi2_tanggallahir || ''
+    };
+
+    // Daftar SEMUA placeholder + nilai aktualnya (untuk panel input kiri).
+    const fields = extractAllPlaceholders(doc).map((k) => {
+      const nk = normKey(k);
+      let v = values[nk];
+      if (v !== undefined && v !== null) {
+        if (k.toLowerCase().includes('tanggal') && /^\d{4}-\d{2}-\d{2}(T|$)/.test(String(v))) v = fmtIdDate(v);
+        const s = String(v).trim();
+        return { key: k, value: s, status: s ? 'filled' : 'missing' };
+      }
+      return { key: k, value: '', status: 'missing' };
+    });
+
+    res.json({ success: true, docId, idReg, title: result.title, html: result.html, filled: result.filled, missing: result.missing, fields, saksiDates });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Ekstrak SEMUA placeholder dari seluruh dokumen (termasuk di dalam tabel, header, footer, & footnote).
+function extractAllPlaceholders(doc) {
+  const found = [];
+  const walk = (el) => {
+    if (!el || typeof el !== 'object') return;
+    if (el.paragraph) {
+      extractPlaceholders(paragraphText(el.paragraph)).forEach((k) => { if (!found.includes(k)) found.push(k); });
+    }
+    if (el.table) {
+      (el.table.tableRows || []).forEach((row) => {
+        (row.tableCells || []).forEach((cell) => {
+          (cell.content || []).forEach(walk);
+        });
+      });
+    }
+    if (Array.isArray(el)) el.forEach(walk);
+  };
+  (doc.body && doc.body.content || []).forEach(walk);
+  if (doc.headers) Object.values(doc.headers).forEach((h) => (h.content || []).forEach(walk));
+  if (doc.footers) Object.values(doc.footers).forEach((f) => (f.content || []).forEach(walk));
+  if (doc.footnotes) Object.values(doc.footnotes).forEach((fn) => (fn.content || []).forEach(walk));
+  return found;
+}
+
+// POST /api/docs/generate -> salin dokumen Google asli + isi placeholder LANGSUNG
+// di dalam dokumen Google (bukan HTML). Format/layout asli terjaga, hasilnya
+// berupa dokumen Google Docs yang bisa dibuka & dicetak langsung dari Google.
+app.post('/api/docs/generate', requireAuth, async (req, res) => {
+  try {
+    const docId = extractDocId(req.body && (req.body.link || req.body.docId || req.body.url));
+    const idRegRaw = String((req.body && req.body.idReg) || '').trim();
+    const idReg = extractRegId(idRegRaw);
+    if (!docId) return res.status(400).json({ success: false, error: 'Link/ID Google Docs tidak valid.' });
+    if (!idReg) return res.status(400).json({ success: false, error: 'ID pendaftaran wajib diisi.' });
+
+    const { data: record, error } = await supabase.from(TABLE_DB).select('*').eq('id', idReg).maybeSingle();
+    if (error) throw error;
+    if (!record) return res.status(404).json({ success: false, error: 'Pendaftaran tidak ditemukan: ' + idReg });
+
+    const doc = await fetchDocContent(docId);
+    const values = await buildDocValues(record, req.body && req.body.extraValues);
+
+    // 1) Salin dokumen asli -> file baru di Drive (placeholder masih utuh).
+    const newName = ((doc.title || 'Surat') + ' - ' + idReg).slice(0, 150);
+    const newId = await copyDriveDoc(docId, newName);
+
+    // 2) Kumpulkan daftar placeholder (dari dokumen asli, termasuk tabel, header, footer).
+    const placeholders = extractAllPlaceholders(doc);
+
+    // 3) Siapkan penggantian: value yang ada diganti; yang kosong dibiarkan
+    //    tetap {{...}} agar terlihat belum diisi (bukan dihapus diam-diam).
+    const replacements = [];
+    const filled = [];
+    const missing = [];
+    placeholders.forEach((key) => {
+      const k = normKey(key);
+      let val = values[k];
+      if (val !== undefined && val !== null && val !== '') {
+        if (key.toLowerCase().includes('tanggal') && /^\d{4}-\d{2}-\d{2}(T|$)/.test(String(val))) {
+          val = fmtIdDate(val);
+        }
+        replacements.push({ from: '{{' + key + '}}', to: String(val) });
+        filled.push(key);
+      } else {
+        missing.push(key);
+      }
+    });
+
+    // 4) Tulis nilai ke dokumen hasil salinan.
+    if (replacements.length) await fillDocText(newId, replacements);
+
+    const resultUrl = 'https://docs.google.com/document/d/' + newId + '/edit';
+    const fields = placeholders.map((key) => {
+      const nk = normKey(key);
+      let v = values[nk];
+      if (v !== undefined && v !== null) {
+        if (key.toLowerCase().includes('tanggal') && /^\d{4}-\d{2}-\d{2}(T|$)/.test(String(v))) v = fmtIdDate(v);
+        const s = String(v).trim();
+        return { key, value: s, status: s ? 'filled' : 'missing' };
+      }
+      return { key, value: '', status: 'missing' };
+    });
+    res.json({ success: true, docId: newId, sourceDocId: docId, idReg, title: doc.title || '', url: resultUrl, filled, missing, placeholders, fields });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// POST /api/docs/save -> simpan hasil render ke tabel surat_terbit (riwayat).
+app.post('/api/docs/save', requireAuth, requireRole('bendahara'), async (req, res) => {
+  try {
+    const b = req.body || {};
+    const idRegRaw = String(b.idReg || '').trim();
+    const idReg = extractRegId(idRegRaw);
+    const html = String(b.html || '');
+    const title = String(b.title || '').trim() || 'Surat';
+    if (!idReg) return res.status(400).json({ success: false, error: 'idReg wajib diisi.' });
+    const docId = extractDocId(b.link || b.docId || b.url) || '';
+    const generatedDocId = extractDocId(b.url || '') || '';
+    // html boleh kosong bila ada dokumen Google hasil generate (dibuka via Google Docs).
+
+    const { data, error } = await supabase.from(TABLE_DOCS).insert({
+      id_registrasi: idReg,
+      doc_id: docId,
+      generated_doc_id: generatedDocId || null,
+      judul: title,
+      html_content: html,
+      filled: b.filled || [],
+      missing: b.missing || [],
+      created_by: (req.auth && (req.auth.username || req.auth.name)) || null,
+      created_at: new Date().toISOString()
+    }).select().single();
+    if (error) throw error;
+    res.status(201).json({ success: true, data });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/docs/history?reg=REG-xxx -> riwayat surat per pendaftaran.
+app.get('/api/docs/history', requireAuth, async (req, res) => {
+  try {
+    const reg = String(req.query.reg || '').trim();
+    let query = supabase.from(TABLE_DOCS).select('*').order('created_at', { ascending: false });
+    if (reg) query = query.eq('id_registrasi', reg);
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json({ success: true, data: data || [] });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// DELETE /api/docs/history/:id -> hapus riwayat surat.
+app.delete('/api/docs/history/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
+  try {
+    const { data, error } = await supabase.from(TABLE_DOCS).delete().eq('id', req.params.id).select();
+    if (error) throw error;
+    res.json({ success: true, data: (data && data[0]) || null });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
 // ---------- Upload KK/KTP/dokumen per pendaftaran ----------
 // Terima file dari form Edit pendaftaran -> upload ke Google Drive -> simpan

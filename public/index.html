@@ -11,8 +11,8 @@
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=121" />
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260818_16" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) { window.lucide.createIcons(); } });</script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -124,6 +124,15 @@
             <path d="M12 8h.01"></path>
         </svg>
         Keuangan
+      </button>
+      <button class="tabbtn nav-tab-item" data-tab="suratdocs">
+        <svg class="tab-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+        Surat Docs
       </button>
     </nav>
 
@@ -380,46 +389,9 @@
     </section>
 
     <section id="tab-keuangan" hidden>
-        <div id="keuRingkasan" class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-            <div class="dash-card total">
-                <div class="dash-ic" style="background-color: #e0f2fe;">💰</div>
-                <div>
-                    <div class="dash-val" id="keuTotalPemasukan">Rp 0</div>
-                    <div class="dash-lb">Total Pemasukan</div>
-                </div>
-            </div>
-            <div class="dash-card ko">
-                <div class="dash-ic" style="background-color: #fee2e2;">💸</div>
-                <div>
-                    <div class="dash-val" id="keuTotalPengeluaran">Rp 0</div>
-                    <div class="dash-lb">Total Pengeluaran</div>
-                </div>
-            </div>
-            <div class="dash-card ok">
-                <div class="dash-ic" style="background-color: #ecfdf5;">🏦</div>
-                <div>
-                    <div class="dash-val" id="keuSaldoAkhir">Rp 0</div>
-                    <div class="dash-lb">Saldo Akhir</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="toolbar toolbar-container" style="margin-top: 24px;">
-            <div class="search-input-group">
-                <i data-lucide="search" class="search-icon-inside"></i>
-                <input id="keuSearchInput" type="search" placeholder="Cari keterangan, ID pemohon, jenis...">
-            </div>
-            <button id="btnImportKeuangan" onclick="importKeuanganFromSheet()" title="Tarik data transaksi dari spreadsheet ke Supabase (manual)" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;">
-                <i data-lucide="download" style="width: 14px; height: 14px;"></i> Tarik dari Sheet
-            </button>
-            <button id="btnCetakKeuangan" onclick="cetakLaporanKeuangan()" class="btn" style="background: #2E7D32; border: 1px solid #FBC02D; color: #ffffff; display:flex; align-items: center; gap: 6px; font-weight: 700;" title="Cetak Laporan Rekapitulasi Keuangan (Pemasukan & Pengeluaran Kas Desa)">
-                <i data-lucide="printer" style="width:16px; height:16px;"></i> Cetak Laporan Keuangan
-            </button>
-            <button id="btnCekTagihanBerkas" class="btn btn-action-primary" style="display:flex; align-items: center; gap: 6px;" title="Cek tagihan dan berkas berdasarkan ID pendaftaran">
+        <div class="toolbar toolbar-container" style="margin-top:0;">
+            <button id="btnCekTagihanBerkas" class="btn btn-action-primary" style="display:flex; align-items: center; gap: 6px;" title="Cek tagihan dan berkas berdasarkan ID pendaftaran (tersedia untuk semua user)">
                 <i data-lucide="search-check" style="width:16px; height:16px;"></i> Cek Tagihan & Berkas
-            </button>
-            <button id="btnTambahTransaksi" class="btn primary btn-action-primary" style="display:flex; align-items: center; gap: 6px;">
-                <i data-lucide="plus-circle" style="width:16px; height:16px;"></i> Tambah Transaksi
             </button>
         </div>
 
@@ -437,24 +409,335 @@
             <div id="cekTbResult" style="margin-top:16px;"></div>
         </div>
 
-        <div id="keuTableWrap" class="table-wrap">
-            <table id="keuTable">
-                <thead>
-                    <tr>
-                        <th>Tanggal</th>
-                        <th>Jenis</th>
-                        <th>Pemohon</th>
-                        <th>Nominal</th>
-                        <th>Keterangan</th>
-                        <th>Bukti</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="keuBody"></tbody>
-            </table>
-            <p id="keuEmpty" class="empty" hidden>Belum ada data transaksi.</p>
+        <div id="keuDashboard" hidden>
+            <div id="keuRingkasan" class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                <div class="dash-card total">
+                    <div class="dash-ic" style="background-color: #e0f2fe;">💰</div>
+                    <div>
+                        <div class="dash-val" id="keuTotalPemasukan">Rp 0</div>
+                        <div class="dash-lb">Total Pemasukan</div>
+                    </div>
+                </div>
+                <div class="dash-card ko">
+                    <div class="dash-ic" style="background-color: #fee2e2;">💸</div>
+                    <div>
+                        <div class="dash-val" id="keuTotalPengeluaran">Rp 0</div>
+                        <div class="dash-lb">Total Pengeluaran</div>
+                    </div>
+                </div>
+                <div class="dash-card ok">
+                    <div class="dash-ic" style="background-color: #ecfdf5;">🏦</div>
+                    <div>
+                        <div class="dash-val" id="keuSaldoAkhir">Rp 0</div>
+                        <div class="dash-lb">Saldo Akhir</div>
+                    </div>
+                </div>
+                <div class="dash-card up">
+                    <div class="dash-ic" style="background-color: #e0e7ff;">🧾</div>
+                    <div>
+                        <div class="dash-val" id="keuJumlahTransaksi">0</div>
+                        <div class="dash-lb">Jumlah Transaksi</div>
+                    </div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-ic" style="background-color: #d1fae5;">📥</div>
+                    <div>
+                        <div class="dash-val" id="keuPemasukanBulanIni">Rp 0</div>
+                        <div class="dash-lb">Pemasukan Bulan Ini</div>
+                    </div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-ic" style="background-color: #fef3c7;">📤</div>
+                    <div>
+                        <div class="dash-val" id="keuPengeluaranBulanIni">Rp 0</div>
+                        <div class="dash-lb">Pengeluaran Bulan Ini</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dash-sec-title">Grafik Keuangan</div>
+
+            <div class="dash-row">
+                <div class="dash-block wide">
+                    <h3 class="panel-title">📊 Pemasukan vs Pengeluaran per Bulan</h3>
+                    <div class="dash-body chart-bar" id="keuChartBulan"></div>
+                </div>
+                <div class="dash-block wide">
+                    <h3 class="panel-title">📉 Tren Saldo Kas Kumulatif</h3>
+                    <div class="dash-body chart-line" id="keuChartSaldo"></div>
+                </div>
+                <div class="dash-block">
+                    <h3 class="panel-title">🥧 Distribusi Jumlah Transaksi per Jenis</h3>
+                    <div class="dash-body chart-pie" id="keuChartJenis"></div>
+                </div>
+                <div class="dash-block">
+                    <h3 class="panel-title">📋 Ringkasan Nilai per Jenis</h3>
+                    <div class="dash-body dt-wrap" id="keuRekapJenis"></div>
+                </div>
+            </div>
+
+            <div class="dash-sec-title">Rekap Bulanan</div>
+
+            <div class="dash-row">
+                <div class="dash-block wide">
+                    <h3 class="panel-title">📅 Pemasukan, Pengeluaran & Saldo per Bulan</h3>
+                    <div class="dash-body dt-wrap" id="keuRekapBulan"></div>
+                </div>
+            </div>
+
+            <div class="toolbar toolbar-container" style="margin-top: 24px;">
+                <div class="search-input-group">
+                    <i data-lucide="search" class="search-icon-inside"></i>
+                    <input id="keuSearchInput" type="search" placeholder="Cari keterangan, ID pemohon, jenis...">
+                </div>
+                <button id="btnImportKeuangan" onclick="importKeuanganFromSheet()" title="Tarik data transaksi dari spreadsheet ke Supabase (manual)" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;">
+                    <i data-lucide="download" style="width: 14px; height: 14px;"></i> Tarik dari Sheet
+                </button>
+                <button id="btnCetakKeuangan" class="btn" style="background: #2E7D32; border: 1px solid #FBC02D; color: #ffffff; display:flex; align-items: center; gap: 6px; font-weight: 700;" title="Cetak Laporan Rekapitulasi Keuangan (Pemasukan & Pengeluaran Kas Desa)">
+                    <i data-lucide="printer" style="width:16px; height:16px;"></i> Cetak Laporan Keuangan
+                </button>
+                <button id="btnTambahTransaksi" class="btn primary btn-action-primary" style="display:flex; align-items: center; gap: 6px;">
+                    <i data-lucide="plus-circle" style="width:16px; height:16px;"></i> Tambah Transaksi
+                </button>
+            </div>
+
+            <div id="keuTableWrap" class="table-wrap">
+                <table id="keuTable">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Jenis</th>
+                            <th>Pemohon</th>
+                            <th>Nominal</th>
+                            <th>Keterangan</th>
+                            <th>Bukti</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keuBody"></tbody>
+                </table>
+                <p id="keuEmpty" class="empty" hidden>Belum ada data transaksi.</p>
+            </div>
+            <div class="pager" id="pagerKeuangan"></div>
         </div>
-        <div class="pager" id="pagerKeuangan"></div>
+    </section>
+
+    <section id="tab-suratdocs" hidden>
+      <div class="docs-layout">
+
+        <!-- Panel Kontrol Kiri (Controls & Fields) -->
+        <div class="docs-controls">
+          <!-- Step 1: Link Google Docs -->
+          <div class="card docs-step">
+            <div class="docs-step-head">
+              <span class="docs-step-num">1</span>
+              <div>
+                <h3>Link &amp; Jenis Template Docs</h3>
+                <p>Pilih jenis dokumen, isi, tempel, atau edit link/ID Docs</p>
+              </div>
+            </div>
+
+            <!-- Tombol Pilih Jenis Dokumen / Link -->
+            <div class="docs-jenis-wrapper" style="margin-bottom:12px;">
+              <label class="docs-field-label" style="font-weight:700; color:#1e293b; display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                <i data-lucide="file-type-2" style="width:15px; height:15px; color:#2E7D32;"></i> Jenis Link / Dokumen:
+              </label>
+              <div class="docs-jenis-grid" id="docsJenisGrid" style="display:flex; flex-wrap:wrap; gap:6px;">
+                <button type="button" class="btn-jenis-dok active" data-jenis="SPORADIK">📜 SPORADIK</button>
+                <button type="button" class="btn-jenis-dok" data-jenis="HIBAH">🎁 Surat Hibah</button>
+                <button type="button" class="btn-jenis-dok" data-jenis="JUALBELI">🤝 Jual Beli</button>
+                <button type="button" class="btn-jenis-dok" data-jenis="AHLIWARIS">👨‍👩‍👧 Ahli Waris</button>
+                <button type="button" class="btn-jenis-dok" data-jenis="LAINNYA">📄 Lainnya</button>
+              </div>
+            </div>
+
+            <div class="search-input-group docs-link-input" style="position:relative;">
+              <i data-lucide="link" class="search-icon-inside"></i>
+              <input id="docsLink" type="text" placeholder="https://docs.google.com/document/d/1AbC…/edit" style="padding-right:32px;" />
+              <button id="btnDocsClearInput" class="btn-input-clear" title="Kosongkan Input" style="display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; cursor:pointer; color:#64748b; font-size:14px;">✕</button>
+            </div>
+            <div id="docsLinkStatus" class="docs-link-status-text"></div>
+            <div class="docs-step-actions">
+              <button id="btnDocsDetect" class="btn primary docs-btn-wide">
+                <i data-lucide="scan-search" style="width:16px; height:16px;"></i> Deteksi Placeholder
+              </button>
+              <button id="btnDocsSaveLink" class="btn btn-action-primary" title="Simpan link ini sebagai template default (tidak perlu paste ulang)">
+                <i data-lucide="save" style="width:15px; height:15px;"></i> Simpan Link
+              </button>
+              <button id="btnDocsClearLink" class="btn btn-action-secondary" title="Kosongkan untuk mengisi link baru">
+                <i data-lucide="rotate-ccw" style="width:15px; height:15px;"></i> Link Baru
+              </button>
+              <button id="btnDocsSample" class="btn btn-action-secondary" title="Isi contoh link Google Docs">
+                <i data-lucide="folder-open" style="width:15px; height:15px;"></i> Contoh
+              </button>
+            </div>
+            <div id="docsLinkSaved" class="docs-link-saved" style="display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                <span style="font-size:12.5px; font-weight:600;">💾 Default tersimpan: <strong id="docsLinkSavedVal" style="word-break:break-all;"></strong></span>
+                <button id="btnDocsUseSaved" class="btn-xs-primary" title="Gunakan link tersimpan ini di input">✏️ Edit / Gunakan</button>
+              </div>
+            </div>
+            <div id="docsDetectResult" class="docs-detect-result">
+              Tempel link Google Docs lalu klik <strong>Deteksi Placeholder</strong>. Dokumen langsung tampil live di sebelah kanan.
+            </div>
+          </div>
+
+          <!-- Step 2: Pilih Pendaftaran -->
+          <div class="card docs-step">
+            <div class="docs-step-head">
+              <span class="docs-step-num">2</span>
+              <div>
+                <h3>Pilih Data Pendaftaran</h3>
+                <p>Pilih ID REG-XXXXXX untuk mengisi surat</p>
+              </div>
+            </div>
+            <div class="docs-field-group">
+              <label class="docs-field-label">ID Pendaftaran / Pemohon</label>
+              <input id="docsIdReg" list="pemohonList" class="docs-select-input" placeholder="Contoh: REG-907237 atau Nama Pemohon" />
+            </div>
+            <button id="btnDocsRender" class="btn primary docs-btn-wide" style="margin-top:12px;">
+              <i data-lucide="wand-2" style="width:16px; height:16px;"></i> Render Surat
+            </button>
+            <div id="docsRenderInfo" class="docs-detect-result">
+              Pilih pendaftaran lalu klik <strong>Render Surat</strong>. Placeholder diisi otomatis dari data pemohon &amp; tanah.
+            </div>
+          </div>
+
+          <!-- Step 3: Manual Field Inputs -->
+          <div class="card docs-step docs-manual-card" id="docsManualPanel" style="display:none;">
+            <div class="docs-step-head">
+              <span class="docs-step-num docs-step-num-warn">✍️</span>
+              <div>
+                <h3>Form Edit Field Placeholder</h3>
+                <p>Sesuaikan / lengkapi isi field jika ada yang kurang.</p>
+              </div>
+            </div>
+            <div class="docs-manual-scroll">
+              <div id="docsManualFields" class="docs-manual-grid"></div>
+            </div>
+            <button id="btnDocsRenderManual" class="btn primary docs-btn-wide" style="margin-top:14px;">
+              <i data-lucide="wand-2" style="width:16px; height:16px;"></i> Render Ulang dengan Field Ini
+            </button>
+          </div>
+
+          <!-- Diagnostic Check Button -->
+          <div class="card docs-diag-card">
+            <button id="btnDocsStatus" class="btn btn-action-primary docs-btn-wide" title="Cek konfigurasi Google (API, scope, env)">
+              <i data-lucide="stethoscope" style="width:16px; height:16px;"></i> Cek Status Integrasi Google
+            </button>
+            <div id="docsStatusPanel" class="docs-status-panel" style="display:none;">
+              <div class="docs-status-head">
+                <h2>🔧 Status Integrasi Google</h2>
+                <button id="btnDocsStatusClose" class="btn-ghost">✕</button>
+              </div>
+              <div id="docsStatusResult"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel Utama Kanan (Live Preview & Riwayat) -->
+        <div class="docs-main">
+
+          <!-- Card Live Google Docs (Tampilan Live Kanan) -->
+          <div class="card docs-live-card" id="docsLiveCard">
+            <div class="docs-live-header">
+              <div class="docs-live-title">
+                <h2 style="display:flex; align-items:center; gap:8px; margin:0; font-size:16px; font-weight:800;">
+                  <i data-lucide="file-text" style="width:20px; height:20px; color:#2E7D32;"></i>
+                  <span>Live Google Docs</span>
+                </h2>
+                <span class="docs-live-sub">ID: <code id="docsLiveDocIdDisplay">-</code></span>
+              </div>
+              <div class="docs-live-toolbar">
+                <div class="docs-mode-segmented">
+                  <button id="btnDocsModePreview" class="btn-mode active" title="Pratinjau Dokumen Google">
+                    <i data-lucide="eye" style="width:14px; height:14px;"></i> Preview
+                  </button>
+                  <button id="btnDocsModeEdit" class="btn-mode" title="Mode Edit Langsung Google Docs">
+                    <i data-lucide="edit-3" style="width:14px; height:14px;"></i> Edit
+                  </button>
+                </div>
+                <a id="btnDocsLiveOpenTab" class="btn btn-action-secondary docs-btn-sm" href="#" target="_blank" rel="noopener" style="display:none;" title="Buka di tab baru browser">
+                  <i data-lucide="external-link" style="width:14px; height:14px;"></i> Buka Tab Baru
+                </a>
+                <button id="btnDocsToggleHeight" class="btn btn-action-secondary docs-btn-sm" title="Perbesar / Perkecil Tinggi Layar">
+                  <i data-lucide="maximize-2" style="width:14px; height:14px;"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="docs-live-body" id="docsLiveBody">
+              <!-- Notice bila link belum diisi -->
+              <div id="docsLiveEmptyNotice" class="docs-live-empty">
+                <div class="docs-empty-icon">📄</div>
+                <h3 style="margin:8px 0 4px; font-weight:700; color:#1e293b;">Live Google Docs View</h3>
+                <p style="margin:0; font-size:13px; color:#64748b;">Tempelkan link atau ID Google Docs pada panel kiri untuk menampilkan dokumen secara live di sini.</p>
+              </div>
+
+              <!-- Live Iframe -->
+              <iframe id="docsLiveIframe" class="docs-live-iframe" style="display:none;" title="Live Google Docs Preview" allow="autoplay"></iframe>
+            </div>
+          </div>
+
+          <!-- Card Preview Kertas A4 (Hasil Render HTML) -->
+          <div class="card docs-preview-card" id="docsPreviewCard" hidden>
+            <div class="docs-preview-toolbar">
+              <div class="docs-preview-title">
+                <h2>Pratinjau Hasil Render <span id="docsTitle"></span></h2>
+              </div>
+              <div class="docs-preview-actions">
+                <button id="btnDocsGenerate" class="btn docs-btn-google" title="Salin dokumen Google asli & isi placeholder langsung di dokumen Google">
+                  <i data-lucide="file-output" style="width:15px; height:15px;"></i> Buka di Google Docs
+                </button>
+                <button id="btnDocsPrint" class="btn docs-btn-green">
+                  <i data-lucide="printer" style="width:15px; height:15px;"></i> Cetak
+                </button>
+                <button id="btnDocsSave" class="btn primary">
+                  <i data-lucide="save" style="width:15px; height:15px;"></i> Simpan Riwayat
+                </button>
+              </div>
+            </div>
+
+            <!-- Status Collapsible Summary -->
+            <details class="docs-status-collapsible" open>
+              <summary class="docs-status-summary">
+                <span>📊 Status Isian Placeholder</span>
+                <span id="docsFieldStatusSummaryText" class="docs-summary-badge"></span>
+              </summary>
+              <div id="docsFieldStatus" class="docs-field-status"></div>
+            </details>
+
+            <!-- A4 Paper Sheet Wrapper -->
+            <div class="docs-paper-wrapper">
+              <div id="docsPreview" class="docs-preview docs-paper-sheet"></div>
+            </div>
+          </div>
+
+          <!-- Card Riwayat Surat -->
+          <div class="card docs-history-card">
+            <div class="docs-preview-head">
+              <h2>📜 Riwayat Cetak & Render Surat</h2>
+              <button id="btnDocsHistoryClear" class="btn-ghost" title="Muat ulang riwayat">↻ Segarkan</button>
+            </div>
+            <div class="table-wrap">
+              <table id="docsHistoryTable" class="docs-history-table">
+                <thead>
+                  <tr>
+                    <th style="width: 120px;">Tanggal</th>
+                    <th style="width: 130px;">ID Pendaftaran</th>
+                    <th>Judul Surat</th>
+                    <th style="width: 120px;">Dibuat oleh</th>
+                    <th style="width: 220px; text-align: center;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="docsHistoryBody"></tbody>
+              </table>
+              <p id="docsHistoryEmpty" class="empty" hidden>Belum ada riwayat surat tersimpan.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </section>
   </main>
   </div>
@@ -610,6 +893,6 @@
     </form>
   </dialog>
 
-  <script src="app.js?v=121"></script>
+  <script src="app.js?v=20260818_23"></script>
 </body>
 </html>
