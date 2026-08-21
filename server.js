@@ -1744,6 +1744,16 @@ async function buildDocValues(record, extraValues) {
 
   Object.keys(alias).forEach((k) => { if (alias[k]) values[normKey(k)] = alias[k]; });
 
+  // Eksplisit set untuk Ahli Waris agar tidak pernah hilang
+  if (tabelAhliWarisStr) {
+    values['tabelaw'] = tabelAhliWarisStr;
+    values['tabelahliwaris'] = tabelAhliWarisStr;
+  }
+  if (ttdAhliWarisStr) {
+    values['ttdaw'] = ttdAhliWarisStr;
+    values['ttdahliwaris'] = ttdAhliWarisStr;
+  }
+
   // Pihak konteks berdasarkan jenis layanan (Hibah / Jual Beli / Ahli Waris)
   const lay = String(record.layanan || '').toLowerCase();
   if (lay.includes('hibah')) {
