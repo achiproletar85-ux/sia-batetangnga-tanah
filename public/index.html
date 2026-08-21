@@ -523,109 +523,123 @@
     </section>
 
     <section id="tab-suratdocs" hidden>
+      <!-- Sub-Header Tab Surat Docs -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px; background:#fff; padding:14px 20px; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+        <div>
+          <h2 style="margin:0; font-size:18px; font-weight:800; color:#1e293b; display:flex; align-items:center; gap:8px;">
+            <i data-lucide="file-check-2" style="width:22px; height:22px; color:#2E7D32;"></i> Surat Docs Generator &amp; Live View
+          </h2>
+          <p style="margin:2px 0 0; font-size:13px; color:#64748b;">Kelola master template surat, generate dokumen otomatis, dan pratinjau live Google Docs.</p>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button id="btnToggleLinkTable" type="button" class="btn btn-action-primary" style="font-size:13px; padding:8px 14px;">
+            <i data-lucide="table" style="width:15px; height:15px;"></i> Master Tabel Link Surat
+          </button>
+          <button id="btnDocsStatus" type="button" class="btn btn-action-secondary" style="font-size:13px; padding:8px 14px;" title="Cek Integrasi OAuth Google">
+            <i data-lucide="stethoscope" style="width:15px; height:15px;"></i> Cek Integrasi Google
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 1: Tabel Master Link Template Surat (Tabel Khusus Terpisah & Rapi) -->
+      <div id="cardMasterLinkTable" class="card" style="margin-bottom:20px; border-radius:14px; border:1px solid #cbd5e1; overflow:hidden;">
+        <div style="padding:16px 20px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div>
+            <h3 style="margin:0; font-size:15px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
+              <i data-lucide="link-2" style="width:18px; height:18px; color:#2E7D32;"></i>
+              Tabel Master Template &amp; Link Google Docs
+            </h3>
+            <p style="margin:2px 0 0; font-size:12.5px; color:#64748b;">Daftar seluruh jenis surat desa dan link template Google Docs resmi yang terpasang.</p>
+          </div>
+          <button id="btnDocsAddJenisTable" type="button" class="btn primary" style="font-size:12.5px; padding:6px 12px;">
+            ➕ Tambah Jenis Surat Baru
+          </button>
+        </div>
+
+        <div style="overflow-x:auto; padding:0;">
+          <table class="docs-history-table" style="width:100%; border-collapse:collapse; margin:0;">
+            <thead>
+              <tr style="background:#f1f5f9; color:#475569; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">
+                <th style="padding:10px 16px; text-align:left; width:220px;">Jenis Surat</th>
+                <th style="padding:10px 16px; text-align:left;">Link / ID Template Google Docs</th>
+                <th style="padding:10px 16px; text-align:center; width:140px;">Status Template</th>
+                <th style="padding:10px 16px; text-align:center; width:220px;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="masterLinkTableBody">
+              <!-- Rendered dynamically by app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Panel Status Diagnostik Google (Hidden default) -->
+      <div id="docsStatusPanel" class="card docs-status-panel" style="display:none; margin-bottom:20px;">
+        <div class="docs-status-head">
+          <h2>🔧 Status Integrasi Google</h2>
+          <button id="btnDocsStatusClose" class="btn-ghost">✕</button>
+        </div>
+        <div id="docsStatusResult"></div>
+      </div>
+
+      <!-- Section 2: Generator & Live Viewer (2 Kolom Rapi) -->
       <div class="docs-layout">
 
-        <!-- Panel Kontrol Kiri (Controls & Fields) -->
+        <!-- Panel Kiri: Form Pembuatan Surat (Fokus & Bersih) -->
         <div class="docs-controls">
-          <!-- Step 1: Link & Jenis Template Docs -->
           <div class="card docs-step">
             <div class="docs-step-head">
               <span class="docs-step-num">1</span>
               <div>
-                <h3>Pengaturan Jenis &amp; Link Surat Docs</h3>
-                <p>Pilih atau kelola jenis surat, lalu atur link template Google Docs</p>
+                <h3 style="margin:0; font-size:15px; font-weight:800; color:#0f172a;">Pilih Jenis Surat &amp; Pendaftar</h3>
+                <p style="margin:2px 0 0; font-size:12.5px; color:#64748b;">Pilih jenis dokumen dan data pemohon tanah.</p>
               </div>
             </div>
 
-            <!-- Tombol Pilih & Kelola Jenis Dokumen -->
-            <div class="docs-jenis-wrapper">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-                <label class="docs-field-label" style="font-weight:800; color:#1e293b; display:flex; align-items:center; gap:6px; margin:0;">
-                  <i data-lucide="layers" style="width:16px; height:16px; color:#2E7D32;"></i> Pilih Jenis Surat:
-                </label>
-                <div style="display:flex; gap:6px;">
-                  <button id="btnDocsAddJenis" type="button" class="btn-xs-secondary" title="Tambah jenis surat baru">➕ Tambah Jenis</button>
-                  <button id="btnDocsManageJenis" type="button" class="btn-xs-secondary" title="Kelola / Hapus jenis surat">⚙️ Kelola Jenis</button>
-                </div>
-              </div>
-
-              <!-- Grid Tombol Jenis Surat (Dinamis dari Supabase) -->
-              <div class="docs-jenis-grid" id="docsJenisGrid" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+            <!-- Selector Dropdown Jenis Surat -->
+            <div class="docs-field-group" style="margin-top:12px;">
+              <label class="docs-field-label" style="font-weight:700;">Jenis Surat Dokumen</label>
+              <select id="docsSelectJenisDropdown" class="docs-select-input" style="font-weight:700; color:#1e293b; cursor:pointer;">
+                <!-- Dynamically populated -->
+              </select>
             </div>
 
-            <!-- Box Info Status Template Aktif untuk Jenis Terpilih -->
-            <div id="docsJenisActiveInfo" class="docs-active-jenis-box">
-              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-                <span style="font-size:12.5px; font-weight:700;">📄 Surat Terpilih: <strong id="docsActiveJenisLabel" style="color:#0f172a;">SPORADIK</strong></span>
-                <span id="docsActiveJenisStatusBadge" class="docs-summary-badge">Loading...</span>
-              </div>
-            </div>
-
-            <!-- Input Link Google Docs -->
-            <div class="search-input-group docs-link-input" style="position:relative;">
-              <i data-lucide="link" class="search-icon-inside"></i>
-              <input id="docsLink" type="text" placeholder="https://docs.google.com/document/d/1AbC…/edit" style="padding-right:32px;" />
-              <button id="btnDocsClearInput" class="btn-input-clear" title="Kosongkan Input" style="display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; cursor:pointer; color:#64748b; font-size:14px;">✕</button>
-            </div>
-            <div id="docsLinkStatus" class="docs-link-status-text"></div>
-
-            <!-- Tombol Aksi Step 1 -->
-            <div class="docs-step-actions">
-              <button id="btnDocsDetect" class="btn primary docs-btn-wide">
-                <i data-lucide="scan-search" style="width:16px; height:16px;"></i> Deteksi Placeholder
-              </button>
-              <button id="btnDocsSaveLink" class="btn btn-action-primary" title="Simpan link ini khusus untuk jenis surat yang dipilih">
-                <i data-lucide="save" style="width:15px; height:15px;"></i> Simpan Link Template
-              </button>
-              <button id="btnDocsDeleteLink" class="btn btn-action-secondary" style="color:#dc2626; border-color:#fecaca;" title="Hapus link template jenis surat ini">
-                <i data-lucide="trash-2" style="width:15px; height:15px;"></i> Hapus Link
-              </button>
-              <button id="btnDocsClearLink" class="btn btn-action-secondary" title="Kosongkan untuk mengisi link baru">
-                <i data-lucide="rotate-ccw" style="width:15px; height:15px;"></i> Reset Input
-              </button>
-              <button id="btnDocsSample" class="btn btn-action-secondary" title="Isi contoh link Google Docs">
-                <i data-lucide="folder-open" style="width:15px; height:15px;"></i> Contoh
-              </button>
-            </div>
-            <div id="docsLinkSaved" class="docs-link-saved" style="display:none;">
-              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-                <span style="font-size:12.5px; font-weight:600;">💾 Link tersimpan: <strong id="docsLinkSavedVal" style="word-break:break-all;"></strong></span>
-                <button id="btnDocsUseSaved" class="btn-xs-primary" title="Gunakan link tersimpan ini di input">✏️ Edit / Gunakan</button>
-              </div>
-            </div>
-            <div id="docsDetectResult" class="docs-detect-result">
-              Pilih jenis surat, tempel link Google Docs, lalu klik <strong>Simpan Link Template</strong> atau <strong>Deteksi Placeholder</strong>. Dokumen langsung tampil live di sebelah kanan.
-            </div>
-          </div>
-
-          <!-- Step 2: Pilih Pendaftaran -->
-          <div class="card docs-step">
-            <div class="docs-step-head">
-              <span class="docs-step-num">2</span>
-              <div>
-                <h3>Pilih Data Pendaftaran</h3>
-                <p>Pilih ID REG-XXXXXX untuk mengisi surat</p>
-              </div>
-            </div>
-            <div class="docs-field-group">
-              <label class="docs-field-label">ID Pendaftaran / Pemohon</label>
+            <!-- Selector Pemohon / Pendaftaran -->
+            <div class="docs-field-group" style="margin-top:12px;">
+              <label class="docs-field-label" style="font-weight:700;">ID Pendaftaran / Pemohon</label>
               <input id="docsIdReg" list="pemohonList" class="docs-select-input" placeholder="Contoh: REG-907237 atau Nama Pemohon" />
             </div>
-            <button id="btnDocsRender" class="btn primary docs-btn-wide" style="margin-top:12px;">
-              <i data-lucide="wand-2" style="width:16px; height:16px;"></i> Render Surat
-            </button>
-            <div id="docsRenderInfo" class="docs-detect-result">
-              Pilih pendaftaran lalu klik <strong>Render Surat</strong>. Placeholder diisi otomatis dari data pemohon &amp; tanah.
+
+            <!-- Status Template Aktif -->
+            <div id="docsJenisActiveInfo" class="docs-active-jenis-box" style="margin-top:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                <span style="font-size:12px; font-weight:700; color:#334155;">Status Template:</span>
+                <span id="docsActiveJenisStatusBadge" class="docs-summary-badge">Memuat...</span>
+              </div>
+            </div>
+
+            <!-- Tombol Aksi Utama (Bersih & Fokus) -->
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px;">
+              <button id="btnDocsRender" class="btn primary docs-btn-wide" style="justify-content:center; padding:10px 16px; font-size:14px; font-weight:800;">
+                <i data-lucide="wand-2" style="width:18px; height:18px;"></i> Render Surat Otomatis
+              </button>
+              <button id="btnDocsDetect" class="btn btn-action-secondary docs-btn-wide" style="justify-content:center; font-size:12.5px;">
+                <i data-lucide="scan-search" style="width:15px; height:15px;"></i> Deteksi Placeholder {{...}}
+              </button>
+            </div>
+            
+            <div id="docsDetectResult" class="docs-detect-result" style="margin-top:12px;">
+              Pilih pendaftaran lalu klik <strong>Render Surat Otomatis</strong> untuk mengisi dokumen.
             </div>
           </div>
 
-          <!-- Step 3: Manual Field Inputs -->
+          <!-- Step 2: Form Edit Field Manual (Muncul jika ada field) -->
           <div class="card docs-step docs-manual-card" id="docsManualPanel" style="display:none;">
             <div class="docs-step-head">
               <span class="docs-step-num docs-step-num-warn">✍️</span>
               <div>
-                <h3>Form Edit Field Placeholder</h3>
-                <p>Sesuaikan / lengkapi isi field jika ada yang kurang.</p>
+                <h3>Form Field Placeholder {{...}}</h3>
+                <p>Sesuaikan / isi data manual jika ada yang kurang.</p>
               </div>
             </div>
             <div class="docs-manual-scroll">
@@ -634,20 +648,6 @@
             <button id="btnDocsRenderManual" class="btn primary docs-btn-wide" style="margin-top:14px;">
               <i data-lucide="wand-2" style="width:16px; height:16px;"></i> Render Ulang dengan Field Ini
             </button>
-          </div>
-
-          <!-- Diagnostic Check Button -->
-          <div class="card docs-diag-card">
-            <button id="btnDocsStatus" class="btn btn-action-primary docs-btn-wide" title="Cek konfigurasi Google (API, scope, env)">
-              <i data-lucide="stethoscope" style="width:16px; height:16px;"></i> Cek Status Integrasi Google
-            </button>
-            <div id="docsStatusPanel" class="docs-status-panel" style="display:none;">
-              <div class="docs-status-head">
-                <h2>🔧 Status Integrasi Google</h2>
-                <button id="btnDocsStatusClose" class="btn-ghost">✕</button>
-              </div>
-              <div id="docsStatusResult"></div>
-            </div>
           </div>
         </div>
 
@@ -929,6 +929,30 @@
         <h4 style="margin:0 0 10px; font-size:14px; font-weight:800; color:#1e293b;">📋 Daftar Jenis Surat (Terhubung ke Supabase)</h4>
         <div id="listJenisDokumen" style="display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto;"></div>
       </div>
+    </div>
+  <!-- Modal Edit / Pasang Link Template Surat -->
+  <dialog id="modalEditLinkTemplate" class="modal">
+    <div class="modal-card" style="max-width:520px; width:92%; background:#fff; border-radius:16px; padding:0; overflow:hidden;">
+      <div class="modal-head" style="padding:16px 20px; background:#2E7D32; color:#fff; display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="margin:0; font-size:16px; font-weight:800; color:#ffffff;" id="modalEditLinkTitle">✏️ Edit Link Template Surat</h2>
+        <button id="btnModalEditLinkClose" class="login-close" style="color:#fff; background:transparent;">✕</button>
+      </div>
+      <form id="formEditLinkTemplate" style="padding:20px;">
+        <input type="hidden" id="editLinkJenisId" />
+        <div style="margin-bottom:14px;">
+          <label class="docs-field-label" style="font-weight:700;">Jenis Surat:</label>
+          <input type="text" id="editLinkJenisNamaDisplay" class="docs-select-input" readonly style="background:#f1f5f9; font-weight:700; color:#1e293b;" />
+        </div>
+        <div style="margin-bottom:16px;">
+          <label class="docs-field-label" style="font-weight:700;">Link / ID Google Docs Resmi:</label>
+          <input type="text" id="editLinkInput" class="docs-select-input" placeholder="https://docs.google.com/document/d/1AbC.../edit" required style="font-size:13px;" />
+          <small style="color:#64748b; margin-top:4px; display:block;">Dokumen Google Docs disetel <em>"Anyone with link can view"</em> agar dapat di-render &amp; live preview.</small>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" id="btnModalEditLinkCancel" class="btn btn-action-secondary">Batal</button>
+          <button type="submit" class="btn primary">💾 Simpan Link Template</button>
+        </div>
+      </form>
     </div>
   </dialog>
 
