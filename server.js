@@ -1463,13 +1463,15 @@ async function buildDocValues(record, extraValues) {
     }).join('\n');
   };
 
-  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Tab Stop Geser Kanan Penuh & Ruang Tinggi Tanda Tangan)
+  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Perlebar Geser Kanan Maksimal 70 Char & Ruang Tinggi Khusus Tanda Tangan)
   const buildTtdAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
       const n = idx + 1;
       const nm = String(item.nama || '').trim().toUpperCase();
-      return `${n}. ${nm}\t\t\t\t\t\t\t( ............................ )`;
+      const leftCol = `${n}. ${nm}`;
+      const spaces = ' '.repeat(Math.max(15, 68 - leftCol.length));
+      return `${leftCol}${spaces}( ............................ )`;
     }).join('\n\n\n').trim();
   };
 
