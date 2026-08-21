@@ -1442,7 +1442,7 @@ async function buildDocValues(record, extraValues) {
     return html;
   };
 
-  // 3) Generasi TABEL_AHLI_WARIS Teks Baku (Indentasi Rapi, Titik Dua 100% Lurus Tegak)
+  // 3) Generasi TABEL_AHLI_WARIS Teks Baku (Format Rapat & Hemat Ruang, Titik Dua 100% Lurus Tegak)
   const buildTabelAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
@@ -1454,24 +1454,24 @@ async function buildDocValues(record, extraValues) {
       const pekr = item.pekerjaan || '-';
       const almt = item.alamat || '-';
 
-      const l1 = `   ${no}. Nama`.padEnd(17, ' ') + `: ${nm}`;
-      const l2 = `      TTL`.padEnd(17, ' ') + `: ${ttl}`;
-      const l3 = `      Pekerjaan`.padEnd(17, ' ') + `: ${pekr}`;
-      const l4 = `      Alamat`.padEnd(17, ' ') + `: ${almt}`;
+      const l1 = `${no}. Nama`.padEnd(14, ' ') + `: ${nm}`;
+      const l2 = `   TTL`.padEnd(14, ' ') + `: ${ttl}`;
+      const l3 = `   Pekerjaan`.padEnd(14, ' ') + `: ${pekr}`;
+      const l4 = `   Alamat`.padEnd(14, ' ') + `: ${almt}`;
 
       return l1 + '\n' + l2 + '\n' + l3 + '\n' + l4;
-    }).join('\n\n');
+    }).join('\n');
   };
 
-  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Indentasi Tengah & Ruang Tinggi Khusus Tanda Tangan)
+  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Perlebar Geser Kanan & Ruang Tinggi Khusus Tanda Tangan Fisik)
   const buildTtdAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
       const n = idx + 1;
       const nm = String(item.nama || '').trim().toUpperCase();
-      const leftCol = `     ${n}. ${nm}`;
-      const line = leftCol.padEnd(48, ' ') + `( ............................ )`;
-      return line + '\n\n';
+      const leftCol = `${n}. ${nm}`;
+      const line = leftCol.padEnd(58, ' ') + `( ............................ )`;
+      return line + '\n\n\n';
     }).join('\n').trim();
   };
 
