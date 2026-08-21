@@ -1605,7 +1605,7 @@ async function buildDocValues(record, extraValues) {
     hargaterbilang: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
     terbilang: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
 
-    // Khusus Surat Ahli Waris (Sesuai Presisi Pengguna & Tabel Transparan 100% Rapi)
+    // Khusus Surat Ahli Waris
     almarhum_nama: almarhumNama,
     nama_almarhum: almarhumNama,
     almarhumah_nama: almarhumNama,
@@ -1615,10 +1615,10 @@ async function buildDocValues(record, extraValues) {
     jumlah_anak: String(jumlahAnakVal),
     jumlah_ahli_waris: String(jumlahAnakVal),
     jumlah_anak_terbilang: jumlahAnakTerbilangVal,
-    tabel_ahli_waris: tabelAhliWarisHtml || tabelAhliWarisStr,
-    tabelahliwaris: tabelAhliWarisHtml || tabelAhliWarisStr,
-    ttd_ahli_waris: ttdAhliWarisHtml || ttdAhliWarisStr,
-    ttdahliwaris: ttdAhliWarisHtml || ttdAhliWarisStr,
+    tabel_ahli_waris: tabelAhliWarisStr,
+    tabelahliwaris: tabelAhliWarisStr,
+    ttd_ahli_waris: ttdAhliWarisStr,
+    ttdahliwaris: ttdAhliWarisStr,
 
     // Khusus Surat Hibah (Sesuai Presisi Pengguna)
     penerima_tgl_lahir: fmtIdDate(dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir),
