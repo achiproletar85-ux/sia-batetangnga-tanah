@@ -1392,10 +1392,122 @@
   }
   window.docsRenderSpecific = docsRenderSpecific;
 
+  function docsRenderAllLeftFields(match) {
+    const panel = $('docsManualPanel');
+    const box = $('docsManualFields');
+    if (!panel || !box) return;
+
+    panel.style.display = 'block';
+
+    let dr = {};
+    if (match && match.data_raw) {
+      try { dr = typeof match.data_raw === 'string' ? JSON.parse(match.data_raw) : match.data_raw; } catch (_) {}
+    }
+
+    const ageFrom = (tglISO) => {
+      if (!tglISO) return '';
+      const b = new Date(String(tglISO).slice(0, 10) + 'T00:00:00');
+      if (isNaN(b.getTime())) return '';
+      const now = new Date();
+      let age = now.getFullYear() - b.getFullYear();
+      const m = now.getMonth() - b.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+      return age >= 0 ? String(age) : '';
+    };
+
+    const age1 = dr.saksi1_umur || ageFrom(dr.saksi1_tanggal_lahir || dr.saksi1_ttl);
+    const age2 = dr.saksi2_umur || ageFrom(dr.saksi2_tanggal_lahir || dr.saksi2_ttl);
+
+    const schema = [
+      {
+        cat: '👤 Data Pemohon / Pihak Utama',
+        items: [
+          { key: 'nama', label: 'Nama Pemohon', val: (match ? match.nama : '') || dr.nama_pemohon || dr.penerima_nama || '' },
+          { key: 'nik', label: 'NIK Pemohon', val: dr.nik || '' },
+          { key: 'agama', label: 'Agama', val: dr.agama || 'Islam' },
+          { key: 'umur_pemohon', label: 'Umur Pemohon (Tahun)', val: dr.pemohon_umur || dr.penerima_umur || ageFrom(dr.penerima_tanggal_lahir || dr.tanggal_lahir) || '' },
+          { key: 'pekerjaan', label: 'Pekerjaan Pemohon', val: dr.pekerjaan || dr.penerima_pekerjaan || '' },
+          { key: 'alamat', label: 'Alamat Pemohon', val: dr.alamat || dr.penerima_alamat || '' },
+          { key: 'no_hp', label: 'No. HP', val: (match ? match.hp : '') || dr.hp || '' }
+        ]
+      },
+      {
+        cat: '🗺️ Data Tanah / Objek Lokasi',
+        items: [
+          { key: 'jalan', label: 'Jalan / Lingkungan', val: dr.jalan || dr.alamat_tanah || '' },
+          { key: 'rt_rw', label: 'RT / RW / Dusun', val: dr.rt_rw || dr.dusun || '' },
+          { key: 'nama_desa', label: 'Desa / Kelurahan', val: dr.nama_desa || 'Batetangnga' },
+          { key: 'kabupaten', label: 'Kabupaten / Kota', val: dr.kabupaten || 'Polewali Mandar' },
+          { key: 'nib', label: 'NIB Tanah', val: dr.nib || '-' },
+          { key: 'status_tanah', label: 'Status Tanah', val: dr.status_tanah || 'Tanah Negara' },
+          { key: 'dipergunakan_untuk', label: 'Peruntukan / Penggunaan', val: dr.dipergunakan_untuk || dr.peruntukan || 'Pekarangan' },
+          { key: 'luas_tanah', label: 'Luas Tanah (m²)', val: dr.luas_tanah || dr.luas || '' },
+          { key: 'asal_tanah', label: 'Asal-Usul / Perolehan', val: dr.asal_tanah || dr.jalan || '' },
+          { key: 'tahun_pembelian', label: 'Tahun Penguasaan / Perolehan', val: dr.tahun_pembelian || dr.tahun_pemberian || dr.tahun_penguasaan || '' }
+        ]
+      },
+      {
+        cat: '🧭 Batas-Batas Tanah',
+        items: [
+          { key: 'batas_utara', label: 'Batas Utara', val: dr.batas_utara || '' },
+          { key: 'batas_timur', label: 'Batas Timur', val: dr.batas_timur || '' },
+          { key: 'batas_selatan', label: 'Batas Selatan', val: dr.batas_selatan || '' },
+          { key: 'batas_barat', label: 'Batas Barat', val: dr.batas_barat || '' }
+        ]
+      },
+      {
+        cat: '👥 Data Saksi-Saksi',
+        items: [
+          { key: 'saksi1_nama', label: 'Nama Saksi 1', val: dr.saksi1_nama || '' },
+          { key: 'saksi1_tanggal_lahir', label: 'Tanggal Lahir Saksi 1', val: dr.saksi1_tanggal_lahir || dr.saksi1_ttl || '', type: 'date' },
+          { key: 'umur_saksi1', label: 'Umur Saksi 1 (Tahun)', val: age1 || '' },
+          { key: 'pekerjaan_saksi1', label: 'Pekerjaan Saksi 1', val: dr.saksi1_pekerjaan || dr.perkejaan_saksi1 || '' },
+          { key: 'alamat_saksi1', label: 'Alamat Saksi 1', val: dr.saksi1_alamat || '' },
+          { key: 'saksi2_nama', label: 'Nama Saksi 2', val: dr.saksi2_nama || '' },
+          { key: 'saksi2_tanggal_lahir', label: 'Tanggal Lahir Saksi 2', val: dr.saksi2_tanggal_lahir || dr.saksi2_ttl || '', type: 'date' },
+          { key: 'umur_saksi2', label: 'Umur Saksi 2 (Tahun)', val: age2 || '' },
+          { key: 'pekerjaan_saksi2', label: 'Pekerjaan Saksi 2', val: dr.saksi2_pekerjaan || dr.perkejaan_saksi2 || '' },
+          { key: 'alamat_saksi2', label: 'Alamat Saksi 2', val: dr.saksi2_alamat || '' }
+        ]
+      },
+      {
+        cat: '📜 Register Surat & Pengesahan',
+        items: [
+          { key: 'nomor_surat', label: 'Nomor Register Surat', val: (match ? match.id : '') || dr.nomor_surat || '' },
+          { key: 'kepala_desa', label: 'Nama Kepala Desa / Lurah', val: dr.kepala_desa || 'SUMALLA DAMANG' }
+        ]
+      }
+    ];
+
+    box.innerHTML = schema.map((grp) => `
+      <div style="margin-bottom:12px; background:#ffffff; border:1px solid #e2e8f0; padding:10px 12px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+        <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:8px; border-bottom:1px solid #f1f5f9; padding-bottom:4px;">${esc(grp.cat)}</div>
+        <div style="display:grid; grid-template-columns:1fr; gap:6px;">
+          ${grp.items.map((it) => {
+            const v = String(it.val || '').trim();
+            const isFilled = Boolean(v);
+            const inputType = it.type || 'text';
+            return `
+            <div class="docs-manual-item ${isFilled ? 'is-filled' : 'is-empty'}" style="padding:4px 6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <label class="docs-manual-label" style="font-size:11.5px; font-weight:700;">${isFilled ? '🟢' : '🔴'} {{${esc(it.key)}}}</label>
+                <small style="color:#64748b; font-size:10.5px;">${esc(it.label)}</small>
+              </div>
+              <input type="${inputType}" data-ph="${esc(it.key)}" value="${esc(v)}" placeholder="Isi ${esc(it.label)}…" style="font-size:12px; padding:5px 8px; margin-top:2px;" />
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    `).join('');
+
+    docsBindSaksiUmurAuto();
+  }
+
   function docsOnRegIdChange() {
     const val = String($('docsIdReg') ? $('docsIdReg').value : '').trim();
     if (!val) {
       docsRenderDropdownSelector(null);
+      docsRenderAllLeftFields(null);
       if ($('docsJenisActiveInfo')) {
         $('docsJenisActiveInfo').innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
@@ -1414,6 +1526,7 @@
         docsLoadTemplate(lay);
       }
       docsRenderDropdownSelector(match);
+      docsRenderAllLeftFields(match);
       if ($('docsJenisActiveInfo')) {
         $('docsJenisActiveInfo').innerHTML = `
           <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:12px; border-radius:10px; font-size:13px; color:#166534; margin-bottom:10px;">
@@ -1437,6 +1550,7 @@
       }
     } else {
       docsRenderDropdownSelector(null);
+      docsRenderAllLeftFields(null);
     }
   }
 
