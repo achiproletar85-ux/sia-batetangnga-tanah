@@ -1442,7 +1442,7 @@ async function buildDocValues(record, extraValues) {
     return html;
   };
 
-  // 3) Generasi TABEL_AHLI_WARIS Teks Baku (Format 1 Kolom Presisi, Titik Dua 100% Lurus Tegak & Bebas Tabrakan Spasi)
+  // 3) Generasi TABEL_AHLI_WARIS Teks Baku (Indentasi Rapi, Titik Dua 100% Lurus Tegak)
   const buildTabelAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
@@ -1454,24 +1454,25 @@ async function buildDocValues(record, extraValues) {
       const pekr = item.pekerjaan || '-';
       const almt = item.alamat || '-';
 
-      const l1 = `${no}. Nama`.padEnd(13, ' ') + `: ${nm}`;
-      const l2 = `   TTL`.padEnd(13, ' ') + `: ${ttl}`;
-      const l3 = `   Pekerjaan`.padEnd(13, ' ') + `: ${pekr}`;
-      const l4 = `   Alamat`.padEnd(13, ' ') + `: ${almt}`;
+      const l1 = `   ${no}. Nama`.padEnd(17, ' ') + `: ${nm}`;
+      const l2 = `      TTL`.padEnd(17, ' ') + `: ${ttl}`;
+      const l3 = `      Pekerjaan`.padEnd(17, ' ') + `: ${pekr}`;
+      const l4 = `      Alamat`.padEnd(17, ' ') + `: ${almt}`;
 
       return l1 + '\n' + l2 + '\n' + l3 + '\n' + l4;
     }).join('\n\n');
   };
 
-  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Single Newline agar SEMUA TTD muat dalam 1 halaman & tidak terlempar ke halaman 2)
+  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Indentasi Tengah & Ruang Tinggi Khusus Tanda Tangan)
   const buildTtdAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
       const n = idx + 1;
       const nm = String(item.nama || '').trim().toUpperCase();
-      const leftCol = `${n}. ${nm}`;
-      return leftCol.padEnd(42, ' ') + `( ............................ )`;
-    }).join('\n');
+      const leftCol = `     ${n}. ${nm}`;
+      const line = leftCol.padEnd(48, ' ') + `( ............................ )`;
+      return line + '\n\n';
+    }).join('\n').trim();
   };
 
   // 5) Generasi KIRI dan KANAN secara terpisah (Untuk Tabel 1 Baris 2 Kolom di Google Docs)
