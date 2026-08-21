@@ -15,6 +15,15 @@
   <link rel="stylesheet" href="style.css?v=20260821_01" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) { window.lucide.createIcons(); } });</script>
+  <script>
+    (function() {
+      const origWarn = console.warn;
+      console.warn = function(...args) {
+        if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com should not be used in production')) return;
+        origWarn.apply(console, args);
+      };
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { corePlugins: { preflight: false } };</script>
 </head>
@@ -860,6 +869,7 @@
         <p>Perbarui kata sandi akun petugas desa</p>
       </div>
       <form id="changePwForm">
+        <input type="text" name="username" autocomplete="username" value="admin" style="display:none;" aria-hidden="true" />
         <label class="login-field">
           <span>Kata Sandi Lama</span>
           <input id="cpCurrent" type="password" placeholder="Kata sandi saat ini" autocomplete="current-password" required />
@@ -975,6 +985,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=20260821_02"></script>
+  <script src="app.js?v=20260821_03"></script>
 </body>
 </html>

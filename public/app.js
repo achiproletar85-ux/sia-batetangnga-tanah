@@ -365,7 +365,10 @@
     const docIdDisplay = $('docsLiveDocIdDisplay');
 
     if (!id) {
-      if (iframe) iframe.style.display = 'none';
+      if (iframe) {
+        iframe.style.display = 'none';
+        iframe.removeAttribute('src');
+      }
       if (emptyNotice) emptyNotice.style.display = 'flex';
       if (openBtn) openBtn.style.display = 'none';
       if (docIdDisplay) docIdDisplay.textContent = '-';
