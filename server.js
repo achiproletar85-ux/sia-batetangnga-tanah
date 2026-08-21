@@ -1374,43 +1374,59 @@ async function buildDocValues(record, extraValues) {
   const jumlahAnakVal = ahliWarisList.length || parseInt((extraValues && extraValues.jumlah_anak) || dr.jumlah_anak || dr.jumlah_ahli_waris || '0', 10) || 0;
   const jumlahAnakTerbilangVal = angkaKeTerbilang(jumlahAnakVal).replace(/Rupiah/gi, '').trim();
 
-  // 1) Generasi TABEL_AHLI_WARIS (Ganjil Kiri/Kanan, Genap Kanan/Kiri Sejajar)
+  // 1) Generasi TABEL_AHLI_WARIS (Ganjil KIRI, Genap KANAN, Sejajar Berdampingan 2 Kolom)
   const buildTabelAhliWaris = (list) => {
     if (!list || !list.length) return '';
-    return list.map((item, idx) => {
-      const n = idx + 1;
-      const nm = String(item.nama || '').trim().toUpperCase();
-      const tmpt = item.tempat_lahir || 'Batetangnga';
-      const tglStr = item.tanggal_lahir ? fmtIdDate(item.tanggal_lahir) : '';
-      const ttl = tmpt + (tglStr ? ', ' + tglStr : '');
-      const pekr = item.pekerjaan || '-';
-      const almt = item.alamat || '-';
-      return `${n}.Nama\t: ${nm}\n  TTL\t: ${ttl}\n  Pekerjaan\t: ${pekr}\n  Alamat\t: ${almt}`;
-    }).join('\n\n');
-  };
-
-  // 2) Generasi TTD_AHLI_WARIS (Signature Block 2 Kolom Sejajar)
-  const buildTtdAhliWaris = (list) => {
-    if (!list || !list.length) return '';
-    const lines = [];
+    const blocks = [];
     for (let i = 0; i < list.length; i += 2) {
       const left = list[i];
       const right = list[i + 1];
 
       const leftNo = i + 1;
-      const leftName = String(left.nama || '').trim().toUpperCase();
+      const leftNm = String(left.nama || '').trim().toUpperCase();
+      const leftTmpt = left.tempat_lahir || 'Batetangnga';
+      const leftTgl = left.tanggal_lahir ? fmtIdDate(left.tanggal_lahir) : '';
+      const leftTtl = leftTmpt + (leftTgl ? ', ' + leftTgl : '');
+      const leftPekr = left.pekerjaan || '-';
+      const leftAlmt = left.alamat || '-';
 
       if (right) {
         const rightNo = i + 2;
-        const rightName = String(right.nama || '').trim().toUpperCase();
-        lines.push(`${leftNo}. ${leftName.padEnd(28, ' ')} ${rightNo}. ${rightName}`);
-        lines.push(`( ............................ )`.padEnd(31, ' ') + `( ............................ )\n`);
+        const rightNm = String(right.nama || '').trim().toUpperCase();
+        const rightTmpt = right.tempat_lahir || 'Batetangnga';
+        const rightTgl = right.tanggal_lahir ? fmtIdDate(right.tanggal_lahir) : '';
+        const rightTtl = rightTmpt + (rightTgl ? ', ' + rightTgl : '');
+        const rightPekr = right.pekerjaan || '-';
+        const rightAlmt = right.alamat || '-';
+
+        const colWidth = 48;
+        blocks.push(
+          `${leftNo}.Nama\t: ${leftNm}`.padEnd(colWidth, ' ') + `${rightNo}.Nama\t: ${rightNm}\n` +
+          `  TTL\t: ${leftTtl}`.padEnd(colWidth, ' ') + `  TTL\t: ${rightTtl}\n` +
+          `  Pekerjaan\t: ${leftPekr}`.padEnd(colWidth, ' ') + `  Pekerjaan\t: ${rightPekr}\n` +
+          `  Alamat\t: ${leftAlmt}`.padEnd(colWidth, ' ') + `  Alamat\t: ${rightAlmt}`
+        );
       } else {
-        lines.push(`${leftNo}. ${leftName}`);
-        lines.push(`( ............................ )\n`);
+        blocks.push(
+          `${leftNo}.Nama\t: ${leftNm}\n` +
+          `  TTL\t: ${leftTtl}\n` +
+          `  Pekerjaan\t: ${leftPekr}\n` +
+          `  Alamat\t: ${leftAlmt}`
+        );
       }
     }
-    return lines.join('\n');
+    return blocks.join('\n\n');
+  };
+
+  // 2) Generasi TTD_AHLI_WARIS (Nomor & Nama di KIRI, Garis TTD di KANAN Sejajar)
+  const buildTtdAhliWaris = (list) => {
+    if (!list || !list.length) return '';
+    return list.map((item, idx) => {
+      const n = idx + 1;
+      const nm = String(item.nama || '').trim().toUpperCase();
+      const leftCol = `${n}. ${nm}`;
+      return leftCol.padEnd(58, ' ') + `( ............................ )`;
+    }).join('\n\n');
   };
 
   const tabelAhliWarisStr = buildTabelAhliWaris(ahliWarisList);
