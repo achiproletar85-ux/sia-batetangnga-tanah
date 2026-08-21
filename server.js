@@ -1463,21 +1463,17 @@ async function buildDocValues(record, extraValues) {
     }).join('\n');
   };
 
-  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Pergeseran Kanan Maksimal & Presisi Piksel Lurus 100% Font Arial/Times)
+  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Format Resmi Titik Penghubung Akta & Ruang Tinggi Tanda Tangan)
   const buildTtdAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
       const n = idx + 1;
       const nm = String(item.nama || '').trim().toUpperCase();
-      const leftCol = `${n}. ${nm}`;
-      
-      // Kompensasi rasio lebar huruf kapital vs karakter spasi pada font dokumen (~2.5 spasi per huruf)
-      const baseSpaces = 86; // Geser maksimal mendekati margin kanan
-      const charDiff = Math.max(0, nm.length - 5);
-      const spaceCount = Math.max(20, baseSpaces - Math.round(charDiff * 2.5));
-      const spaces = ' '.repeat(spaceCount);
-      
-      return `${leftCol}${spaces}( ............................ )`;
+      const prefix = `${n}. ${nm} `;
+      const totalWidth = 72;
+      const dotsCount = Math.max(8, totalWidth - prefix.length - 30);
+      const dots = '.'.repeat(dotsCount);
+      return `${prefix}${dots} ( ............................ )`;
     }).join('\n\n\n').trim();
   };
 
