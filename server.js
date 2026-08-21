@@ -1268,6 +1268,56 @@ async function buildDocValues(record, extraValues) {
   const tglLhr = values[normKey('tanggal_lahir')] || dr.tanggal_lahir || dr.penerima_tanggal_lahir || dr.pembeli_tanggal_lahir;
   const ttlCombined = (tmpt && tglLhr) ? (tmpt + ', ' + fmtIdDate(tglLhr)) : '';
 
+  // Helper format nomor surat SPORADIK: 145-xxx/Des.Bat/560/MM/YYYY
+  const formatNomorSuratSporadik = (rawVal, tglVal) => {
+    const strVal = String(rawVal || '').trim();
+    if (!strVal) return '';
+
+    let mm = '', yyyy = '';
+    if (tglVal) {
+      const tStr = String(tglVal).trim();
+      let m = /^(\d{4})-(\d{2})-(\d{2})/.exec(tStr);
+      if (m) {
+        yyyy = m[1];
+        mm = m[2];
+      } else {
+        m = /(\d{1,2})[\s\/-](\d{1,2})[\s\/-](\d{4})/.exec(tStr);
+        if (m) {
+          mm = String(m[2]).padStart(2, '0');
+          yyyy = m[3];
+        } else {
+          const d = new Date(tStr);
+          if (!isNaN(d.getTime())) {
+            yyyy = String(d.getFullYear());
+            mm = String(d.getMonth() + 1).padStart(2, '0');
+          }
+        }
+      }
+    }
+
+    if (!mm || !yyyy) {
+      mm = String(now.getMonth() + 1).padStart(2, '0');
+      yyyy = String(now.getFullYear());
+    }
+
+    if (/^145-\d{3}\/Des\.Bat\/560\/\d{2}\/\d{4}$/i.test(strVal)) {
+      return strVal;
+    }
+
+    const digitMatch = strVal.match(/\d+/);
+    if (digitMatch && strVal.length <= 4) {
+      const urutStr = String(digitMatch[0]).padStart(3, '0');
+      return `145-${urutStr}/Des.Bat/560/${mm}/${yyyy}`;
+    }
+
+    return strVal;
+  };
+
+  const rawNumSurat = (extraValues && (extraValues.nomor_surat || extraValues.no_surat || extraValues.nomorSuratTercetak)) || dr.nomorSuratTercetak || dr._nomorSuratTercetak || dr.nomor_surat || '';
+  const tglSuratVal = (extraValues && (extraValues.tanggal_surat || extraValues.tanggal)) || dr.tanggal_surat || dr.tanggal || now;
+  const formattedNomorSurat = formatNomorSuratSporadik(rawNumSurat, tglSuratVal);
+  const thnVal = dr.tahun_pemberian || dr.tahun_pembelian || dr.tahun_penguasaan || '';
+
   // Alias umum agar placeholder fleksibel (mis. {{nama}} / {{nama_lengkap}}).
   const alias = {
     nama_lengkap: values[normKey('nama')],
@@ -1372,16 +1422,16 @@ async function buildDocValues(record, extraValues) {
     pekerjaan_penerima: dr.penerima_pekerjaan || dr.pembeli_pekerjaan || '',
     alamat_penerima: dr.penerima_alamat || dr.pembeli_alamat || dr.alamat || '',
 
-    // Nomor surat tercetak (Eksplisit: NOMOR_SURAT = nomorSuratTercetak).
-    // Jika belum diisi, biarkan KOSONG (bukan fallback ke record.id) agar diisi manual.
-    nomor_surat: dr.nomorSuratTercetak || dr._nomorSuratTercetak || dr.nomor_surat || '',
-    nomorsurattercetak: dr.nomorSuratTercetak || dr._nomorSuratTercetak || dr.nomor_surat || '',
-    _nomorsurattercetak: dr.nomorSuratTercetak || dr._nomorSuratTercetak || dr.nomor_surat || '',
-    no_surat: dr.nomorSuratTercetak || dr._nomorSuratTercetak || dr.nomor_surat || '',
+    // Nomor surat tercetak (Eksplisit: NOMOR_SURAT = nomorSuratTercetak ala SPORADIK).
+    nomor_surat: formattedNomorSurat,
+    nomorsurattercetak: formattedNomorSurat,
+    _nomorsurattercetak: formattedNomorSurat,
+    no_surat: formattedNomorSurat,
     nomor_register: record.id,
-    // Tahun pembelian/pemberian (tergantung layanan).
-    tahun_pembelian: dr.tahun_pemberian || dr.tahun_pembelian || dr.tahun_penguasaan || '',
-    tahun_pemberian: dr.tahun_pemberian || dr.tahun_pembelian || dr.tahun_penguasaan || '',
+    // Tahun pemberian/pembelian (tergantung layanan).
+    tahun: thnVal,
+    tahun_pembelian: thnVal,
+    tahun_pemberian: thnVal,
     tanggal_surat: fmtIdDate(now),
     tanggal: fmtIdDate(now),
     nama_desa: values[normKey('nama_desa')] || '',

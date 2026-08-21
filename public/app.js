@@ -1447,7 +1447,7 @@
         items: [
           { key: 'alamat_lokasi_tanah', label: 'Alamat Lokasi Tanah', val: dr.alamat_tanah || dr.jalan || '' },
           { key: 'luas_tanah', label: 'Luas Tanah (m²)', val: dr.luas_tanah || dr.luas || '' },
-          { key: 'tahun_pemberian', label: 'Tahun Pemberian / Penguasaan', val: dr.tahun_pemberian || dr.tahun_pembelian || dr.tahun_penguasaan || '' },
+          { key: 'tahun_pemberian', label: 'Tahun Pemberian ({{TAHUN}})', val: dr.tahun_pemberian || dr.tahun_pembelian || dr.tahun_penguasaan || '' },
           { key: 'pemilik_tanah_sebelah_utara', label: 'Batas Sebelah Utara', val: dr.batas_utara || dr.batas_barat || '' },
           { key: 'pemilik_tanah_sebelah_timur', label: 'Batas Sebelah Timur', val: dr.batas_timur || '' },
           { key: 'pemilik_tanah_sebelah_selatan', label: 'Batas Sebelah Selatan', val: dr.batas_selatan || '' },
