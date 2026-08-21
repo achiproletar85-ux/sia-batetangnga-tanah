@@ -1463,14 +1463,25 @@ async function buildDocValues(record, extraValues) {
     }).join('\n');
   };
 
-  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Perlebar Geser Kanan Maksimal 70 Char & Ruang Tinggi Khusus Tanda Tangan)
+  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Perlebar Geser Kanan Maksimal & Presisi Lurus 100% Font Proporsional)
   const buildTtdAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
       const n = idx + 1;
       const nm = String(item.nama || '').trim().toUpperCase();
       const leftCol = `${n}. ${nm}`;
-      const spaces = ' '.repeat(Math.max(15, 68 - leftCol.length));
+      
+      // Kompensasi lebar huruf font proporsional Google Docs (Arial / Times New Roman)
+      let visualWidth = 0;
+      for (const ch of leftCol) {
+        if (ch === ' ' || ch === '.' || ch === 'I' || ch === '1' || ch === 'l') visualWidth += 0.45;
+        else if (ch === 'M' || ch === 'W') visualWidth += 1.25;
+        else visualWidth += 0.95;
+      }
+      
+      const targetWidth = 22;
+      const spaceCount = Math.max(25, Math.round((targetWidth - visualWidth) * 2.2) + 54);
+      const spaces = ' '.repeat(spaceCount);
       return `${leftCol}${spaces}( ............................ )`;
     }).join('\n\n\n').trim();
   };
