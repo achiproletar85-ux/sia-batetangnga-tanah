@@ -1373,8 +1373,100 @@ function escHtml(s) {
   }[c]));
 }
 
-// Kunci pengaturan untuk menyimpan link/ID template Google Docs (disimpan sekali, bisa diubah).
+// Kunci pengaturan untuk menyimpan link/ID template Google Docs & Daftar Jenis Surat (disimpan sekali, bisa diubah).
 const TEMPLATE_DOCS_KEY = 'google_docs_template_link';
+const JENIS_DOCS_KEY = 'google_docs_jenis_list';
+
+const DEFAULT_DOC_TYPES = [
+  { id: 'SPORADIK', nama: 'SPORADIK', icon: '📜' },
+  { id: 'HIBAH', nama: 'Surat Hibah', icon: '🎁' },
+  { id: 'JUALBELI', nama: 'Jual Beli', icon: '🤝' },
+  { id: 'AHLIWARIS', nama: 'Ahli Waris', icon: '👨‍👩‍👧' },
+  { id: 'LAINNYA', nama: 'Lainnya', icon: '📄' }
+];
+
+// GET /api/docs/jenis-list -> daftar jenis surat dinamis
+app.get('/api/docs/jenis-list', requireAuth, async (req, res) => {
+  try {
+    const raw = await getPengaturan(JENIS_DOCS_KEY, null);
+    let list = raw ? JSON.parse(raw) : DEFAULT_DOC_TYPES;
+    res.json({ success: true, data: list });
+  } catch (e) {
+    res.json({ success: true, data: DEFAULT_DOC_TYPES });
+  }
+});
+
+// POST /api/docs/jenis -> tambah/update jenis surat
+app.post('/api/docs/jenis', requireAuth, requireRole('bendahara'), async (req, res) => {
+  try {
+    const { id, nama, icon } = req.body || {};
+    if (!nama || !String(nama).trim()) return res.status(400).json({ success: false, error: 'Nama jenis surat harus diisi.' });
+
+    const raw = await getPengaturan(JENIS_DOCS_KEY, null);
+    let list = raw ? JSON.parse(raw) : [...DEFAULT_DOC_TYPES];
+
+    const cleanId = String(id || nama).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '_');
+    const existingIndex = list.findIndex((item) => item.id === cleanId);
+
+    const newItem = {
+      id: cleanId,
+      nama: String(nama).trim(),
+      icon: String(icon || '📄').trim()
+    };
+
+    if (existingIndex >= 0) {
+      list[existingIndex] = newItem;
+    } else {
+      list.push(newItem);
+    }
+
+    const { error } = await supabase.from(TABLE_SET).upsert(
+      { kunci: JENIS_DOCS_KEY, nilai: JSON.stringify(list), updated_at: new Date().toISOString() },
+      { onConflict: 'kunci' }
+    );
+    if (error) throw error;
+    res.json({ success: true, data: list, item: newItem });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// DELETE /api/docs/jenis/:id -> hapus jenis surat
+app.delete('/api/docs/jenis/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
+  try {
+    const targetId = String(req.params.id || '').trim().toUpperCase();
+    const raw = await getPengaturan(JENIS_DOCS_KEY, null);
+    let list = raw ? JSON.parse(raw) : [...DEFAULT_DOC_TYPES];
+
+    list = list.filter((item) => item.id !== targetId);
+
+    const { error } = await supabase.from(TABLE_SET).upsert(
+      { kunci: JENIS_DOCS_KEY, nilai: JSON.stringify(list), updated_at: new Date().toISOString() },
+      { onConflict: 'kunci' }
+    );
+    if (error) throw error;
+
+    // Hapus juga template link yang tersimpan untuk jenis ini
+    await supabase.from(TABLE_SET).delete().eq('kunci', `${TEMPLATE_DOCS_KEY}_${targetId}`);
+
+    res.json({ success: true, data: list });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// DELETE /api/docs/template -> hapus link template jenis surat
+app.delete('/api/docs/template', requireAuth, requireRole('bendahara'), async (req, res) => {
+  try {
+    const jenis = String(req.query.jenis || '').trim();
+    const key = (jenis && jenis !== 'default') ? `${TEMPLATE_DOCS_KEY}_${jenis}` : TEMPLATE_DOCS_KEY;
+    const { error } = await supabase.from(TABLE_SET).delete().eq('kunci', key);
+    if (error) throw error;
+    res.json({ success: true, jenis });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
 // GET /api/docs/template -> ambil link template Google Docs yang tersimpan (dukung per jenis dokumen).
 app.get('/api/docs/template', requireAuth, async (req, res) => {

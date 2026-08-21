@@ -438,6 +438,127 @@
     docsOnLinkInput();
   }
 
+  let docsJenisListState = [
+    { id: 'SPORADIK', nama: 'SPORADIK', icon: '📜' },
+    { id: 'HIBAH', nama: 'Surat Hibah', icon: '🎁' },
+    { id: 'JUALBELI', nama: 'Jual Beli', icon: '🤝' },
+    { id: 'AHLIWARIS', nama: 'Ahli Waris', icon: '👨‍👩‍👧' },
+    { id: 'LAINNYA', nama: 'Lainnya', icon: '📄' }
+  ];
+
+  async function docsFetchJenisList() {
+    try {
+      const res = await fetch('/api/docs/jenis-list');
+      const json = await res.json();
+      if (json.success && json.data && json.data.length) {
+        docsJenisListState = json.data;
+      }
+    } catch (e) {
+      console.warn('Gagal memuat jenis surat:', e.message);
+    }
+    docsRenderJenisButtons();
+    docsRenderManageList();
+  }
+
+  function docsRenderJenisButtons() {
+    const grid = $('docsJenisGrid');
+    if (!grid) return;
+    grid.innerHTML = docsJenisListState.map((item) => {
+      const active = item.id === docsState.jenis ? 'active' : '';
+      return `<button type="button" class="btn-jenis-dok ${active}" data-jenis="${esc(item.id)}">${esc(item.icon || '📄')} ${esc(item.nama)}</button>`;
+    }).join('');
+
+    const activeObj = docsJenisListState.find((x) => x.id === docsState.jenis) || docsJenisListState[0] || { id: 'SPORADIK', nama: 'SPORADIK' };
+    if ($('docsActiveJenisLabel')) $('docsActiveJenisLabel').textContent = `${activeObj.icon || '📄'} ${activeObj.nama}`;
+  }
+
+  async function docsSelectJenis(jenisId) {
+    docsState.jenis = jenisId;
+    docsRenderJenisButtons();
+    await docsLoadTemplate(jenisId);
+  }
+
+  async function docsDeleteLink() {
+    if (!confirm(`Hapus link template untuk jenis surat "${docsState.jenis}"?`)) return;
+    try {
+      const res = await fetch(`/api/docs/template?jenis=${encodeURIComponent(docsState.jenis)}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal menghapus link.');
+      if ($('docsLink')) $('docsLink').value = '';
+      if ($('docsLinkSaved')) $('docsLinkSaved').style.display = 'none';
+      if ($('docsLinkSavedVal')) $('docsLinkSavedVal').textContent = '';
+      const badge = $('docsActiveJenisStatusBadge');
+      if (badge) {
+        badge.textContent = '⚠️ Belum Ada Template';
+        badge.style.background = '#fffbeb';
+        badge.style.color = '#d97706';
+      }
+      docsOnLinkInput();
+      alert(`Link template untuk ${docsState.jenis} berhasil dihapus.`);
+    } catch (e) {
+      alert('Gagal menghapus link: ' + e.message);
+    }
+  }
+
+  async function docsAddJenis(e) {
+    if (e) e.preventDefault();
+    const namaInp = $('newJenisNama');
+    const iconInp = $('newJenisIcon');
+    if (!namaInp || !namaInp.value.trim()) return;
+
+    const nama = namaInp.value.trim();
+    const icon = (iconInp && iconInp.value.trim()) ? iconInp.value.trim() : '📄';
+
+    try {
+      const res = await fetch('/api/docs/jenis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nama, icon })
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal menambahkan jenis surat.');
+      docsJenisListState = json.data;
+      if (json.item && json.item.id) docsState.jenis = json.item.id;
+      docsRenderJenisButtons();
+      docsRenderManageList();
+      namaInp.value = '';
+      alert(`Jenis surat "${nama}" berhasil ditambahkan!`);
+      docsLoadTemplate(docsState.jenis);
+    } catch (err) {
+      alert('Gagal menambah jenis surat: ' + err.message);
+    }
+  }
+
+  async function docsDeleteJenis(id) {
+    if (!confirm(`Hapus jenis surat "${id}"? Link template terkait juga akan dihapus.`)) return;
+    try {
+      const res = await fetch(`/api/docs/jenis/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal menghapus jenis surat.');
+      docsJenisListState = json.data;
+      if (docsState.jenis === id) {
+        docsState.jenis = (docsJenisListState[0] && docsJenisListState[0].id) || 'SPORADIK';
+      }
+      docsRenderJenisButtons();
+      docsRenderManageList();
+      docsLoadTemplate(docsState.jenis);
+      alert('Jenis surat berhasil dihapus.');
+    } catch (err) {
+      alert('Gagal menghapus jenis surat: ' + err.message);
+    }
+  }
+
+  function docsRenderManageList() {
+    const listEl = $('listJenisDokumen');
+    if (!listEl) return;
+    listEl.innerHTML = docsJenisListState.map((item) => `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+        <span style="font-size:13px; font-weight:700; color:#1e293b;">${esc(item.icon || '📄')} ${esc(item.nama)} <small style="color:#64748b; font-size:11px;">(${esc(item.id)})</small></span>
+        <button type="button" class="btn btn-action-secondary" data-del-jenis="${esc(item.id)}" style="padding:4px 8px; font-size:11px; color:#dc2626; border-color:#fecaca;">🗑 Hapus</button>
+      </div>
+    `).join('');
+  }
+
   function docsUseSavedLink() {
     const saved = $('docsLinkSavedVal') ? String($('docsLinkSavedVal').textContent || '').trim() : '';
     if (!saved) return;
@@ -451,6 +572,8 @@
   // Muat link template tersimpan per jenis dokumen.
   async function docsLoadTemplate(jenis) {
     const targetJenis = jenis || docsState.jenis || 'SPORADIK';
+    const badge = $('docsActiveJenisStatusBadge');
+    if (badge) badge.textContent = 'Memuat template…';
     try {
       const res = await fetch(`/api/docs/template?jenis=${encodeURIComponent(targetJenis)}`);
       const json = await res.json();
@@ -459,14 +582,29 @@
         if ($('docsLinkSaved')) $('docsLinkSaved').style.display = 'block';
         if ($('docsLinkSavedVal')) $('docsLinkSavedVal').textContent = json.link;
         if ($('docsLink')) $('docsLink').value = json.link;
+        if (badge) {
+          badge.textContent = '✅ Template Tersimpan';
+          badge.style.background = '#e8f5e9';
+          badge.style.color = '#2E7D32';
+        }
       } else {
         if ($('docsLinkSaved')) $('docsLinkSaved').style.display = 'none';
         if ($('docsLinkSavedVal')) $('docsLinkSavedVal').textContent = '';
         if ($('docsLink')) $('docsLink').value = '';
+        if (badge) {
+          badge.textContent = '⚠️ Belum Ada Template';
+          badge.style.background = '#fffbeb';
+          badge.style.color = '#d97706';
+        }
       }
       docsOnLinkInput();
     } catch (e) {
       console.warn('Gagal memuat template tersimpan:', e.message);
+      if (badge) {
+        badge.textContent = '⚠️ Belum Ada Template';
+        badge.style.background = '#fffbeb';
+        badge.style.color = '#d97706';
+      }
       docsOnLinkInput();
     }
   }
@@ -486,7 +624,13 @@
       if (!json.success) throw new Error(json.error || 'Gagal menyimpan template.');
       if ($('docsLinkSaved')) $('docsLinkSaved').style.display = 'block';
       if ($('docsLinkSavedVal')) $('docsLinkSavedVal').textContent = json.link;
-      alert(`Template default untuk ${docsState.jenis || 'SPORADIK'} berhasil disimpan.`);
+      const badge = $('docsActiveJenisStatusBadge');
+      if (badge) {
+        badge.textContent = '✅ Template Tersimpan';
+        badge.style.background = '#e8f5e9';
+        badge.style.color = '#2E7D32';
+      }
+      alert(`Template link untuk ${docsState.jenis || 'SPORADIK'} berhasil disimpan ke Supabase.`);
     } catch (e) {
       alert('Gagal menyimpan template: ' + e.message);
     } finally {
@@ -1044,18 +1188,27 @@
       $('docsLink').addEventListener('change', docsOnLinkInput);
       $('docsLink').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); docsDetect(); } });
     }
+    if ($('btnDocsDeleteLink')) $('btnDocsDeleteLink').addEventListener('click', docsDeleteLink);
+    if ($('btnDocsAddJenis')) $('btnDocsAddJenis').addEventListener('click', () => { if ($('modalManageJenis')) $('modalManageJenis').showModal(); });
+    if ($('btnDocsManageJenis')) $('btnDocsManageJenis').addEventListener('click', () => { if ($('modalManageJenis')) $('modalManageJenis').showModal(); });
+    if ($('btnModalManageJenisClose')) $('btnModalManageJenisClose').addEventListener('click', () => { if ($('modalManageJenis')) $('modalManageJenis').close(); });
+    if ($('formAddJenis')) $('formAddJenis').addEventListener('submit', docsAddJenis);
+    if ($('listJenisDokumen')) {
+      $('listJenisDokumen').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-del-jenis]');
+        if (btn) docsDeleteJenis(btn.dataset.delJenis);
+      });
+    }
+
     const jenisGrid = $('docsJenisGrid');
     if (jenisGrid) {
       jenisGrid.addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-jenis-dok');
         if (!btn) return;
-        jenisGrid.querySelectorAll('.btn-jenis-dok').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        docsState.jenis = btn.dataset.jenis || 'SPORADIK';
-        docsLoadTemplate(docsState.jenis);
+        docsSelectJenis(btn.dataset.jenis || 'SPORADIK');
       });
     }
-    docsLoadTemplate(docsState.jenis);
+    docsFetchJenisList().then(() => docsLoadTemplate(docsState.jenis));
     const body = $('docsHistoryBody');
     if (body) {
       body.addEventListener('click', (e) => {
