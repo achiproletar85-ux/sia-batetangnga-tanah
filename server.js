@@ -1442,7 +1442,7 @@ async function buildDocValues(record, extraValues) {
     return html;
   };
 
-  // 3) Generasi TABEL_AHLI_WARIS Teks Baku
+  // 3) Generasi TABEL_AHLI_WARIS Teks Baku (Perataan Presisi Titik Dua padEnd 13 Karakter & Kolom Kanan 50 Karakter)
   const buildTabelAhliWaris = (list) => {
     if (!list || !list.length) return '';
     const blocks = [];
@@ -1458,10 +1458,10 @@ async function buildDocValues(record, extraValues) {
       const leftPekr = left.pekerjaan || '-';
       const leftAlmt = left.alamat || '-';
 
-      const l1 = `${leftNo}. Nama     : ${leftNm}`;
-      const l2 = `   TTL      : ${leftTtl}`;
-      const l3 = `   Pekerjaan: ${leftPekr}`;
-      const l4 = `   Alamat   : ${leftAlmt}`;
+      const l1 = `${leftNo}. Nama`.padEnd(13, ' ') + `: ${leftNm}`;
+      const l2 = `   TTL`.padEnd(13, ' ') + `: ${leftTtl}`;
+      const l3 = `   Pekerjaan`.padEnd(13, ' ') + `: ${leftPekr}`;
+      const l4 = `   Alamat`.padEnd(13, ' ') + `: ${leftAlmt}`;
 
       if (right) {
         const rightNo = i + 2;
@@ -1472,12 +1472,12 @@ async function buildDocValues(record, extraValues) {
         const rightPekr = right.pekerjaan || '-';
         const rightAlmt = right.alamat || '-';
 
-        const r1 = `${rightNo}. Nama     : ${rightNm}`;
-        const r2 = `   TTL      : ${rightTtl}`;
-        const r3 = `   Pekerjaan: ${rightPekr}`;
-        const r4 = `   Alamat   : ${rightAlmt}`;
+        const r1 = `${rightNo}. Nama`.padEnd(13, ' ') + `: ${rightNm}`;
+        const r2 = `   TTL`.padEnd(13, ' ') + `: ${rightTtl}`;
+        const r3 = `   Pekerjaan`.padEnd(13, ' ') + `: ${rightPekr}`;
+        const r4 = `   Alamat`.padEnd(13, ' ') + `: ${rightAlmt}`;
 
-        const colWidth = 44;
+        const colWidth = 50;
         blocks.push(
           l1.padEnd(colWidth, ' ') + r1 + '\n' +
           l2.padEnd(colWidth, ' ') + r2 + '\n' +
@@ -1491,15 +1491,15 @@ async function buildDocValues(record, extraValues) {
     return blocks.join('\n\n');
   };
 
-  // 4) Generasi TTD_AHLI_WARIS Teks Baku
+  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Single Newline agar SEMUA TTD muat dalam 1 halaman & tidak terlempar ke halaman 2)
   const buildTtdAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
       const n = idx + 1;
       const nm = String(item.nama || '').trim().toUpperCase();
       const leftCol = `${n}. ${nm}`;
-      return leftCol.padEnd(50, ' ') + `( .................... )`;
-    }).join('\n\n');
+      return leftCol.padEnd(42, ' ') + `( ............................ )`;
+    }).join('\n');
   };
 
   // 5) Generasi KIRI dan KANAN secara terpisah (Untuk Tabel 1 Baris 2 Kolom di Google Docs)
@@ -1515,7 +1515,12 @@ async function buildDocValues(record, extraValues) {
       const leftTtl = leftTmpt + (leftTgl ? ', ' + leftTgl : '');
       const leftPekr = left.pekerjaan || '-';
       const leftAlmt = left.alamat || '-';
-      blocks.push(`${leftNo}. Nama\t\t: ${leftNm}\n   TTL\t\t: ${leftTtl}\n   Pekerjaan\t: ${leftPekr}\n   Alamat\t\t: ${leftAlmt}`);
+      
+      const l1 = `${leftNo}. Nama`.padEnd(13, ' ') + `: ${leftNm}`;
+      const l2 = `   TTL`.padEnd(13, ' ') + `: ${leftTtl}`;
+      const l3 = `   Pekerjaan`.padEnd(13, ' ') + `: ${leftPekr}`;
+      const l4 = `   Alamat`.padEnd(13, ' ') + `: ${leftAlmt}`;
+      blocks.push(l1 + '\n' + l2 + '\n' + l3 + '\n' + l4);
     }
     return blocks.join('\n\n');
   };
@@ -1532,7 +1537,12 @@ async function buildDocValues(record, extraValues) {
       const rightTtl = rightTmpt + (rightTgl ? ', ' + rightTgl : '');
       const rightPekr = right.pekerjaan || '-';
       const rightAlmt = right.alamat || '-';
-      blocks.push(`${rightNo}. Nama\t\t: ${rightNm}\n   TTL\t\t: ${rightTtl}\n   Pekerjaan\t: ${rightPekr}\n   Alamat\t\t: ${rightAlmt}`);
+
+      const r1 = `${rightNo}. Nama`.padEnd(13, ' ') + `: ${rightNm}`;
+      const r2 = `   TTL`.padEnd(13, ' ') + `: ${rightTtl}`;
+      const r3 = `   Pekerjaan`.padEnd(13, ' ') + `: ${rightPekr}`;
+      const r4 = `   Alamat`.padEnd(13, ' ') + `: ${rightAlmt}`;
+      blocks.push(r1 + '\n' + r2 + '\n' + r3 + '\n' + r4);
     }
     return blocks.join('\n\n');
   };
@@ -1543,9 +1553,10 @@ async function buildDocValues(record, extraValues) {
     for (let i = 0; i < list.length; i += 2) {
       const leftNo = i + 1;
       const leftNm = String(list[i].nama || '').trim().toUpperCase();
-      blocks.push(`${leftNo}. ${leftNm}\n( ............................ )`);
+      const leftCol = `${leftNo}. ${leftNm}`;
+      blocks.push(leftCol.padEnd(30, ' ') + `( ............................ )`);
     }
-    return blocks.join('\n\n');
+    return blocks.join('\n');
   };
 
   const buildTtdAhliWarisKanan = (list) => {
@@ -1554,9 +1565,10 @@ async function buildDocValues(record, extraValues) {
     for (let i = 1; i < list.length; i += 2) {
       const rightNo = i + 1;
       const rightNm = String(list[i].nama || '').trim().toUpperCase();
-      blocks.push(`${rightNo}. ${rightNm}\n( ............................ )`);
+      const rightCol = `${rightNo}. ${rightNm}`;
+      blocks.push(rightCol.padEnd(30, ' ') + `( ............................ )`);
     }
-    return blocks.join('\n\n');
+    return blocks.join('\n');
   };
 
   const tabelAhliWarisHtml = buildTabelAhliWarisHtml(ahliWarisList);
@@ -2134,79 +2146,6 @@ function extractAllPlaceholders(doc) {
   return found;
 }
 
-// Hapus baris tabel yang berisi placeholder anak yang tidak terpakai
-async function deleteEmptyAhliWarisRows(docId, doc, maxAnak) {
-  const requests = [];
-  const rowsToDelete = [];
-  const max = parseInt(maxAnak, 10) || 0;
-
-  const walk = (el) => {
-    if (!el || typeof el !== 'object') return;
-    if (el.table) {
-      const tableStart = el.startIndex;
-      (el.table.tableRows || []).forEach((row, rIndex) => {
-        let hasUnusedAnak = false;
-        let hasUsedAnak = false;
-        
-        (row.tableCells || []).forEach((cell) => {
-           let cellText = '';
-           const walkCell = (celEl) => {
-             if (celEl.paragraph) {
-               celEl.paragraph.elements.forEach(e => {
-                 if (e.textRun) cellText += String(e.textRun.content);
-               });
-             }
-             if (celEl.table) { /* ignore */ }
-           };
-           (cell.content || []).forEach(walkCell);
-           
-           // Match {{ANAK_X_...}} or {{AHLIWARIS_X_...}} or {{TTD_X_...}}
-           const re = /\{\{\s*(?:ANAK|AHLIWARIS)_(\d+)_/gi;
-           let m;
-           while ((m = re.exec(cellText)) !== null) {
-             const anakNum = parseInt(m[1], 10);
-             if (anakNum > max) hasUnusedAnak = true;
-             else hasUsedAnak = true;
-           }
-        });
-        
-        // Hapus jika ada placeholder anak tak terpakai dan TIDAK ADA anak terpakai di baris yang sama.
-        if (hasUnusedAnak && !hasUsedAnak) {
-           rowsToDelete.push({ tableStart, rowIndex: rIndex });
-        }
-      });
-    }
-    if (Array.isArray(el)) el.forEach(walk);
-  };
-
-  (doc.body && doc.body.content || []).forEach(walk);
-
-  rowsToDelete.sort((a, b) => {
-    if (a.tableStart !== b.tableStart) return b.tableStart - a.tableStart;
-    return b.rowIndex - a.rowIndex; // bottom to top
-  });
-
-  rowsToDelete.forEach(r => {
-    requests.push({
-      deleteTableRow: {
-        tableCellLocation: {
-          tableStartLocation: { index: r.tableStart },
-          rowIndex: r.rowIndex
-        }
-      }
-    });
-  });
-
-  if (requests.length > 0) {
-    const token = await googleAccessToken();
-    await fetch('https://docs.googleapis.com/v1/documents/' + encodeURIComponent(docId) + ':batchUpdate', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requests })
-    });
-  }
-}
-
 // POST /api/docs/generate -> salin dokumen Google asli + isi placeholder LANGSUNG
 // di dalam dokumen Google (bukan HTML). Format/layout asli terjaga, hasilnya
 // berupa dokumen Google Docs yang bisa dibuka & dicetak langsung dari Google.
@@ -2261,11 +2200,6 @@ app.post('/api/docs/generate', requireAuth, async (req, res) => {
     // 1) Salin dokumen asli -> file baru di Drive (placeholder masih utuh).
     const newName = ((doc.title || 'Surat') + ' - ' + idReg).slice(0, 150);
     const newId = await copyDriveDoc(docId, newName);
-
-    // [FITUR BARU] Hapus baris tabel kosong yang berlebih (jika jumlah anak dinamis)
-    if (requestedJenis === 'AHLIWARIS' || (record && String(record.layanan || '').toUpperCase() === 'AHLIWARIS') || (doc.title || '').toUpperCase().includes('WARIS')) {
-      await deleteEmptyAhliWarisRows(newId, doc, values['jumlah_anak'] || 0);
-    }
 
     // 2) Kumpulkan daftar placeholder (dari dokumen asli, termasuk tabel, header, footer).
     const placeholders = extractAllPlaceholders(doc);
