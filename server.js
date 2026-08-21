@@ -1463,16 +1463,14 @@ async function buildDocValues(record, extraValues) {
     }).join('\n');
   };
 
-  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Perlebar Geser Kanan & Ruang Tinggi Khusus Tanda Tangan Fisik)
+  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Tab Stop Geser Kanan Penuh & Ruang Tinggi Tanda Tangan)
   const buildTtdAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
       const n = idx + 1;
       const nm = String(item.nama || '').trim().toUpperCase();
-      const leftCol = `${n}. ${nm}`;
-      const line = leftCol.padEnd(58, ' ') + `( ............................ )`;
-      return line + '\n\n\n';
-    }).join('\n').trim();
+      return `${n}. ${nm}\t\t\t\t\t\t\t( ............................ )`;
+    }).join('\n\n\n').trim();
   };
 
   // 5) Generasi KIRI dan KANAN secara terpisah (Untuk Tabel 1 Baris 2 Kolom di Google Docs)
@@ -1495,7 +1493,7 @@ async function buildDocValues(record, extraValues) {
       const l4 = `   Alamat`.padEnd(13, ' ') + `: ${leftAlmt}`;
       blocks.push(l1 + '\n' + l2 + '\n' + l3 + '\n' + l4);
     }
-    return blocks.join('\n\n');
+    return blocks.join('\n');
   };
 
   const buildTabelAhliWarisKanan = (list) => {
@@ -1517,7 +1515,7 @@ async function buildDocValues(record, extraValues) {
       const r4 = `   Alamat`.padEnd(13, ' ') + `: ${rightAlmt}`;
       blocks.push(r1 + '\n' + r2 + '\n' + r3 + '\n' + r4);
     }
-    return blocks.join('\n\n');
+    return blocks.join('\n');
   };
 
   const buildTtdAhliWarisKiri = (list) => {
@@ -1526,10 +1524,9 @@ async function buildDocValues(record, extraValues) {
     for (let i = 0; i < list.length; i += 2) {
       const leftNo = i + 1;
       const leftNm = String(list[i].nama || '').trim().toUpperCase();
-      const leftCol = `${leftNo}. ${leftNm}`;
-      blocks.push(leftCol.padEnd(30, ' ') + `( ............................ )`);
+      blocks.push(`${leftNo}. ${leftNm}\t\t( .................... )`);
     }
-    return blocks.join('\n');
+    return blocks.join('\n\n\n');
   };
 
   const buildTtdAhliWarisKanan = (list) => {
@@ -1538,10 +1535,9 @@ async function buildDocValues(record, extraValues) {
     for (let i = 1; i < list.length; i += 2) {
       const rightNo = i + 1;
       const rightNm = String(list[i].nama || '').trim().toUpperCase();
-      const rightCol = `${rightNo}. ${rightNm}`;
-      blocks.push(rightCol.padEnd(30, ' ') + `( ............................ )`);
+      blocks.push(`${rightNo}. ${rightNm}\t\t( .................... )`);
     }
-    return blocks.join('\n');
+    return blocks.join('\n\n\n');
   };
 
   const tabelAhliWarisHtml = buildTabelAhliWarisHtml(ahliWarisList);
