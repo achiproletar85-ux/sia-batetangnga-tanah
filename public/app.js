@@ -587,6 +587,37 @@
     }
   }
 
+  async function docsQuickSaveLink(jenisId) {
+    const input = $(`inputMasterLink_${jenisId}`);
+    const link = String(input ? input.value : '').trim();
+
+    if (!link) {
+      alert('⚠️ Silakan tempelkan link Google Docs terlebih dahulu.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/docs/template', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link, jenis: jenisId })
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Gagal menyimpan link template.');
+
+      docsMasterLinksMap[jenisId] = link;
+      docsRenderMasterTable();
+      docsRenderDropdownSelector();
+      if (docsState.jenis === jenisId) {
+        docsLoadTemplate(jenisId);
+      }
+      alert(`✅ Link Template Surat (${jenisId}) berhasil disimpan ke Supabase!`);
+    } catch (err) {
+      alert('❌ Gagal menyimpan link: ' + err.message);
+    }
+  }
+  window.docsQuickSaveLink = docsQuickSaveLink;
+
   function docsRenderMasterTable() {
     const tbody = $('masterLinkTableBody');
     if (!tbody) return;
@@ -601,25 +632,30 @@
       const docId = docsExtractDocId(link);
       const hasLink = Boolean(link && docId);
       const statusBadge = hasLink
-        ? `<span class="docs-field-chip ok" style="font-size:11px;">✅ Terpasang</span>`
-        : `<span class="docs-field-chip bad" style="font-size:11px; background:#fffbeb; color:#d97706; border-color:#fef3c7;">⚠️ Belum Diset</span>`;
-
-      const displayLink = hasLink
-        ? `<a href="https://docs.google.com/document/d/${encodeURIComponent(docId)}/edit" target="_blank" rel="noopener" style="color:#0284c7; font-weight:600; text-decoration:none;">📄 ID: ${esc(docId.slice(0, 16))}…</a>`
-        : `<em style="color:#94a3b8; font-size:12px;">(Belum ada link template)</em>`;
+        ? `<span class="docs-field-chip ok" style="font-size:11.5px; padding:4px 8px;">✅ Terpasang</span>`
+        : `<span class="docs-field-chip bad" style="font-size:11.5px; background:#fffbeb; color:#d97706; border-color:#fef3c7; padding:4px 8px;">⚠️ Belum Diset</span>`;
 
       return `
         <tr style="border-bottom:1px solid #f1f5f9;">
-          <td style="padding:12px 16px; font-weight:700; color:#1e293b;">
-            ${esc(item.icon || '📄')} ${esc(item.nama)}
-            <br/><small style="color:#64748b; font-weight:400;">KEY: ${esc(item.id)}</small>
+          <td style="padding:10px 16px; font-weight:700; color:#1e293b; white-space:nowrap; vertical-align:middle;">
+            <div style="font-size:13.5px;">${esc(item.icon || '📄')} ${esc(item.nama)}</div>
+            <small style="color:#64748b; font-weight:600; font-size:10.5px;">KEY: ${esc(item.id)}</small>
           </td>
-          <td style="padding:12px 16px;">${displayLink}</td>
-          <td style="padding:12px 16px; text-align:center;">${statusBadge}</td>
-          <td style="padding:12px 16px; text-align:center;">
+          <td style="padding:8px 16px; vertical-align:middle;">
+            <div style="display:flex; gap:6px; align-items:center;">
+              <input type="text" id="inputMasterLink_${esc(item.id)}" class="docs-select-input" value="${esc(link)}" placeholder="Tempel link https://docs.google.com/document/d/... di sini" style="font-size:12px; padding:6px 10px; width:100%; border-radius:6px;" />
+              <button type="button" class="btn primary" onclick="docsQuickSaveLink('${esc(item.id)}')" style="padding:6px 12px; font-size:12px; white-space:nowrap; font-weight:700;">
+                💾 Simpan
+              </button>
+            </div>
+          </td>
+          <td style="padding:10px 16px; text-align:center; vertical-align:middle; white-space:nowrap;">
+            ${statusBadge}
+          </td>
+          <td style="padding:10px 16px; text-align:center; vertical-align:middle; white-space:nowrap;">
             <div style="display:flex; gap:6px; justify-content:center;">
-              <button type="button" class="btn-xs-secondary" data-edit-link-jenis="${esc(item.id)}" title="Edit link template">✏️ Edit Link</button>
-              ${hasLink ? `<button type="button" class="btn-xs-secondary" data-del-link-jenis="${esc(item.id)}" style="color:#dc2626; border-color:#fecaca;" title="Hapus link template">🗑️ Hapus</button>` : ''}
+              ${hasLink ? `<a href="https://docs.google.com/document/d/${encodeURIComponent(docId)}/edit" target="_blank" rel="noopener" class="btn btn-action-secondary" style="padding:4px 8px; font-size:11.5px; text-decoration:none;" title="Buka di Google Docs">🔗 Buka</a>` : ''}
+              ${hasLink ? `<button type="button" class="btn btn-action-secondary" data-del-link-jenis="${esc(item.id)}" style="padding:4px 8px; font-size:11.5px; color:#dc2626; border-color:#fecaca;" title="Hapus link template">🗑️ Hapus</button>` : ''}
             </div>
           </td>
         </tr>
