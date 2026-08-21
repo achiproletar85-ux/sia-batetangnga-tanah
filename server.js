@@ -1976,6 +1976,26 @@ app.delete('/api/docs/jenis/:id', requireAuth, requireRole('bendahara'), async (
   }
 });
 
+// GET /api/docs/debug-values -> Diagnostik isi values untuk registrasi tertentu.
+app.get('/api/docs/debug-values', async (req, res) => {
+  try {
+    const idReg = String(req.query.idReg || '').trim();
+    const { data: record, error } = await supabase.from(TABLE_DB).select('*').eq('id', idReg).single();
+    if (error || !record) return res.status(404).json({ error: 'Record not found' });
+    const values = await buildDocValues(record, undefined);
+    res.json({
+      success: true,
+      idReg,
+      tabelaw_length: (values['tabelaw'] || '').length,
+      tabelaw_preview: values['tabelaw'],
+      ttdaw_preview: values['ttdaw'],
+      all_keys: Object.keys(values)
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // DELETE /api/docs/template -> hapus link template jenis surat
 app.delete('/api/docs/template', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
