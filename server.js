@@ -1347,27 +1347,66 @@ function fillPlaceholders(text, values) {
 }
 
 // Ubah struktur Google Docs (paragraph + tabel) menjadi HTML sederhana.
+function paragraphToHtmlObj(p, values) {
+  if (!p || !p.elements) return { html: '', filled: [], missing: [] };
+  
+  const alignMap = { CENTER: 'center', JUSTIFY: 'justify', RIGHT: 'right', LEFT: 'left' };
+  const align = (p.paragraphStyle && p.paragraphStyle.alignment) ? alignMap[p.paragraphStyle.alignment] || 'left' : 'left';
+  const styleAttr = ` style="text-align:${align}; margin:4px 0; line-height:1.55;"`;
+
+  let inner = '';
+  const allFilled = [];
+  const allMissing = [];
+
+  for (const elem of p.elements) {
+    if (elem.textRun && elem.textRun.content) {
+      const raw = elem.textRun.content;
+      const { text, filled, missing } = fillPlaceholders(raw, values);
+      allFilled.push(...filled);
+      allMissing.push(...missing);
+
+      let formatted = escHtml(text).replace(/\n/g, '<br/>');
+      const ts = elem.textRun.textStyle || {};
+      if (ts.bold) formatted = `<strong>${formatted}</strong>`;
+      if (ts.underline) formatted = `<u>${formatted}</u>`;
+      if (ts.italic) formatted = `<em>${formatted}</em>`;
+      inner += formatted;
+    }
+  }
+
+  if (!inner.trim() || inner === '<br/>') {
+    return { html: `<p${styleAttr}>&nbsp;</p>`, filled: allFilled, missing: allMissing };
+  }
+
+  return { html: `<p${styleAttr}>${inner}</p>`, filled: allFilled, missing: allMissing };
+}
+
 function docToHtml(doc, values) {
   const parts = [];
   const content = doc.body && doc.body.content ? doc.body.content : [];
   for (const el of content) {
     if (el.paragraph) {
-      const raw = paragraphText(el.paragraph);
-      const { text, filled, missing } = fillPlaceholders(raw, values);
-      parts.push({ filled, missing, html: '<p>' + escHtml(text).replace(/\n/g, '<br/>') + '</p>' });
+      const res = paragraphToHtmlObj(el.paragraph, values);
+      parts.push(res);
     } else if (el.table) {
       const rows = el.table.tableRows || [];
-      let tbl = '<table class="doc-table">';
+      let tbl = '<table class="doc-layout-table" style="width:100%; border-collapse:collapse; margin:8px 0; border:none;">';
       const tblFilled = [];
       const tblMissing = [];
-      rows.forEach((r, ri) => {
+
+      rows.forEach((r) => {
         tbl += '<tr>';
         (r.tableCells || []).forEach((c) => {
-          const cellText = (c.content || []).map((x) => x.paragraph ? paragraphText(x.paragraph) : '').join('');
-          const { text, filled, missing } = fillPlaceholders(cellText, values);
-          tbl += (ri === 0 ? '<th>' : '<td>') + escHtml(text).replace(/\n/g, '<br/>') + (ri === 0 ? '</th>' : '</td>');
-          tblFilled.push(...filled);
-          tblMissing.push(...missing);
+          let cellHtml = '';
+          (c.content || []).forEach((x) => {
+            if (x.paragraph) {
+              const res = paragraphToHtmlObj(x.paragraph, values);
+              cellHtml += res.html;
+              tblFilled.push(...res.filled);
+              tblMissing.push(...res.missing);
+            }
+          });
+          tbl += `<td style="padding:3px 6px; vertical-align:top; border:none;">${cellHtml || '&nbsp;'}</td>`;
         });
         tbl += '</tr>';
       });

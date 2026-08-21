@@ -3457,12 +3457,59 @@ canvas, #chartDusun, #chartLayanan {
 
 .docs-paper-sheet {
   background: #ffffff;
+  width: 210mm;
   max-width: 210mm;
   min-height: 297mm;
   margin: 0 auto;
   padding: 24mm 20mm;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
   box-sizing: border-box;
+  color: #000000;
+  font-family: "Times New Roman", Times, Georgia, serif;
+  font-size: 12pt;
+  line-height: 1.55;
+  text-align: justify;
+}
+
+.docs-paper-sheet p {
+  margin: 4px 0;
+  color: #000000;
+}
+
+.docs-paper-sheet strong {
+  font-weight: 700;
+}
+
+.docs-paper-sheet u {
+  text-decoration: underline;
+}
+
+.docs-paper-sheet em {
+  font-style: italic;
+}
+
+.docs-paper-sheet table.doc-layout-table,
+.docs-paper-sheet table.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6px 0;
+  font-size: 11pt;
+  border: none !important;
+}
+
+.docs-paper-sheet table.doc-layout-table td,
+.docs-paper-sheet table.doc-layout-table th,
+.docs-paper-sheet table.doc-table td,
+.docs-paper-sheet table.doc-table th {
+  border: none !important;
+  padding: 3px 6px;
+  vertical-align: top;
+  line-height: 1.45;
+}
+
+.docs-paper-sheet table.doc-layout-table p,
+.docs-paper-sheet table.doc-table p {
+  margin: 2px 0;
 }
 
 .docs-history-table {
