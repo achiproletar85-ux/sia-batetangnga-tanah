@@ -1424,10 +1424,10 @@
       {
         cat: '🤝 Pihak Pertama (Penjual / Yang Melakukan Pengoperan)',
         items: [
-          { key: 'nama_pihak_pertama', label: 'Nama Penjual (Pihak 1)', val: dr.penjual_nama || dr.pemberi_nama || (match ? match.nama : '') || '' },
-          { key: 'umur_pihak_pertama', label: 'Umur Penjual (Tahun)', val: dr.penjual_umur || dr.pemberi_umur || ageFrom(dr.penjual_tanggal_lahir || dr.tanggal_lahir) || '' },
-          { key: 'pekerjaan_pihak_pertama', label: 'Pekerjaan Penjual', val: dr.penjual_pekerjaan || dr.pekerjaan || dr.pemberi_pekerjaan || '' },
-          { key: 'alamat_pihak_pertama', label: 'Alamat Penjual', val: dr.penjual_alamat || dr.alamat || dr.pemberi_alamat || '' }
+          { key: 'nama_pihak_pertama', label: 'Nama Penjual (Pihak 1)', val: dr.penjual_nama || dr.pemberi_nama || dr.pihak1_nama || '' },
+          { key: 'umur_pihak_pertama', label: 'Umur Penjual (Tahun)', val: dr.penjual_umur || dr.pemberi_umur || ageFrom(dr.penjual_tanggal_lahir) || '' },
+          { key: 'pekerjaan_pihak_pertama', label: 'Pekerjaan Penjual (Pihak 1)', val: dr.penjual_pekerjaan || dr.pemberi_pekerjaan || '' },
+          { key: 'alamat_pihak_pertama', label: 'Alamat Penjual (Pihak 1)', val: dr.penjual_alamat || dr.pemberi_alamat || '' }
         ]
       },
       {
