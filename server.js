@@ -1463,7 +1463,7 @@ async function buildDocValues(record, extraValues) {
     }).join('\n');
   };
 
-  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Perlebar Geser Kanan Maksimal & Presisi Lurus 100% Font Proporsional)
+  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Pergeseran Kanan Maksimal & Presisi Piksel Lurus 100% Font Arial/Times)
   const buildTtdAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
@@ -1471,17 +1471,12 @@ async function buildDocValues(record, extraValues) {
       const nm = String(item.nama || '').trim().toUpperCase();
       const leftCol = `${n}. ${nm}`;
       
-      // Kompensasi lebar huruf font proporsional Google Docs (Arial / Times New Roman)
-      let visualWidth = 0;
-      for (const ch of leftCol) {
-        if (ch === ' ' || ch === '.' || ch === 'I' || ch === '1' || ch === 'l') visualWidth += 0.45;
-        else if (ch === 'M' || ch === 'W') visualWidth += 1.25;
-        else visualWidth += 0.95;
-      }
-      
-      const targetWidth = 22;
-      const spaceCount = Math.max(25, Math.round((targetWidth - visualWidth) * 2.2) + 54);
+      // Kompensasi rasio lebar huruf kapital vs karakter spasi pada font dokumen (~2.5 spasi per huruf)
+      const baseSpaces = 86; // Geser maksimal mendekati margin kanan
+      const charDiff = Math.max(0, nm.length - 5);
+      const spaceCount = Math.max(20, baseSpaces - Math.round(charDiff * 2.5));
       const spaces = ' '.repeat(spaceCount);
+      
       return `${leftCol}${spaces}( ............................ )`;
     }).join('\n\n\n').trim();
   };
