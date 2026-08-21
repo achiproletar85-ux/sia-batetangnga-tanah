@@ -345,6 +345,10 @@
     const extracted = docsExtractDocId(inp);
     if (extracted) return extracted;
     if (inp) return inp;
+    const masterLink = docsMasterLinksMap && docsMasterLinksMap[docsState.jenis || 'SPORADIK'];
+    const masterExtracted = docsExtractDocId(masterLink);
+    if (masterExtracted) return masterExtracted;
+    if (masterLink) return masterLink;
     if (docsState.docId) return docsState.docId;
     if (docsState.lastRender && docsState.lastRender.docId) return docsState.lastRender.docId;
     const saved = $('docsLinkSavedVal') ? String($('docsLinkSavedVal').textContent || '').trim() : '';
@@ -416,6 +420,13 @@
     if ($('btnDocsModePreview')) $('btnDocsModePreview').classList.toggle('active', mode === 'preview');
     if ($('btnDocsModeEdit')) $('btnDocsModeEdit').classList.toggle('active', mode === 'edit');
     docsUpdateLiveIframe();
+
+    if (mode === 'edit') {
+      const id = docsState.docId || docsExtractDocId(docsDocIdFromInput());
+      if (id) {
+        window.open(`https://docs.google.com/document/d/${encodeURIComponent(id)}/edit`, '_blank', 'noopener');
+      }
+    }
   }
 
   function docsToggleHeight() {
@@ -479,14 +490,30 @@
     docsRenderManageList();
   }
 
-  function docsRenderDropdownSelector() {
+  function docsRenderDropdownSelector(rec) {
     const dropdown = $('docsSelectJenisDropdown');
     if (!dropdown) return;
+    const recLayanan = rec ? String(rec.layanan || '').toUpperCase() : null;
+    const serviceTypes = ['HIBAH', 'JUALBELI', 'AHLIWARIS'];
+
+    if (recLayanan && serviceTypes.includes(recLayanan)) {
+      if (docsState.jenis !== 'SPORADIK' && docsState.jenis !== recLayanan && serviceTypes.includes(docsState.jenis)) {
+        docsState.jenis = recLayanan;
+        docsLoadTemplate(docsState.jenis);
+      }
+    }
+
     dropdown.innerHTML = docsJenisListState.map((item) => {
       const link = docsMasterLinksMap[item.id];
       const hasLink = Boolean(link);
+      const isServiceDoc = serviceTypes.includes(item.id);
+      const isMismatch = recLayanan && isServiceDoc && item.id !== recLayanan;
+
       const sel = item.id === docsState.jenis ? 'selected' : '';
-      return `<option value="${esc(item.id)}" ${sel}>${esc(item.icon || '📄')} ${esc(item.nama)} ${hasLink ? '✅' : '⚠️ (Belum Diset)'}</option>`;
+      const disabled = isMismatch ? 'disabled' : '';
+      const lockLabel = isMismatch ? ` 🔒 (Terkunci - Hanya untuk ${recLayanan})` : '';
+
+      return `<option value="${esc(item.id)}" ${sel} ${disabled}>${esc(item.icon || '📄')} ${esc(item.nama)}${lockLabel} ${hasLink ? '✅' : '⚠️ (Belum Diset)'}</option>`;
     }).join('');
 
     if (!docsState.jenis && docsJenisListState[0]) {
@@ -958,7 +985,7 @@
       const res = await fetch('/api/docs/render', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ link: input, idReg, extraValues: extraValues || {} })
+        body: JSON.stringify({ link: input, idReg, jenis: docsState.jenis || 'SPORADIK', extraValues: extraValues || {} })
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal merender surat.');
@@ -1001,14 +1028,18 @@
 <meta charset="utf-8">
 <title>${esc(docsState.lastRender.title || 'Surat')}</title>
 <style>
+  @page { size: A4 portrait; margin: 15mm 20mm; }
   * { box-sizing: border-box; }
-  body { font-family: Georgia, 'Times New Roman', Times, serif; margin: 0; padding: 24px; color: #000; font-size: 12pt; line-height: 1.55; }
+  body { font-family: "Times New Roman", Times, Georgia, serif; margin: 0; padding: 24px; color: #000; font-size: 12pt; line-height: 1.55; background: #fff; }
   .docs-body { max-width: 210mm; margin: 0 auto; }
   .docs-body p { margin: 8px 0; text-align: justify; }
   table.doc-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11pt; }
   table.doc-table th, table.doc-table td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top; }
   table.doc-table th { background: #eee; }
-  @media print { body { padding: 12px; } }
+  @media print {
+    body { padding: 0; margin: 0; }
+    .docs-body { max-width: 100%; margin: 0; }
+  }
 </style>
 </head>
 <body>
@@ -1032,7 +1063,7 @@
       const res = await fetch('/api/docs/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ link: input, idReg, extraValues: docsCollectManual() })
+        body: JSON.stringify({ link: input, idReg, jenis: docsState.jenis || 'SPORADIK', extraValues: docsCollectManual() })
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal membuat dokumen.');
@@ -1230,14 +1261,18 @@
 <meta charset="utf-8">
 <title>${esc(rec.judul || 'Surat')}</title>
 <style>
+  @page { size: A4 portrait; margin: 15mm 20mm; }
   * { box-sizing: border-box; }
-  body { font-family: Georgia, 'Times New Roman', Times, serif; margin: 0; padding: 24px; color: #000; font-size: 12pt; line-height: 1.55; }
+  body { font-family: "Times New Roman", Times, Georgia, serif; margin: 0; padding: 24px; color: #000; font-size: 12pt; line-height: 1.55; background: #fff; }
   .docs-body { max-width: 210mm; margin: 0 auto; }
   .docs-body p { margin: 8px 0; text-align: justify; }
   table.doc-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11pt; }
   table.doc-table th, table.doc-table td { border: 1px solid #000; padding: 4px 6px; text-align: left; vertical-align: top; }
   table.doc-table th { background: #eee; }
-  @media print { body { padding: 12px; } }
+  @media print {
+    body { padding: 0; margin: 0; }
+    .docs-body { max-width: 100%; margin: 0; }
+  }
 </style>
 </head>
 <body>
@@ -1250,6 +1285,7 @@
   }
 
   function initDocsTab() {
+    if ($('btnDocsSaveLink')) $('btnDocsSaveLink').addEventListener('click', docsSaveLink);
     if ($('btnDocsDetect')) $('btnDocsDetect').addEventListener('click', docsDetect);
     if ($('btnDocsStatus')) $('btnDocsStatus').addEventListener('click', docsStatus);
     if ($('btnDocsStatusClose')) $('btnDocsStatusClose').addEventListener('click', () => { $('docsStatusPanel').style.display = 'none'; });
@@ -1315,7 +1351,66 @@
       });
     }
 
+  function docsRenderSpecific(targetJenis) {
+    if (targetJenis) {
+      docsState.jenis = targetJenis;
+      docsLoadTemplate(targetJenis);
+    }
+    docsRender();
+  }
+  window.docsRenderSpecific = docsRenderSpecific;
+
+  function docsOnRegIdChange() {
+    const val = String($('docsIdReg') ? $('docsIdReg').value : '').trim();
+    if (!val) {
+      docsRenderDropdownSelector(null);
+      if ($('docsJenisActiveInfo')) {
+        $('docsJenisActiveInfo').innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+            <span style="font-size:12px; font-weight:700; color:#334155;">Status Template:</span>
+            <span id="docsActiveJenisStatusBadge" class="docs-summary-badge">Memuat...</span>
+          </div>`;
+      }
+      return;
+    }
+
+    const match = (allData || []).find(x => String(x.id).toUpperCase() === val.toUpperCase() || String(x.nama || '').toLowerCase().includes(val.toLowerCase()));
+    if (match) {
+      const lay = String(match.layanan || '').toUpperCase();
+      if (['HIBAH', 'JUALBELI', 'AHLIWARIS'].includes(lay)) {
+        docsState.jenis = lay;
+        docsLoadTemplate(lay);
+      }
+      docsRenderDropdownSelector(match);
+      if ($('docsJenisActiveInfo')) {
+        $('docsJenisActiveInfo').innerHTML = `
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:12px; border-radius:10px; font-size:13px; color:#166534; margin-bottom:10px;">
+            <div style="font-weight:800; font-size:14px; color:#0f172a; margin-bottom:4px;">📌 ${esc(match.nama)} <small style="color:#64748b; font-weight:400;">(${esc(match.id)})</small></div>
+            <div style="margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+              <span>Layanan Terdaftar:</span>
+              <span class="tag ${esc(lay)}" style="font-weight:800; font-size:12px;">Surat ${esc(lay)}</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+              <button type="button" class="btn primary" onclick="docsRenderSpecific('${esc(lay)}')" style="justify-content:center; padding:8px 12px; font-size:13px; font-weight:700; width:100%;">
+                ✨ Render Surat ${esc(lay)} Otomatis
+              </button>
+              <button type="button" class="btn btn-action-secondary" onclick="docsRenderSpecific('SPORADIK')" style="justify-content:center; padding:6px 12px; font-size:12.5px; font-weight:700; width:100%;">
+                📜 Render Surat SPORADIK (Wajib)
+              </button>
+              <button type="button" class="btn btn-action-secondary" onclick="openEdit('${esc(match.id)}')" style="justify-content:center; padding:6px 12px; font-size:12px; font-weight:700; width:100%; color:#0284c7; border-color:#bae6fd;">
+                ✏️ Edit Data Pemohon (${esc(match.id)})
+              </button>
+            </div>
+          </div>`;
+      }
+    } else {
+      docsRenderDropdownSelector(null);
+    }
+  }
+
     if ($('docsIdReg')) {
+      $('docsIdReg').addEventListener('input', docsOnRegIdChange);
+      $('docsIdReg').addEventListener('change', docsOnRegIdChange);
       $('docsIdReg').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); docsRender(); } });
     }
 
@@ -2180,14 +2275,13 @@
   }
 
   // ===== CETAK KWITANSI PEMBAYARAN RESMI =====
-  function cetakKwitansi(trxId) {
+  async function cetakKwitansi(trxId) {
     if (!keuState || !keuState.length) {
-      alert('Belum ada data transaksi untuk dicetak kwitansi.');
-      return;
+      await fetchKeuanganTransaksi();
     }
 
-    let t = keuState.find(x => String(x.id) === String(trxId));
-    if (!t && keuState.length > 0) {
+    let t = (keuState || []).find(x => String(x.id) === String(trxId));
+    if (!t && keuState && keuState.length > 0 && !trxId) {
       t = keuState[0];
     }
 
@@ -2745,16 +2839,22 @@
     }
   }
 
-  // Sisipkan token Bearer ke setiap panggilan /api/* secara otomatis.
+  // Sisipkan token Bearer ke setiap panggilan /api/* secara otomatis & tangani sesi expired (401).
   {
     const _fetch = window.fetch;
-    window.fetch = function (url, opts) {
+    window.fetch = async function (url, opts) {
       opts = opts || {};
       const sess = getSession();
-      if (sess && sess.token && typeof url === 'string' && url.indexOf('/api/') === 0) {
+      const urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : '');
+      const isApi = urlStr.includes('/api/');
+      if (sess && sess.token && isApi) {
         opts.headers = Object.assign({}, opts.headers || {}, { Authorization: 'Bearer ' + sess.token });
       }
-      return _fetch(url, opts);
+      const res = await _fetch(url, opts);
+      if (res.status === 401 && isApi && !urlStr.includes('/api/login') && !urlStr.includes('/api/me')) {
+        if (typeof handleLogout === 'function') handleLogout();
+      }
+      return res;
     };
   }
 
@@ -2848,6 +2948,17 @@
   function handleLogout() {
     clearSession();
     try { fetch('/api/logout', { method: 'POST' }).catch(() => {}); } catch (_) {}
+    allData = [];
+    uploads = [];
+    keuState = [];
+    payStatus = {};
+    pemohonCache = [];
+    rowsCache = [];
+    docsMasterLinksMap = {};
+    ['sporadikBody', 'keuBody', 'uploadBody', 'masterLinkTableBody', 'docsHistoryBody', 'tableBody'].forEach((id) => {
+      const el = $(id);
+      if (el) el.innerHTML = '';
+    });
     setGuestUI();
     closeLogin();
   }
@@ -3823,6 +3934,7 @@ hideChangePwMsg();
     renderEditBody(r, raw);
     $('editModal').showModal();
   }
+  window.openEdit = openEdit;
 
   function parseRaw(data_raw) {
     try {
@@ -4247,8 +4359,6 @@ hideChangePwMsg();
   }
 
   function handleSimpan() {
-    const v = validateSuratBeforePrint(true);
-    if (!v.ok) { alert(v.msg); return; }
     saveSuratEdit();
   }
 

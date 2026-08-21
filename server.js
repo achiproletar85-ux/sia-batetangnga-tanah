@@ -336,7 +336,7 @@ app.post('/api/permohonan', requireAuth, requireRole('bendahara', 'user'), async
   }
 });
 
-app.patch('/api/permohonan/:id', async (req, res) => {
+app.patch('/api/permohonan/:id', requireAuth, requireRole('bendahara', 'user'), async (req, res) => {
   try {
     const { status_berkas, catatan_admin, layanan, data_raw } = req.body || {};
     const payload = { updated_at: new Date().toISOString() };
@@ -377,7 +377,7 @@ app.patch('/api/permohonan/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/permohonan/:id', async (req, res) => {
+app.delete('/api/permohonan/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
   try {
     const { data, error } = await supabase.from(TABLE_DB).delete().eq('id', req.params.id).select();
     if (error) throw error;
@@ -817,9 +817,10 @@ app.post('/api/keuangan/transaksi', requireAuth, requireRole('bendahara'), async
       return res.status(400).json({ success: false, error: 'Tanggal, jenis transaksi, and nominal are required.' });
     }
 
+    const cleanIdPerm = clean(id_permohonan);
     const { data, error } = await supabase
       .from(TABLE_TRX)
-      .insert([{ tanggal, jenis_transaksi, id_permohonan, nominal, keterangan, url_bukti, updated_at: new Date().toISOString() }])
+      .insert([{ tanggal, jenis_transaksi, id_permohonan: cleanIdPerm, nominal, keterangan, url_bukti, updated_at: new Date().toISOString() }])
       .select()
       .single();
     
@@ -1053,6 +1054,18 @@ function extractRegId(input) {
   if (m) return m[0].toUpperCase();
   if (/^\d+$/.test(s)) return 'REG-' + s;
   return s.toUpperCase();
+}
+
+async function findRecordByRegOrName(idRegRaw) {
+  const s = String(idRegRaw || '').trim();
+  if (!s) return null;
+  const idReg = extractRegId(s);
+  if (idReg) {
+    const { data } = await supabase.from(TABLE_DB).select('*').eq('id', idReg).maybeSingle();
+    if (data) return data;
+  }
+  const { data: byName } = await supabase.from(TABLE_DB).select('*').ilike('nama', `%${s}%`).limit(1).maybeSingle();
+  return byName || null;
 }
 
 async function fetchDocContent(docId) {
@@ -1522,15 +1535,33 @@ app.post('/api/docs/detect', requireAuth, async (req, res) => {
 // POST /api/docs/render -> isi placeholder dari data pendaftaran terpilih.
 app.post('/api/docs/render', requireAuth, async (req, res) => {
   try {
-    const docId = extractDocId(req.body && (req.body.link || req.body.docId || req.body.url));
+    let docId = extractDocId(req.body && (req.body.link || req.body.docId || req.body.url));
     const idRegRaw = String((req.body && req.body.idReg) || '').trim();
     const idReg = extractRegId(idRegRaw);
-    if (!docId) return res.status(400).json({ success: false, error: 'Link/ID Google Docs tidak valid.' });
-    if (!idReg) return res.status(400).json({ success: false, error: 'ID pendaftaran wajib diisi.' });
+    if (!idRegRaw) return res.status(400).json({ success: false, error: 'ID atau Nama pendaftaran wajib diisi.' });
 
-    const { data: record, error } = await supabase.from(TABLE_DB).select('*').eq('id', idReg).maybeSingle();
-    if (error) throw error;
-    if (!record) return res.status(404).json({ success: false, error: 'Pendaftaran tidak ditemukan: ' + idReg });
+    const record = await findRecordByRegOrName(idRegRaw);
+    if (!record) return res.status(404).json({ success: false, error: 'Pendaftaran tidak ditemukan untuk: ' + idRegRaw });
+
+    const recLayanan = String(record.layanan || '').toUpperCase();
+    const requestedJenis = String(req.body && (req.body.jenis || req.body.jenisSurat) || '').trim().toUpperCase() || recLayanan || 'SPORADIK';
+    const serviceTypes = ['HIBAH', 'JUALBELI', 'AHLIWARIS'];
+    if (requestedJenis && serviceTypes.includes(requestedJenis) && recLayanan && requestedJenis !== recLayanan) {
+      return res.status(400).json({
+        success: false,
+        error: `Layanan pendaftaran ${record.id} adalah ${recLayanan}. Hanya dokumen ${recLayanan} dan SPORADIK yang diperbolehkan untuk ID ini.`
+      });
+    }
+
+    if (!docId) {
+      const key = (requestedJenis && requestedJenis !== 'default') ? `${TEMPLATE_DOCS_KEY}_${requestedJenis}` : TEMPLATE_DOCS_KEY;
+      let link = await getPengaturan(key, '');
+      if (!link && key !== TEMPLATE_DOCS_KEY) {
+        link = await getPengaturan(TEMPLATE_DOCS_KEY, '');
+      }
+      if (link) docId = extractDocId(link);
+    }
+    if (!docId) return res.status(400).json({ success: false, error: 'Link/ID Google Docs untuk jenis "' + requestedJenis + '" belum tersimpan di Supabase. Silakan atur link template di Tabel Master terlebih dahulu.' });
 
     const doc = await fetchDocContent(docId);
     const values = await buildDocValues(record, req.body && req.body.extraValues);
@@ -1592,15 +1623,33 @@ function extractAllPlaceholders(doc) {
 // berupa dokumen Google Docs yang bisa dibuka & dicetak langsung dari Google.
 app.post('/api/docs/generate', requireAuth, async (req, res) => {
   try {
-    const docId = extractDocId(req.body && (req.body.link || req.body.docId || req.body.url));
+    let docId = extractDocId(req.body && (req.body.link || req.body.docId || req.body.url));
     const idRegRaw = String((req.body && req.body.idReg) || '').trim();
     const idReg = extractRegId(idRegRaw);
-    if (!docId) return res.status(400).json({ success: false, error: 'Link/ID Google Docs tidak valid.' });
-    if (!idReg) return res.status(400).json({ success: false, error: 'ID pendaftaran wajib diisi.' });
+    if (!idRegRaw) return res.status(400).json({ success: false, error: 'ID atau Nama pendaftaran wajib diisi.' });
 
-    const { data: record, error } = await supabase.from(TABLE_DB).select('*').eq('id', idReg).maybeSingle();
-    if (error) throw error;
-    if (!record) return res.status(404).json({ success: false, error: 'Pendaftaran tidak ditemukan: ' + idReg });
+    const record = await findRecordByRegOrName(idRegRaw);
+    if (!record) return res.status(404).json({ success: false, error: 'Pendaftaran tidak ditemukan untuk: ' + idRegRaw });
+
+    const requestedJenis = String(req.body && (req.body.jenis || req.body.jenisSurat) || '').trim().toUpperCase();
+    const serviceTypes = ['HIBAH', 'JUALBELI', 'AHLIWARIS'];
+    const recLayanan = String(record.layanan || '').toUpperCase();
+    if (requestedJenis && serviceTypes.includes(requestedJenis) && recLayanan && requestedJenis !== recLayanan) {
+      return res.status(400).json({
+        success: false,
+        error: `Layanan pendaftaran ${record.id} adalah ${recLayanan}. Hanya dokumen ${recLayanan} dan SPORADIK yang diperbolehkan untuk ID ini.`
+      });
+    }
+
+    if (!docId) {
+      const key = (requestedJenis && requestedJenis !== 'default') ? `${TEMPLATE_DOCS_KEY}_${requestedJenis}` : TEMPLATE_DOCS_KEY;
+      let link = await getPengaturan(key, '');
+      if (!link && key !== TEMPLATE_DOCS_KEY) {
+        link = await getPengaturan(TEMPLATE_DOCS_KEY, '');
+      }
+      if (link) docId = extractDocId(link);
+    }
+    if (!docId) return res.status(400).json({ success: false, error: 'Link/ID Google Docs untuk jenis "' + requestedJenis + '" belum tersimpan di Supabase. Silakan atur link template di Tabel Master terlebih dahulu.' });
 
     const doc = await fetchDocContent(docId);
     const values = await buildDocValues(record, req.body && req.body.extraValues);
@@ -1710,7 +1759,7 @@ app.delete('/api/docs/history/:id', requireAuth, requireRole('bendahara'), async
 // ---------- Upload KK/KTP/dokumen per pendaftaran ----------
 // Terima file dari form Edit pendaftaran -> upload ke Google Drive -> simpan
 // LINK-nya di permohonan_uploads (konsisten: file biner tidak di database).
-app.post('/api/permohonan/:id/upload', async (req, res) => {
+app.post('/api/permohonan/:id/upload', requireAuth, requireRole('bendahara', 'user'), async (req, res) => {
   try {
     const idReg = String(req.params.id || '').trim();
     const { jenis_upload, fileName, fileData } = req.body;
@@ -1764,9 +1813,10 @@ app.patch('/api/keuangan/transaksi/:id', requireAuth, requireRole('bendahara'), 
         const { id } = req.params;
         const { tanggal, jenis_transaksi, id_permohonan, nominal, keterangan, url_bukti } = req.body;
 
+        const cleanIdPerm = clean(id_permohonan);
         const { data, error } = await supabase
             .from(TABLE_TRX)
-            .update({ tanggal, jenis_transaksi, id_permohonan, nominal, keterangan, url_bukti, updated_at: new Date().toISOString() })
+            .update({ tanggal, jenis_transaksi, id_permohonan: cleanIdPerm, nominal, keterangan, url_bukti, updated_at: new Date().toISOString() })
             .eq('id', id)
             .select()
             .single();
