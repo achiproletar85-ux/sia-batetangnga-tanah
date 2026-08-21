@@ -1374,7 +1374,75 @@ async function buildDocValues(record, extraValues) {
   const jumlahAnakVal = ahliWarisList.length || parseInt((extraValues && extraValues.jumlah_anak) || dr.jumlah_anak || dr.jumlah_ahli_waris || '0', 10) || 0;
   const jumlahAnakTerbilangVal = angkaKeTerbilang(jumlahAnakVal).replace(/Rupiah/gi, '').trim();
 
-  // 1) Generasi TABEL_AHLI_WARIS (2 Kolom Presisi 44 Spasi, Titik Dua 100% Lurus Tegak)
+  // 1) Generasi TABEL_AHLI_WARIS HTML (Tabel Transparan Tanpa Garis Border - 100% Rapi Saat Diprint)
+  const buildTabelAhliWarisHtml = (list) => {
+    if (!list || !list.length) return '';
+    let html = '<table style="width:100%; border-collapse:collapse; margin:12px 0; border:none; background:transparent;">';
+    for (let i = 0; i < list.length; i += 2) {
+      const left = list[i];
+      const right = list[i + 1];
+
+      const leftNo = i + 1;
+      const leftNm = String(left.nama || '').trim().toUpperCase();
+      const leftTmpt = left.tempat_lahir || 'Batetangnga';
+      const leftTgl = left.tanggal_lahir ? fmtIdDate(left.tanggal_lahir) : '';
+      const leftTtl = leftTmpt + (leftTgl ? ', ' + leftTgl : '');
+      const leftPekr = left.pekerjaan || '-';
+      const leftAlmt = left.alamat || '-';
+
+      html += '<tr>';
+      html += `<td style="width:50%; vertical-align:top; border:none; padding:4px 10px;">
+        <table style="width:100%; border-collapse:collapse; border:none;">
+          <tr><td style="width:105px; border:none; padding:1px 0;"><b>${leftNo}. Nama</b></td><td style="border:none; padding:1px 0;">: ${leftNm}</td></tr>
+          <tr><td style="border:none; padding:1px 0;">&nbsp;&nbsp;&nbsp;<b>TTL</b></td><td style="border:none; padding:1px 0;">: ${leftTtl}</td></tr>
+          <tr><td style="border:none; padding:1px 0;">&nbsp;&nbsp;&nbsp;<b>Pekerjaan</b></td><td style="border:none; padding:1px 0;">: ${leftPekr}</td></tr>
+          <tr><td style="border:none; padding:1px 0;">&nbsp;&nbsp;&nbsp;<b>Alamat</b></td><td style="border:none; padding:1px 0;">: ${leftAlmt}</td></tr>
+        </table>
+      </td>`;
+
+      if (right) {
+        const rightNo = i + 2;
+        const rightNm = String(right.nama || '').trim().toUpperCase();
+        const rightTmpt = right.tempat_lahir || 'Batetangnga';
+        const rightTgl = right.tanggal_lahir ? fmtIdDate(right.tanggal_lahir) : '';
+        const rightTtl = rightTmpt + (rightTgl ? ', ' + rightTgl : '');
+        const rightPekr = right.pekerjaan || '-';
+        const rightAlmt = right.alamat || '-';
+
+        html += `<td style="width:50%; vertical-align:top; border:none; padding:4px 10px;">
+          <table style="width:100%; border-collapse:collapse; border:none;">
+            <tr><td style="width:105px; border:none; padding:1px 0;"><b>${rightNo}. Nama</b></td><td style="border:none; padding:1px 0;">: ${rightNm}</td></tr>
+            <tr><td style="border:none; padding:1px 0;">&nbsp;&nbsp;&nbsp;<b>TTL</b></td><td style="border:none; padding:1px 0;">: ${rightTtl}</td></tr>
+            <tr><td style="border:none; padding:1px 0;">&nbsp;&nbsp;&nbsp;<b>Pekerjaan</b></td><td style="border:none; padding:1px 0;">: ${rightPekr}</td></tr>
+            <tr><td style="border:none; padding:1px 0;">&nbsp;&nbsp;&nbsp;<b>Alamat</b></td><td style="border:none; padding:1px 0;">: ${rightAlmt}</td></tr>
+          </table>
+        </td>`;
+      } else {
+        html += '<td style="width:50%; border:none;"></td>';
+      }
+      html += '</tr>';
+    }
+    html += '</table>';
+    return html;
+  };
+
+  // 2) Generasi TTD_AHLI_WARIS HTML (Tabel Transparan Tanpa Garis Border - 100% Rapi & Tidak Terpotong)
+  const buildTtdAhliWarisHtml = (list) => {
+    if (!list || !list.length) return '';
+    let html = '<table style="width:100%; border-collapse:collapse; margin:16px 0; border:none; background:transparent;">';
+    list.forEach((item, idx) => {
+      const n = idx + 1;
+      const nm = String(item.nama || '').trim().toUpperCase();
+      html += `<tr>
+        <td style="width:55%; vertical-align:middle; border:none; padding:8px 0; font-weight:bold; font-size:14px;">${n}. ${nm}</td>
+        <td style="width:45%; text-align:right; vertical-align:middle; border:none; padding:8px 0; font-size:14px;">( ............................ )</td>
+      </tr>`;
+    });
+    html += '</table>';
+    return html;
+  };
+
+  // 3) Generasi TABEL_AHLI_WARIS Teks Baku
   const buildTabelAhliWaris = (list) => {
     if (!list || !list.length) return '';
     const blocks = [];
@@ -1423,7 +1491,7 @@ async function buildDocValues(record, extraValues) {
     return blocks.join('\n\n');
   };
 
-  // 2) Generasi TTD_AHLI_WARIS (Nomor & Nama di KIRI, Garis TTD di KANAN Pas Margin & Tidak Terpotong)
+  // 4) Generasi TTD_AHLI_WARIS Teks Baku
   const buildTtdAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
@@ -1434,6 +1502,8 @@ async function buildDocValues(record, extraValues) {
     }).join('\n\n');
   };
 
+  const tabelAhliWarisHtml = buildTabelAhliWarisHtml(ahliWarisList);
+  const ttdAhliWarisHtml = buildTtdAhliWarisHtml(ahliWarisList);
   const tabelAhliWarisStr = buildTabelAhliWaris(ahliWarisList);
   const ttdAhliWarisStr = buildTtdAhliWaris(ahliWarisList);
 
@@ -1535,7 +1605,7 @@ async function buildDocValues(record, extraValues) {
     hargaterbilang: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
     terbilang: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
 
-    // Khusus Surat Ahli Waris (Sesuai Presisi Pengguna)
+    // Khusus Surat Ahli Waris (Sesuai Presisi Pengguna & Tabel Transparan 100% Rapi)
     almarhum_nama: almarhumNama,
     nama_almarhum: almarhumNama,
     almarhumah_nama: almarhumNama,
@@ -1545,10 +1615,10 @@ async function buildDocValues(record, extraValues) {
     jumlah_anak: String(jumlahAnakVal),
     jumlah_ahli_waris: String(jumlahAnakVal),
     jumlah_anak_terbilang: jumlahAnakTerbilangVal,
-    tabel_ahli_waris: tabelAhliWarisStr,
-    tabelahliwaris: tabelAhliWarisStr,
-    ttd_ahli_waris: ttdAhliWarisStr,
-    ttdahliwaris: ttdAhliWarisStr,
+    tabel_ahli_waris: tabelAhliWarisHtml || tabelAhliWarisStr,
+    tabelahliwaris: tabelAhliWarisHtml || tabelAhliWarisStr,
+    ttd_ahli_waris: ttdAhliWarisHtml || ttdAhliWarisStr,
+    ttdahliwaris: ttdAhliWarisHtml || ttdAhliWarisStr,
 
     // Khusus Surat Hibah (Sesuai Presisi Pengguna)
     penerima_tgl_lahir: fmtIdDate(dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir),
@@ -1591,6 +1661,30 @@ async function buildDocValues(record, extraValues) {
     kabupaten: values[normKey('kabupaten')] || '',
     provinsi: values[normKey('provinsi')] || ''
   };
+
+  ahliWarisList.forEach((child, idx) => {
+    const num = idx + 1;
+    const nm = String(child.nama || '').trim().toUpperCase();
+    const tmpt = child.tempat_lahir || 'Batetangnga';
+    const tglStr = child.tanggal_lahir ? fmtIdDate(child.tanggal_lahir) : '';
+    const ttl = tmpt + (tglStr ? ', ' + tglStr : '');
+    const pekr = child.pekerjaan || '-';
+    const almt = child.alamat || '-';
+
+    alias[`anak_${num}_nama`] = nm;
+    alias[`anak_${num}_ttl`] = ttl;
+    alias[`anak_${num}_tempat_lahir`] = tmpt;
+    alias[`anak_${num}_tanggal_lahir`] = child.tanggal_lahir || '';
+    alias[`anak_${num}_pekerjaan`] = pekr;
+    alias[`anak_${num}_alamat`] = almt;
+    alias[`anak_${num}_ttd`] = `( .................... )`;
+
+    alias[`ahliwaris_${num}_nama`] = nm;
+    alias[`ahliwaris_${num}_ttl`] = ttl;
+    alias[`ahliwaris_${num}_pekerjaan`] = pekr;
+    alias[`ahliwaris_${num}_alamat`] = almt;
+  });
+
   Object.keys(alias).forEach((k) => { if (alias[k]) values[normKey(k)] = alias[k]; });
 
   // Pihak konteks berdasarkan jenis layanan (Hibah / Jual Beli / Ahli Waris)
