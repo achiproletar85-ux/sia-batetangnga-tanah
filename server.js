@@ -2196,14 +2196,41 @@ app.post('/api/docs/generate', requireAuth, async (req, res) => {
         if (key.toLowerCase().includes('tanggal') && /^\d{4}-\d{2}-\d{2}(T|$)/.test(String(val))) {
           val = fmtIdDate(val);
         }
-        replacements.push({ from: '{{' + key + '}}', to: String(val) });
-        replacements.push({ from: '{' + key + '}}', to: String(val) });
-        replacements.push({ from: '{{' + key + '}', to: String(val) });
+        const sVal = String(val);
+        replacements.push({ from: '{{' + key + '}}', to: sVal });
+        replacements.push({ from: '{{ ' + key + ' }}', to: sVal });
+        replacements.push({ from: '{{  ' + key + '  }}', to: sVal });
+        replacements.push({ from: '{{' + key + ' }', to: sVal });
+        replacements.push({ from: '{ ' + key + '}}', to: sVal });
+        replacements.push({ from: '{' + key + '}}', to: sVal });
+        replacements.push({ from: '{{' + key + '}', to: sVal });
+        replacements.push({ from: '{' + key + '}', to: sVal });
+        replacements.push({ from: '{ ' + key + ' }', to: sVal });
         filled.push(key);
       } else {
         missing.push(key);
       }
     });
+
+    // Explicit fallback: Pastikan placeholder utama Ahli Waris selalu diganti jika ada di dokumen
+    if (values['tabelaw']) {
+      ['TABEL_AW', 'TABEL_AHLI_WARIS', 'TABEL_AHLIWARIS', 'tabel_aw', 'tabel_ahli_waris', 'TABEL AW', 'TABEL AHLI WARIS'].forEach(k => {
+        replacements.push({ from: '{{' + k + '}}', to: values['tabelaw'] });
+        replacements.push({ from: '{{ ' + k + ' }}', to: values['tabelaw'] });
+        replacements.push({ from: '{{' + k + ' }', to: values['tabelaw'] });
+        replacements.push({ from: '{ ' + k + '}}', to: values['tabelaw'] });
+        replacements.push({ from: '{' + k + '}', to: values['tabelaw'] });
+      });
+    }
+    if (values['ttdaw']) {
+      ['TTD_AW', 'TTD_AHLI_WARIS', 'TTD_AHLIWARIS', 'ttd_aw', 'ttd_ahli_waris', 'TTD AW', 'TTD AHLI WARIS'].forEach(k => {
+        replacements.push({ from: '{{' + k + '}}', to: values['ttdaw'] });
+        replacements.push({ from: '{{ ' + k + ' }}', to: values['ttdaw'] });
+        replacements.push({ from: '{{' + k + ' }', to: values['ttdaw'] });
+        replacements.push({ from: '{ ' + k + '}}', to: values['ttdaw'] });
+        replacements.push({ from: '{' + k + '}', to: values['ttdaw'] });
+      });
+    }
 
     // 4) Tulis nilai ke dokumen hasil salinan.
     if (replacements.length) await fillDocText(newId, replacements);
