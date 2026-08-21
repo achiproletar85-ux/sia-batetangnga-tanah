@@ -1135,212 +1135,6 @@ async function fillDocText(docId, replacements) {
   return j;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// GOOGLE DOCS TABLE INSERTER  — Surat Ahli Waris
-// Menggantikan placeholder teks TABEL_AHLI_WARIS & TTD_AHLI_WARIS dengan
-// tabel nyata (invisible border) sehingga kolom 100% lurus di font proporsional.
-// ──────────────────────────────────────────────────────────────────────────────
-
-async function docsRequest(docId, requests) {
-  const token = await googleAccessToken();
-  const res = await fetch(`https://docs.googleapis.com/v1/documents/${encodeURIComponent(docId)}:batchUpdate`, {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ requests })
-  });
-  const j = await res.json();
-  if (!res.ok) throw new Error('Docs batchUpdate error: ' + (j.error && j.error.message ? j.error.message : res.statusText));
-  return j;
-}
-
-async function docsGetFresh(docId) {
-  const token = await googleAccessToken();
-  const res = await fetch(`https://docs.googleapis.com/v1/documents/${encodeURIComponent(docId)}`, {
-    headers: { Authorization: 'Bearer ' + token }
-  });
-  return res.json();
-}
-
-// Cari paragraf yang mengandung teks tertentu, kembalikan {index, startIndex, endIndex} atau null.
-function findParaContaining(content, searchText) {
-  for (let i = 0; i < content.length; i++) {
-    const el = content[i];
-    if (!el.paragraph) continue;
-    const full = (el.paragraph.elements || []).map(e => (e.textRun && e.textRun.content) || '').join('');
-    if (full.includes(searchText)) {
-      const firstElem = (el.paragraph.elements || [])[0];
-      return {
-        idx: i,
-        startIndex: firstElem ? firstElem.startIndex : el.startIndex,
-        endIndex: el.endIndex
-      };
-    }
-  }
-  return null;
-}
-
-// Warna border transparan untuk tabel (0pt border)
-const NO_BORDER = { color: { color: { rgbColor: { red: 1, green: 1, blue: 1 } } }, dashStyle: 'SOLID', width: { magnitude: 0, unit: 'PT' } };
-const BORDER_OBJ = { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER, innerHorizontal: NO_BORDER, innerVertical: NO_BORDER };
-
-function tableBorderRequests(docId, table) {
-  // Setelah insert, kita perlu ambil dokumen ulang untuk mendapatkan table reference.
-  // Google Docs API tidak mengizinkan set border via batchUpdate pada table cells secara langsung pada tabel yang baru saja diinsert.
-  // Border akan transparan karena warna putih (RGB 1,1,1) width 0pt.
-  return [];
-}
-
-// Isi satu sel tabel dengan teks. tableStartIndex dan (row, col, tableRef) dipakai untuk menghitung index.
-function makeCellTextRequest(tableCell, text, bold) {
-  // Cari paragraf pertama dalam sel
-  const cellContent = tableCell.content || [];
-  const firstPara = cellContent[0];
-  if (!firstPara || !firstPara.paragraph) return [];
-  const firstElem = (firstPara.paragraph.elements || [])[0];
-  if (!firstElem) return [];
-
-  const insertIdx = firstElem.startIndex;
-  const reqs = [];
-
-  // Hapus isi sel yang ada (biasanya newline saja)
-  const endIdx = firstPara.endIndex - 1; // jangan hapus newline terakhir paragraf
-  if (endIdx > insertIdx) {
-    reqs.push({ deleteContentRange: { range: { startIndex: insertIdx, endIndex: endIdx } } });
-  }
-
-  if (text) {
-    reqs.push({ insertText: { location: { index: insertIdx }, text } });
-    if (bold) {
-      reqs.push({
-        updateTextStyle: {
-          range: { startIndex: insertIdx, endIndex: insertIdx + text.length },
-          textStyle: { bold: true },
-          fields: 'bold'
-        }
-      });
-    }
-  }
-  return reqs;
-}
-
-// Sisipkan tabel AHLI WARIS nyata ke dalam Google Docs (pengganti placeholder).
-// dipanggil SETELAH fillDocText agar marker dummy sudah ada di dokumen salinan.
-async function insertAhliWarisTableInDoc(docId, ahliWarisList, fmtDate) {
-  if (!ahliWarisList || !ahliWarisList.length) return;
-  const TABEL_PH = '[[TABEL_AW]]';
-  const TTD_PH   = '[[TTD_AW]]';
-
-  const doc1 = await docsGetFresh(docId);
-  const content1 = (doc1.body && doc1.body.content) || [];
-
-  const tabelPara = findParaContaining(content1, TABEL_PH);
-  const ttdPara   = findParaContaining(content1, TTD_PH);
-
-  if (!tabelPara && !ttdPara) return; // marker tidak ada, skip
-
-  // Proses dari bawah ke atas agar index tidak bergeser
-  const tasks = [];
-  if (ttdPara)   tasks.push({ type: 'TTD',   para: ttdPara,   ph: TTD_PH });
-  if (tabelPara) tasks.push({ type: 'TABEL', para: tabelPara, ph: TABEL_PH });
-  tasks.sort((a, b) => b.para.startIndex - a.para.startIndex); // bawah dulu
-
-  for (const task of tasks) {
-    const { type, para, ph } = task;
-    const insertAt = para.startIndex;
-
-    // Langkah 1: Hapus baris marker, sisipkan tabel
-    const rowCount = type === 'TABEL' ? Math.ceil(ahliWarisList.length / 2) : ahliWarisList.length;
-    const colCount = 2;
-
-    const step1 = [];
-    // Hapus marker paragraph (seluruh baris termasuk newline)
-    step1.push({ deleteContentRange: { range: { startIndex: para.startIndex, endIndex: para.endIndex } } });
-    // Sisipkan tabel di posisi yang sama
-    step1.push({ insertTable: { rows: rowCount, columns: colCount, location: { index: insertAt } } });
-    await docsRequest(docId, step1);
-
-    // Langkah 2: Ambil dokumen terbaru untuk mendapatkan index sel baru
-    const doc2 = await docsGetFresh(docId);
-    const content2 = (doc2.body && doc2.body.content) || [];
-
-    // Cari tabel yang baru diinsert (kemungkinan di index yang sama)
-    let insertedTable = null;
-    for (const el of content2) {
-      if (!el.table) continue;
-      // Pilih tabel yang startIndex-nya paling mendekati insertAt
-      if (!insertedTable || Math.abs(el.startIndex - insertAt) < Math.abs(insertedTable.startIndex - insertAt)) {
-        insertedTable = el;
-      }
-    }
-    if (!insertedTable) continue;
-
-    // Langkah 3: Isi sel tabel dengan data
-    const fillRequests = [];
-    const rows = insertedTable.table.tableRows || [];
-
-    if (type === 'TABEL') {
-      // 2 kolom: ganjil kiri, genap kanan
-      for (let r = 0; r < rows.length; r++) {
-        const leftIdx  = r * 2;
-        const rightIdx = r * 2 + 1;
-        const leftChild  = ahliWarisList[leftIdx];
-        const rightChild = ahliWarisList[rightIdx];
-        const cells = rows[r].tableCells || [];
-
-        if (leftChild && cells[0]) {
-          const no   = leftIdx + 1;
-          const nm   = String(leftChild.nama || '').trim().toUpperCase();
-          const tmpt = leftChild.tempat_lahir || 'Batetangnga';
-          const tgl  = leftChild.tanggal_lahir ? fmtDate(leftChild.tanggal_lahir) : '';
-          const ttl  = tmpt + (tgl ? ', ' + tgl : '');
-          const pekr = leftChild.pekerjaan || '-';
-          const almt = leftChild.alamat || '-';
-          const txt  = `${no}. Nama       : ${nm}\n    TTL        : ${ttl}\n    Pekerjaan : ${pekr}\n    Alamat    : ${almt}`;
-          fillRequests.push(...makeCellTextRequest(cells[0], txt, false));
-        }
-        if (rightChild && cells[1]) {
-          const no   = rightIdx + 1;
-          const nm   = String(rightChild.nama || '').trim().toUpperCase();
-          const tmpt = rightChild.tempat_lahir || 'Batetangnga';
-          const tgl  = rightChild.tanggal_lahir ? fmtDate(rightChild.tanggal_lahir) : '';
-          const ttl  = tmpt + (tgl ? ', ' + tgl : '');
-          const pekr = rightChild.pekerjaan || '-';
-          const almt = rightChild.alamat || '-';
-          const txt  = `${no}. Nama       : ${nm}\n    TTL        : ${ttl}\n    Pekerjaan : ${pekr}\n    Alamat    : ${almt}`;
-          fillRequests.push(...makeCellTextRequest(cells[1], txt, false));
-        }
-      }
-    } else {
-      // TTD: nama kiri, garis tanda tangan kanan
-      for (let r = 0; r < rows.length; r++) {
-        const child = ahliWarisList[r];
-        const cells = rows[r].tableCells || [];
-        if (!child || !cells[0]) continue;
-        const no  = r + 1;
-        const nm  = String(child.nama || '').trim().toUpperCase();
-        fillRequests.push(...makeCellTextRequest(cells[0], `${no}. ${nm}`, false));
-        if (cells[1]) fillRequests.push(...makeCellTextRequest(cells[1], '( ............................ )', false));
-      }
-    }
-
-    // Kirim fill requests dari bawah ke atas (sort by startIndex descending)
-    const sorted = fillRequests
-      .filter(r => r.insertText || r.deleteContentRange)
-      .sort((a, b) => {
-        const ia = (a.deleteContentRange && a.deleteContentRange.range.startIndex) ||
-                   (a.insertText && a.insertText.location.index) || 0;
-        const ib = (b.deleteContentRange && b.deleteContentRange.range.startIndex) ||
-                   (b.insertText && b.insertText.location.index) || 0;
-        return ib - ia;
-      });
-
-    const style = fillRequests.filter(r => r.updateTextStyle);
-
-    if (sorted.length) await docsRequest(docId, sorted);
-    if (style.length)  await docsRequest(docId, style);
-  }
-}
-
 // Ekstrak daftar placeholder unik (urutan kemunculan pertama).
 function extractPlaceholders(text) {
   const seen = [];
@@ -1868,15 +1662,20 @@ async function buildDocValues(record, extraValues) {
     jumlah_anak_terbilang: jumlahAnakTerbilangVal,
     tabel_ahli_waris: tabelAhliWarisStr,
     tabelahliwaris: tabelAhliWarisStr,
+    tabel_aw: tabelAhliWarisStr,
+    tabelaw: tabelAhliWarisStr,
     ttd_ahli_waris: ttdAhliWarisStr,
     ttdahliwaris: ttdAhliWarisStr,
+    ttd_aw: ttdAhliWarisStr,
+    ttdaw: ttdAhliWarisStr,
     tabel_ahli_waris_kiri: tabelAhliWarisKiriStr,
     tabel_ahli_waris_kanan: tabelAhliWarisKananStr,
+    tabel_aw_kiri: tabelAhliWarisKiriStr,
+    tabel_aw_kanan: tabelAhliWarisKananStr,
     ttd_ahli_waris_kiri: ttdAhliWarisKiriStr,
     ttd_ahli_waris_kanan: ttdAhliWarisKananStr,
-    // Marker khusus yang dipanggil insertAhliWarisTableInDoc untuk menyisipkan tabel nyata
-    tabel_aw: '[[TABEL_AW]]',
-    ttd_aw: '[[TTD_AW]]',
+    ttd_aw_kiri: ttdAhliWarisKiriStr,
+    ttd_aw_kanan: ttdAhliWarisKananStr,
 
     // Khusus Surat Hibah (Sesuai Presisi Pengguna)
     penerima_tgl_lahir: fmtIdDate(dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir),
@@ -2408,42 +2207,6 @@ app.post('/api/docs/generate', requireAuth, async (req, res) => {
 
     // 4) Tulis nilai ke dokumen hasil salinan.
     if (replacements.length) await fillDocText(newId, replacements);
-
-    // 5) Jika template menggunakan {{TABEL_AW}} / {{TTD_AW}}, sisipkan tabel nyata.
-    try {
-      const hasTabelAw = placeholders.some(p => normKey(p) === 'tabelaw');
-      const hasTtdAw   = placeholders.some(p => normKey(p) === 'ttdaw');
-      if (hasTabelAw || hasTtdAw) {
-        let drAw = {};
-        try { drAw = typeof record.data_raw === 'string' ? JSON.parse(record.data_raw || '{}') : (record.data_raw || {}); } catch (_) {}
-
-        // Baca anak dari array ahli_waris[], atau dari field anak_1_nama ... anak_N_nama
-        const awList = (() => {
-          const raw = drAw.ahli_waris || drAw.ahliwaris || drAw.anak || [];
-          if (Array.isArray(raw) && raw.length) return raw;
-          const jml = parseInt(drAw.jumlah_anak || drAw.jumlah_ahli_waris || '0', 10) || 10;
-          const res2 = [];
-          for (let i = 1; i <= jml; i++) {
-            const nm = drAw[`anak_${i}_nama`];
-            if (!nm) continue;
-            res2.push({
-              nama: nm,
-              tempat_lahir: drAw[`anak_${i}_tempat_lahir`] || 'Batetangnga',
-              tanggal_lahir: drAw[`anak_${i}_tanggal_lahir`] || '',
-              pekerjaan: drAw[`anak_${i}_pekerjaan`] || '-',
-              alamat: drAw[`anak_${i}_alamat`] || '-'
-            });
-          }
-          return res2;
-        })();
-
-        if (awList.length) {
-          await insertAhliWarisTableInDoc(newId, awList, fmtIdDate);
-        }
-      }
-    } catch (awErr) {
-      console.warn('insertAhliWarisTableInDoc warning (non-fatal):', awErr.message);
-    }
 
     const resultUrl = 'https://docs.google.com/document/d/' + newId + '/edit';
     const fields = placeholders.map((key) => {
