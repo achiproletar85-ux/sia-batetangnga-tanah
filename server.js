@@ -2409,25 +2409,37 @@ app.post('/api/docs/generate', requireAuth, async (req, res) => {
     // 4) Tulis nilai ke dokumen hasil salinan.
     if (replacements.length) await fillDocText(newId, replacements);
 
-    // 5) Jika surat Ahli Waris dan template menggunakan {{TABEL_AW}} / {{TTD_AW}},
-    //    sisipkan tabel nyata (invisible border) menggantikan marker tersebut.
+    // 5) Jika template menggunakan {{TABEL_AW}} / {{TTD_AW}}, sisipkan tabel nyata.
     try {
-      let drAw = {};
-      try { drAw = typeof record.data_raw === 'string' ? JSON.parse(record.data_raw || '{}') : (record.data_raw || {}); } catch (_) {}
-      const awList = (() => {
-        const raw = drAw.ahli_waris || drAw.ahliwaris || drAw.anak || [];
-        if (Array.isArray(raw) && raw.length) return raw;
-        const jml = parseInt(drAw.jumlah_anak || drAw.jumlah_ahli_waris || '0', 10);
-        const res2 = [];
-        for (let i = 1; i <= jml; i++) {
-          if (drAw[`anak_${i}_nama`]) {
-            res2.push({ nama: drAw[`anak_${i}_nama`], tempat_lahir: drAw[`anak_${i}_tempat_lahir`] || 'Batetangnga', tanggal_lahir: drAw[`anak_${i}_tanggal_lahir`] || '', pekerjaan: drAw[`anak_${i}_pekerjaan`] || '-', alamat: drAw[`anak_${i}_alamat`] || '-' });
+      const hasTabelAw = placeholders.some(p => normKey(p) === 'tabelaw');
+      const hasTtdAw   = placeholders.some(p => normKey(p) === 'ttdaw');
+      if (hasTabelAw || hasTtdAw) {
+        let drAw = {};
+        try { drAw = typeof record.data_raw === 'string' ? JSON.parse(record.data_raw || '{}') : (record.data_raw || {}); } catch (_) {}
+
+        // Baca anak dari array ahli_waris[], atau dari field anak_1_nama ... anak_N_nama
+        const awList = (() => {
+          const raw = drAw.ahli_waris || drAw.ahliwaris || drAw.anak || [];
+          if (Array.isArray(raw) && raw.length) return raw;
+          const jml = parseInt(drAw.jumlah_anak || drAw.jumlah_ahli_waris || '0', 10) || 10;
+          const res2 = [];
+          for (let i = 1; i <= jml; i++) {
+            const nm = drAw[`anak_${i}_nama`];
+            if (!nm) continue;
+            res2.push({
+              nama: nm,
+              tempat_lahir: drAw[`anak_${i}_tempat_lahir`] || 'Batetangnga',
+              tanggal_lahir: drAw[`anak_${i}_tanggal_lahir`] || '',
+              pekerjaan: drAw[`anak_${i}_pekerjaan`] || '-',
+              alamat: drAw[`anak_${i}_alamat`] || '-'
+            });
           }
+          return res2;
+        })();
+
+        if (awList.length) {
+          await insertAhliWarisTableInDoc(newId, awList, fmtIdDate);
         }
-        return res2;
-      })();
-      if (awList.length && (filled.includes('TABEL_AW') || filled.includes('TTD_AW') || placeholders.includes('TABEL_AW') || placeholders.includes('TTD_AW'))) {
-        await insertAhliWarisTableInDoc(newId, awList, fmtIdDate);
       }
     } catch (awErr) {
       console.warn('insertAhliWarisTableInDoc warning (non-fatal):', awErr.message);
