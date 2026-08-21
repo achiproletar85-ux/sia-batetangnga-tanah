@@ -1459,7 +1459,7 @@
         items: [
           { key: 'saksi_1', label: 'Nama Saksi 1 ({{SAKSI_1}})', val: dr.saksi1_nama || '' },
           { key: 'saksi_2', label: 'Nama Saksi 2 ({{SAKSI_2}})', val: dr.saksi2_nama || '' },
-          { key: 'nomor_surat', label: 'Nomor Register Surat ({{NOMOR_SURAT}})', val: dr.nomorSuratTercetak || dr._nomorSuratTercetak || dr.nomor_surat || (match ? match.id : '') || '' },
+          { key: 'nomor_surat', label: 'Nomor Register Surat ({{NOMOR_SURAT}})', val: dr.nomorSuratTercetak || dr._nomorSuratTercetak || dr.nomor_surat || '' },
           { key: 'kepala_desa', label: 'Nama Kepala Desa / Lurah', val: dr.kepala_desa || 'SUMALLA DAMANG' }
         ]
       }
@@ -1506,7 +1506,7 @@
         items: [
           { key: 'nama_saksi_pertama', label: 'Nama Saksi Pertama (1)', val: dr.saksi1_nama || '' },
           { key: 'nama_saksi_kedua', label: 'Nama Saksi Kedua (2)', val: dr.saksi2_nama || '' },
-          { key: 'no_surat', label: 'Nomor Register Surat', val: (match ? match.id : '') || dr.nomor_surat || '' },
+          { key: 'no_surat', label: 'Nomor Register Surat', val: dr.nomorSuratTercetak || dr._nomorSuratTercetak || dr.nomor_surat || '' },
           { key: 'kepala_desa', label: 'Nama Kepala Desa / Lurah', val: dr.kepala_desa || 'SUMALLA DAMANG' }
         ]
       }
@@ -1565,7 +1565,7 @@
       {
         cat: '📜 Register Surat & Pengesahan',
         items: [
-          { key: 'nomor_surat', label: 'Nomor Register Surat', val: (match ? match.id : '') || dr.nomor_surat || '' },
+          { key: 'nomor_surat', label: 'Nomor Register Surat', val: dr.nomorSuratTercetak || dr._nomorSuratTercetak || dr.nomor_surat || '' },
           { key: 'kepala_desa', label: 'Nama Kepala Desa / Lurah', val: dr.kepala_desa || 'SUMALLA DAMANG' }
         ]
       }
