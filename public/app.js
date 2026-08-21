@@ -1486,7 +1486,8 @@
         cat: '💰 Nilai Transaksi & Harga Jual Beli',
         items: [
           { key: 'rp_harga_jual', label: 'Harga Jual Beli (Rp)', val: dr.harga_jual || dr.harga || dr.biaya || '' },
-          { key: 'terbilang_harga_jual', label: 'Terbilang Harga', val: dr.terbilang_harga || '' }
+          { key: 'harga_pembelian', label: 'Harga Pembelian ({{HARGA_PEMBELIAN}})', val: dr.harga_pembelian || dr.harga_jual || dr.harga || dr.biaya || '' },
+          { key: 'harga_terbilang', label: 'Terbilang Pembelian ({{HARGA_TERBILANG}})', val: dr.harga_terbilang || dr.terbilang_harga || '' }
         ]
       },
       {

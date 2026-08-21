@@ -1429,10 +1429,15 @@ async function buildDocValues(record, extraValues) {
     pemilik_tanah_sebelah_selatan: dr.batas_selatan || '',
     pemilik_tanah_sebelah_barat: dr.batas_barat || '',
 
-    rp_harga_jual: formatRupiah(dr.harga_jual || dr.harga || dr.biaya || '0'),
-    harga_jual: formatRupiah(dr.harga_jual || dr.harga || dr.biaya || '0'),
-    terbilang_harga_jual: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || '0'),
-    terbilang_harga: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || '0'),
+    rp_harga_jual: formatRupiah(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
+    harga_jual: formatRupiah(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
+    harga_pembelian: formatRupiah(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
+    hargapembelian: formatRupiah(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
+    terbilang_harga_jual: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
+    terbilang_harga: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
+    harga_terbilang: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
+    hargaterbilang: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
+    terbilang: angkaKeTerbilang(dr.harga_jual || dr.harga || dr.biaya || dr.harga_pembelian || '0'),
 
     // Khusus Surat Hibah (Sesuai Presisi Pengguna)
     penerima_tgl_lahir: fmtIdDate(dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir),
