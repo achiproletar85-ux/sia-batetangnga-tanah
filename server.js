@@ -1138,7 +1138,7 @@ async function fillDocText(docId, replacements) {
 // Ekstrak daftar placeholder unik (urutan kemunculan pertama).
 function extractPlaceholders(text) {
   const seen = [];
-  const re = /\{\{\s*([^{}]+?)\s*\}\}/g;
+  const re = /\{{1,2}\s*([^{}]+?)\s*\}\}/g;
   let m;
   while ((m = re.exec(text)) !== null) {
     const key = m[1].trim();
@@ -1273,19 +1273,34 @@ async function buildDocValues(record, extraValues) {
     batas_timur: values[normKey('batas_timur')] || dr.batas_timur,
     batas_selatan: values[normKey('batas_selatan')] || dr.batas_selatan,
     batas_barat: values[normKey('batas_barat')] || dr.batas_barat,
+    // Agama
+    agama: values[normKey('agama')] || dr.agama || 'Islam',
     // Saksi.
     nama_saksi1: values[normKey('saksi1_nama')] || dr.saksi1_nama,
     saksi1_nama: values[normKey('saksi1_nama')] || dr.saksi1_nama,
     saksi1_nik: values[normKey('saksi1_nik')] || dr.saksi1_nik,
-    saksi1_pekerjaan: values[normKey('saksi1_pekerjaan')] || dr.saksi1_pekerjaan,
+    saksi1_pekerjaan: values[normKey('saksi1_pekerjaan')] || dr.saksi1_pekerjaan || dr.perkejaan_saksi1,
     saksi1_alamat: values[normKey('saksi1_alamat')] || dr.saksi1_alamat,
+    saksi1_umur: values[normKey('umur_saksi1')] || values[normKey('saksi1_umur')] || dr.saksi1_umur,
+    umur_saksi1: values[normKey('umur_saksi1')] || values[normKey('saksi1_umur')] || dr.saksi1_umur,
+    alamat_saksi1: values[normKey('saksi1_alamat')] || dr.saksi1_alamat,
+    pekerjaan_saksi1: values[normKey('saksi1_pekerjaan')] || dr.saksi1_pekerjaan,
+    perkejaan_saksi1: values[normKey('saksi1_pekerjaan')] || dr.saksi1_pekerjaan,
+
     nama_saksi2: values[normKey('saksi2_nama')] || dr.saksi2_nama,
     saksi2_nama: values[normKey('saksi2_nama')] || dr.saksi2_nama,
     saksi2_nik: values[normKey('saksi2_nik')] || dr.saksi2_nik,
-    saksi2_pekerjaan: values[normKey('saksi2_pekerjaan')] || dr.saksi2_pekerjaan,
+    saksi2_pekerjaan: values[normKey('saksi2_pekerjaan')] || dr.saksi2_pekerjaan || dr.perkejaan_saksi2,
     saksi2_alamat: values[normKey('saksi2_alamat')] || dr.saksi2_alamat,
-    // Nomor surat tercetak (disimpan dengan prefix underscore oleh GAS).
-    nomor_surat: values[normKey('_nomorSuratTercetak')] || dr._nomorSuratTercetak || dr.nomor_surat,
+    saksi2_umur: values[normKey('umur_saksi2')] || values[normKey('saksi2_umur')] || dr.saksi2_umur,
+    umur_saksi2: values[normKey('umur_saksi2')] || values[normKey('saksi2_umur')] || dr.saksi2_umur,
+    alamat_saksi2: values[normKey('saksi2_alamat')] || dr.saksi2_alamat,
+    pekerjaan_saksi2: values[normKey('saksi2_pekerjaan')] || dr.saksi2_pekerjaan,
+    perkejaan_saksi2: values[normKey('saksi2_pekerjaan')] || dr.saksi2_pekerjaan,
+
+    // Nomor surat & register tercetak.
+    nomor_surat: values[normKey('nomor_surat')] || values[normKey('_nomorSuratTercetak')] || dr._nomorSuratTercetak || dr.nomor_surat || record.id,
+    nomor_register: values[normKey('nomor_register')] || record.id,
     // Tahun pembelian/pemberian (tergantung layanan).
     tahun_pembelian: values[normKey('tahun_pembelian')] || dr.tahun_pembelian || dr.tahun_pemberian,
     tahun_pemberian: values[normKey('tahun_pemberian')] || dr.tahun_pemberian || dr.tahun_pembelian,
@@ -1713,6 +1728,8 @@ app.post('/api/docs/generate', requireAuth, async (req, res) => {
           val = fmtIdDate(val);
         }
         replacements.push({ from: '{{' + key + '}}', to: String(val) });
+        replacements.push({ from: '{' + key + '}}', to: String(val) });
+        replacements.push({ from: '{{' + key + '}', to: String(val) });
         filled.push(key);
       } else {
         missing.push(key);
