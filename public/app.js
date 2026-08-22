@@ -1734,6 +1734,26 @@
     }
   }
 
+  function openDocsForId(id, jenis) {
+    if (!id) return;
+    switchTab('suratdocs');
+    if ($('docsIdReg')) {
+      $('docsIdReg').value = id;
+    }
+    const match = (allData || []).find(x => String(x.id).toUpperCase() === String(id).toUpperCase());
+    const targetJenis = jenis || (match && match.layanan) || 'SPORADIK';
+    docsState.jenis = targetJenis;
+    if ($('docsJenisSelect')) {
+      $('docsJenisSelect').value = targetJenis;
+    }
+    docsLoadTemplate(targetJenis);
+    docsOnRegIdChange();
+    setTimeout(() => {
+      docsRender();
+    }, 250);
+  }
+  window.openDocsForId = openDocsForId;
+
   function openCekTbPanel() {
     fetchPemohonList();
     $('cekTbPanel').style.display = 'block';
@@ -3812,6 +3832,7 @@ hideChangePwMsg();
         <td data-label="Aksi">
           <button class="btn primary" data-action="surat" data-id="${esc(r.id)}">🖨 Surat</button>
           <button class="btn" data-action="surat-sporadik" data-id="${esc(r.id)}" title="Cetak Surat SPORADIK (Penguasaan Fisik Bidang Tanah)">🖨 SPORADIK</button>
+          <button class="btn" data-action="open-docs" data-id="${esc(r.id)}" style="background:#0284c7; color:#fff; font-weight:600;" title="Buka dan Edit di Tab Surat Docs">📄 Docs</button>
         </td>
         <td data-label="ID"><strong>${esc(r.id)}</strong></td>
         <td data-label="Tanggal">${esc(fmtTgl(r.timestamp) || '')}</td>
@@ -7141,6 +7162,7 @@ hideChangePwMsg();
     const id = btn.dataset.id;
     if (action === 'surat') cetakSporadik(id);
     else if (action === 'surat-sporadik') cetakSporadik(id, 'SPORADIK');
+    else if (action === 'open-docs') openDocsForId(id, 'SPORADIK');
   });
   $('uploadBody').addEventListener('click', (e) => {
     const del = e.target.closest('[data-del-up]');
@@ -7158,6 +7180,13 @@ hideChangePwMsg();
   $('btnBackSurat').addEventListener('click', backToSporadik);
   $('btnPrintSurat').addEventListener('click', handleCetak);
   $('btnSaveSuratEdit').addEventListener('click', handleSimpan);
+  if ($('btnOpenDocsFromSporadik')) {
+    $('btnOpenDocsFromSporadik').addEventListener('click', () => {
+      if (currentSurat && currentSurat.r && currentSurat.r.id) {
+        openDocsForId(currentSurat.r.id, currentSuratTemplate || 'SPORADIK');
+      }
+    });
+  }
   $('srTgl').addEventListener('input', renderSurat);
   maskDmyInput($('srTgl'));
   $('srNoUrut').addEventListener('input', renderSurat);
