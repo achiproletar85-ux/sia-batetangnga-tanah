@@ -1820,6 +1820,10 @@ async function openDocsForId(id, jenis) {
 
   if (idInput) {
     idInput.value = targetId;
+    try {
+      idInput.dispatchEvent(new Event('input', { bubbles: true }));
+      idInput.dispatchEvent(new Event('change', { bubbles: true }));
+    } catch (_) {}
   }
 
   docsLoadTemplate(targetJenis).then(() => {
@@ -3907,7 +3911,7 @@ hideChangePwMsg();
         <td data-label="Aksi">
           <button class="btn primary" data-action="surat" data-id="${esc(r.id)}">🖨 Surat</button>
           <button class="btn" data-action="surat-sporadik" data-id="${esc(r.id)}" title="Cetak Surat SPORADIK (Penguasaan Fisik Bidang Tanah)">🖨 SPORADIK</button>
-          <button class="btn" data-action="open-docs" data-id="${esc(r.id)}" style="background:#0284c7; color:#fff; font-weight:600;" title="Buka dan Edit di Tab Surat Docs">📄 Docs</button>
+          <button class="btn" onclick="openDocsForId('${esc(r.id)}'); event.stopPropagation();" data-action="open-docs" data-id="${esc(r.id)}" style="background:#0284c7; color:#fff; font-weight:600;" title="Buka dan Edit di Tab Surat Docs">📄 Docs</button>
         </td>
         <td data-label="ID"><strong>${esc(r.id)}</strong></td>
         <td data-label="Tanggal">${esc(fmtTgl(r.timestamp) || '')}</td>
