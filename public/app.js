@@ -1801,6 +1801,16 @@ async function openDocsForId(id, jenis) {
     if (hit) match = hit.r;
   }
 
+  // Fallback: ambil langsung dari API bila tidak ditemukan di cache lokal
+  // (mis. allData belum termuat / belum dibuild ulang).
+  if (!match) {
+    try {
+      const res = await fetch('/api/permohonan/' + encodeURIComponent(targetId));
+      const json = await res.json();
+      if (json && json.success && json.data) match = json.data;
+    } catch (_) {}
+  }
+
   const targetJenis = (match && match.layanan && ['HIBAH', 'JUALBELI', 'AHLIWARIS'].includes(String(match.layanan).toUpperCase()))
     ? String(match.layanan).toUpperCase()
     : (jenis || docsState.jenis || 'SPORADIK');
