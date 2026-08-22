@@ -1443,6 +1443,16 @@ async function buildDocValues(record, extraValues) {
   };
 
   // 3) Generasi TABEL_AHLI_WARIS Teks Baku (Format Rapat & Hemat Ruang, Titik Dua 100% Lurus Tegak)
+  const formatChildRow = (no, nm, ttl, pekr, almt) => {
+    const numStr = String(no);
+    const nameSpaces = numStr.length > 1 ? 5 : 7;
+    const l1 = `${no}. Nama` + ' '.repeat(nameSpaces) + `: ${nm}`;
+    const l2 = `   TTL` + ' '.repeat(11) + `: ${ttl}`;
+    const l3 = `   Pekerjaan : ${pekr}`;
+    const l4 = `   Alamat` + ' '.repeat(6) + `: ${almt}`;
+    return l1 + '\n' + l2 + '\n' + l3 + '\n' + l4;
+  };
+
   const buildTabelAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
@@ -1453,13 +1463,7 @@ async function buildDocValues(record, extraValues) {
       const ttl = tmpt + (tgl ? ', ' + tgl : '');
       const pekr = item.pekerjaan || '-';
       const almt = item.alamat || '-';
-
-      const l1 = `${no}. Nama : ${nm}`;
-      const l2 = `   TTL : ${ttl}`;
-      const l3 = `   Pekerjaan : ${pekr}`;
-      const l4 = `   Alamat : ${almt}`;
-
-      return l1 + '\n' + l2 + '\n' + l3 + '\n' + l4;
+      return formatChildRow(no, nm, ttl, pekr, almt);
     }).join('\n');
   };
 
@@ -1486,12 +1490,7 @@ async function buildDocValues(record, extraValues) {
       const leftTtl = leftTmpt + (leftTgl ? ', ' + leftTgl : '');
       const leftPekr = left.pekerjaan || '-';
       const leftAlmt = left.alamat || '-';
-      
-      const l1 = `${leftNo}. Nama : ${leftNm}`;
-      const l2 = `   TTL : ${leftTtl}`;
-      const l3 = `   Pekerjaan : ${leftPekr}`;
-      const l4 = `   Alamat : ${leftAlmt}`;
-      blocks.push(l1 + '\n' + l2 + '\n' + l3 + '\n' + l4);
+      blocks.push(formatChildRow(leftNo, leftNm, leftTtl, leftPekr, leftAlmt));
     }
     return blocks.join('\n\n');
   };
@@ -1508,12 +1507,7 @@ async function buildDocValues(record, extraValues) {
       const rightTtl = rightTmpt + (rightTgl ? ', ' + rightTgl : '');
       const rightPekr = right.pekerjaan || '-';
       const rightAlmt = right.alamat || '-';
-
-      const r1 = `${rightNo}. Nama : ${rightNm}`;
-      const r2 = `   TTL : ${rightTtl}`;
-      const r3 = `   Pekerjaan : ${rightPekr}`;
-      const r4 = `   Alamat : ${rightAlmt}`;
-      blocks.push(r1 + '\n' + r2 + '\n' + r3 + '\n' + r4);
+      blocks.push(formatChildRow(rightNo, rightNm, rightTtl, rightPekr, rightAlmt));
     }
     return blocks.join('\n\n');
   };
@@ -2678,7 +2672,7 @@ app.post('/api/keuangan/import-from-sheet', requireAuth, requireRole('bendahara'
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    version: '2026-08-22_16:36_clean_colons',
+    version: '2026-08-22_16:39_perfect_colon_align',
     tables: [TABLE_DB, TABLE_UP],
     timestamp: new Date().toISOString()
   });
