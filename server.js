@@ -1540,6 +1540,20 @@ async function buildDocValues(record, extraValues) {
     return blocks.join('\n\n\n\n');
   };
 
+  const buildTtdAhliWarisNama = (list) => {
+    if (!list || !list.length) return '';
+    return list.map((item, idx) => {
+      const n = idx + 1;
+      const nm = String(item.nama || '').trim().toUpperCase();
+      return `${n}. ${nm}`;
+    }).join('\n\n\n\n').trim();
+  };
+
+  const buildTtdAhliWarisKotak = (list) => {
+    if (!list || !list.length) return '';
+    return list.map(() => `( ........................ )`).join('\n\n\n\n').trim();
+  };
+
   const tabelAhliWarisHtml = buildTabelAhliWarisHtml(ahliWarisList);
   const ttdAhliWarisHtml = buildTtdAhliWarisHtml(ahliWarisList);
   const tabelAhliWarisStr = buildTabelAhliWaris(ahliWarisList);
@@ -1548,6 +1562,8 @@ async function buildDocValues(record, extraValues) {
   const tabelAhliWarisKananStr = buildTabelAhliWarisKanan(ahliWarisList);
   const ttdAhliWarisKiriStr = buildTtdAhliWarisKiri(ahliWarisList);
   const ttdAhliWarisKananStr = buildTtdAhliWarisKanan(ahliWarisList);
+  const ttdAhliWarisNamaStr = buildTtdAhliWarisNama(ahliWarisList);
+  const ttdAhliWarisKotakStr = buildTtdAhliWarisKotak(ahliWarisList);
 
   // Alias umum agar placeholder fleksibel (mis. {{nama}} / {{nama_lengkap}}).
   const alias = {
@@ -1669,10 +1685,17 @@ async function buildDocValues(record, extraValues) {
     tabel_ahli_waris_kanan: tabelAhliWarisKananStr,
     tabel_aw_kiri: tabelAhliWarisKiriStr,
     tabel_aw_kanan: tabelAhliWarisKananStr,
-    ttd_ahli_waris_kiri: ttdAhliWarisKiriStr,
-    ttd_ahli_waris_kanan: ttdAhliWarisKananStr,
     ttd_aw_kiri: ttdAhliWarisKiriStr,
     ttd_aw_kanan: ttdAhliWarisKananStr,
+    ttd_aw_nama: ttdAhliWarisNamaStr,
+    ttd_nama: ttdAhliWarisNamaStr,
+    ttdawnama: ttdAhliWarisNamaStr,
+    ttdnama: ttdAhliWarisNamaStr,
+    ttd_aw_kotak: ttdAhliWarisKotakStr,
+    ttd_kotak: ttdAhliWarisKotakStr,
+    ttd_garis: ttdAhliWarisKotakStr,
+    ttdawkotak: ttdAhliWarisKotakStr,
+    ttdkotak: ttdAhliWarisKotakStr,
 
     // Khusus Surat Hibah (Sesuai Presisi Pengguna)
     penerima_tgl_lahir: fmtIdDate(dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir),
