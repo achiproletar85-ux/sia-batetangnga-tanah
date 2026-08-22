@@ -1117,6 +1117,20 @@
 
       docsUpdateLiveIframe(json.docId);
 
+      // Tampilkan banner hasil dokumen baru di bagian atas preview live
+      const banner = $('docsGeneratedBanner');
+      const bannerTitle = $('docsGeneratedBannerTitle');
+      const bannerSub = $('docsGeneratedBannerSub');
+      const btnDirect = $('btnDocsOpenGeneratedDirect');
+      if (banner) {
+        banner.style.display = 'flex';
+        if (bannerTitle) bannerTitle.textContent = `✅ Dokumen ${json.title || 'Surat'} Berhasil Dibuat di Google Drive!`;
+        if (bannerSub) bannerSub.textContent = `ID Dokumen: ${json.docId} (${(json.filled || []).length} field terisi penuh)`;
+      }
+      if (btnDirect) {
+        btnDirect.href = `https://docs.google.com/document/d/${encodeURIComponent(json.docId)}/edit`;
+      }
+
       const liveCard = $('docsLiveCard');
       if (liveCard) {
         liveCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1124,7 +1138,7 @@
 
       renderDocsHistory();
 
-      alert(`✅ Dokumen Google Docs (${json.title || 'Surat'}) berhasil dibuat!\n\nSalinan dokumen baru telah dibuat di Google Drive & seluruh placeholder (${(json.filled || []).length} terisi) terisi 100% presisi dengan format asli terjaga.`);
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
     } catch (e) {
       const msg = e.message || 'Gagal membuat dokumen Google Docs.';
       if ($('docsDetectResult')) {
