@@ -1435,14 +1435,14 @@ async function buildDocValues(record, extraValues) {
       const nm = String(item.nama || '').trim().toUpperCase();
       html += `<tr>
         <td style="width:55%; vertical-align:middle; border:none; padding:12px 0; font-weight:bold; font-size:14px;">${n}. ${nm}</td>
-        <td style="width:45%; text-align:right; vertical-align:middle; border:none; padding:12px 0; font-size:14px;">( ........................ )</td>
+        <td style="width:45%; text-align:right; vertical-align:middle; border:none; padding:12px 0; font-size:14px;">( .............................. )</td>
       </tr>`;
     });
     html += '</table>';
     return html;
   };
 
-  // 3) Generasi TABEL_AHLI_WARIS Teks Baku (Format Rapat & Hemat Ruang, Titik Dua 100% Lurus Tegak)
+  // 3) Generasi TABEL_AHLI_WARIS Teks Baku (Format Rapat & Hemat Ruang, Titik Dua 100% Lurus Tegak - PATEN)
   const formatChildRow = (no, nm, ttl, pekr, almt) => {
     const numStr = String(no);
     const nameSpaces = numStr.length > 1 ? 5 : 7;
@@ -1467,13 +1467,13 @@ async function buildDocValues(record, extraValues) {
     }).join('\n');
   };
 
-  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Titik tanda tangan ringkas & Ruang Vertikal Tinggi)
+  // 4) Generasi TTD_AHLI_WARIS Teks Baku (Titik tanda tangan 30 titik & Ruang Vertikal Tinggi)
   const buildTtdAhliWaris = (list) => {
     if (!list || !list.length) return '';
     return list.map((item, idx) => {
       const n = idx + 1;
       const nm = String(item.nama || '').trim().toUpperCase();
-      return `${n}. ${nm} ( ........................ )`;
+      return `${n}. ${nm} ( .............................. )`;
     }).join('\n\n\n\n').trim();
   };
 
@@ -1518,7 +1518,7 @@ async function buildDocValues(record, extraValues) {
     for (let i = 0; i < list.length; i += 2) {
       const leftNo = i + 1;
       const leftNm = String(list[i].nama || '').trim().toUpperCase();
-      blocks.push(`${leftNo}. ${leftNm}\n   ( ........................ )`);
+      blocks.push(`${leftNo}. ${leftNm}\n   ( .............................. )`);
     }
     return blocks.join('\n\n\n');
   };
@@ -1529,7 +1529,7 @@ async function buildDocValues(record, extraValues) {
     for (let i = 1; i < list.length; i += 2) {
       const rightNo = i + 1;
       const rightNm = String(list[i].nama || '').trim().toUpperCase();
-      blocks.push(`${rightNo}. ${rightNm}\n   ( ........................ )`);
+      blocks.push(`${rightNo}. ${rightNm}\n   ( .............................. )`);
     }
     return blocks.join('\n\n\n');
   };
@@ -1545,7 +1545,7 @@ async function buildDocValues(record, extraValues) {
 
   const buildTtdAhliWarisKotak = (list) => {
     if (!list || !list.length) return '';
-    return list.map(() => `( ........................ )`).join('\n\n\n\n').trim();
+    return list.map(() => `( .............................. )`).join('\n\n\n\n').trim();
   };
 
   const tabelAhliWarisHtml = buildTabelAhliWarisHtml(ahliWarisList);
