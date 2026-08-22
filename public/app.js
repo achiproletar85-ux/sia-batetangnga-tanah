@@ -1747,31 +1747,52 @@
 
   async function openDocsForId(id, jenis) {
     if (!id) return;
+    const targetId = String(id).trim();
+    
+    // Pindah ke tab surat docs
     switchTab('suratdocs');
+    
+    // Set ID pada input
+    const idInput = $('docsIdReg');
+    if (idInput) {
+      idInput.value = targetId;
+    }
+
+    // Pastikan data pendaftaran termuat
     if (!allData || !allData.length) {
       try { await loadData(); } catch (_) {}
     }
-    if ($('docsIdReg')) {
-      $('docsIdReg').value = id;
+    
+    // Set kembali ID untuk memastikan tidak tertimpa
+    if (idInput) {
+      idInput.value = targetId;
     }
-    const cleanId = String(id).replace(/^REG-/i, '').trim();
+
+    const cleanId = targetId.replace(/^REG-/i, '').trim();
     const match = (allData || []).find(x => {
       if (!x) return false;
       const xId = String(x.id || '').toUpperCase();
-      return xId === String(id).toUpperCase() || xId.replace(/^REG-/, '') === cleanId.toUpperCase();
+      return xId === targetId.toUpperCase() || xId.replace(/^REG-/, '') === cleanId.toUpperCase();
     });
+
     const targetJenis = jenis || (match && match.layanan) || 'SPORADIK';
     docsState.jenis = targetJenis;
     if ($('docsSelectJenisDropdown')) {
       $('docsSelectJenisDropdown').value = targetJenis;
     }
+
     docsLoadTemplate(targetJenis);
     docsRenderDropdownSelector(match || null);
     docsRenderAllLeftFields(match || null);
     docsOnRegIdChange();
+
+    if (idInput) {
+      idInput.value = targetId;
+    }
+
     setTimeout(() => {
       docsRender();
-    }, 200);
+    }, 150);
   }
   window.openDocsForId = openDocsForId;
 
@@ -6391,8 +6412,11 @@ hideChangePwMsg();
     else if (activeTab === 'suratdocs') {
         fetchPemohonList();
         renderDocsHistory();
-        docsUpdateLiveIframe();
-        docsOnRegIdChange();
+        if ($('docsIdReg') && $('docsIdReg').value) {
+          docsOnRegIdChange();
+        } else {
+          docsRenderAllLeftFields(null);
+        }
     }
   }
 
