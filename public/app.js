@@ -1676,11 +1676,22 @@
       return;
     }
 
-    const match = (allData || []).find(x => String(x.id).toUpperCase() === val.toUpperCase() || String(x.nama || '').toLowerCase().includes(val.toLowerCase()));
+    const cleanVal = val.replace(/^REG-/i, '').trim();
+    const match = (allData || []).find(x => {
+      if (!x) return false;
+      const xId = String(x.id || '').toUpperCase();
+      const xIdClean = xId.replace(/^REG-/, '');
+      const xNama = String(x.nama || '').toLowerCase();
+      return xId === val.toUpperCase() || 
+             xIdClean === cleanVal.toUpperCase() || 
+             (val.length >= 3 && xNama.includes(val.toLowerCase()));
+    });
+
     if (match) {
       const lay = String(match.layanan || '').toUpperCase();
       if (['HIBAH', 'JUALBELI', 'AHLIWARIS'].includes(lay)) {
         docsState.jenis = lay;
+        if ($('docsSelectJenisDropdown')) $('docsSelectJenisDropdown').value = lay;
         docsLoadTemplate(lay);
       }
       docsRenderDropdownSelector(match);
@@ -1734,23 +1745,33 @@
     }
   }
 
-  function openDocsForId(id, jenis) {
+  async function openDocsForId(id, jenis) {
     if (!id) return;
     switchTab('suratdocs');
+    if (!allData || !allData.length) {
+      try { await loadData(); } catch (_) {}
+    }
     if ($('docsIdReg')) {
       $('docsIdReg').value = id;
     }
-    const match = (allData || []).find(x => String(x.id).toUpperCase() === String(id).toUpperCase());
+    const cleanId = String(id).replace(/^REG-/i, '').trim();
+    const match = (allData || []).find(x => {
+      if (!x) return false;
+      const xId = String(x.id || '').toUpperCase();
+      return xId === String(id).toUpperCase() || xId.replace(/^REG-/, '') === cleanId.toUpperCase();
+    });
     const targetJenis = jenis || (match && match.layanan) || 'SPORADIK';
     docsState.jenis = targetJenis;
-    if ($('docsJenisSelect')) {
-      $('docsJenisSelect').value = targetJenis;
+    if ($('docsSelectJenisDropdown')) {
+      $('docsSelectJenisDropdown').value = targetJenis;
     }
     docsLoadTemplate(targetJenis);
+    docsRenderDropdownSelector(match || null);
+    docsRenderAllLeftFields(match || null);
     docsOnRegIdChange();
     setTimeout(() => {
       docsRender();
-    }, 250);
+    }, 200);
   }
   window.openDocsForId = openDocsForId;
 
@@ -6371,6 +6392,7 @@ hideChangePwMsg();
         fetchPemohonList();
         renderDocsHistory();
         docsUpdateLiveIframe();
+        docsOnRegIdChange();
     }
   }
 
