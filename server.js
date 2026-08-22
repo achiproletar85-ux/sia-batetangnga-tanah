@@ -1589,8 +1589,18 @@ async function buildDocValues(record, extraValues) {
     batas_timur: values[normKey('batas_timur')] || dr.batas_timur,
     batas_selatan: values[normKey('batas_selatan')] || dr.batas_selatan,
     batas_barat: values[normKey('batas_barat')] || dr.batas_barat,
-    // Agama
+    // Agama (Default Otomatis 'Islam' untuk SPORADIK dan semua layanan)
     agama: values[normKey('agama')] || dr.agama || 'Islam',
+    agama_pemohon: values[normKey('agama')] || dr.agama || 'Islam',
+    agamapemohon: values[normKey('agama')] || dr.agama || 'Islam',
+    agama_penjual: dr.penjual_agama || dr.agama || 'Islam',
+    agama_pembeli: dr.pembeli_agama || dr.agama || 'Islam',
+    agama_pemberi: dr.pemberi_agama || dr.agama || 'Islam',
+    agama_penerima: dr.penerima_agama || dr.agama || 'Islam',
+    agama_pihak_pertama: dr.penjual_agama || dr.pemberi_agama || dr.agama || 'Islam',
+    agama_pihak_kedua: dr.pembeli_agama || dr.penerima_agama || dr.agama || 'Islam',
+    agama_saksi1: dr.saksi1_agama || 'Islam',
+    agama_saksi2: dr.saksi2_agama || 'Islam',
     // Saksi.
     nama_saksi1: values[normKey('saksi1_nama')] || dr.saksi1_nama,
     saksi1_nama: values[normKey('saksi1_nama')] || dr.saksi1_nama,

@@ -1479,6 +1479,7 @@
         cat: '🎁 Pihak Pertama (Pemberi Hibah)',
         items: [
           { key: 'nama_pemberi', label: 'Nama Pemberi Hibah', val: dr.pemberi_nama || dr.penjual_nama || '' },
+          { key: 'pemberi_agama', label: 'Agama Pemberi', val: dr.pemberi_agama || dr.agama || 'Islam' },
           { key: 'pemberi_tgl_lahir', label: 'Tgl Lahir Pemberi ({{PEMBERI_TGL_LAHIR}})', val: dr.penjual_tanggal_lahir || dr.pemberi_tanggal_lahir || '', type: 'date' },
           { key: 'pemberi_umur', label: 'Umur Pemberi ({{PEMBERI_UMUR}})', val: dr.pemberi_umur || ageFrom(dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir) || '' },
           { key: 'pekerjaan_pemberi', label: 'Pekerjaan Pemberi Hibah', val: dr.pemberi_pekerjaan || dr.penjual_pekerjaan || '' },
@@ -1489,6 +1490,7 @@
         cat: '🎁 Pihak Kedua (Penerima Hibah)',
         items: [
           { key: 'nama_penerima', label: 'Nama Penerima Hibah', val: dr.penerima_nama || dr.pembeli_nama || (match ? match.nama : '') || '' },
+          { key: 'penerima_agama', label: 'Agama Penerima', val: dr.penerima_agama || dr.agama || 'Islam' },
           { key: 'penerima_tgl_lahir', label: 'Tgl Lahir Penerima ({{PENERIMA_TGL_LAHIR}})', val: dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir || '', type: 'date' },
           { key: 'penerima_umur', label: 'Umur Penerima ({{PENERIMA_UMUR}})', val: dr.penerima_umur || ageFrom(dr.penjual_tanggal_lahir || dr.pemberi_tanggal_lahir) || '' },
           { key: 'pekerjaan_penerima', label: 'Pekerjaan Penerima Hibah', val: dr.penerima_pekerjaan || dr.pembeli_pekerjaan || '' },
@@ -1521,6 +1523,7 @@
         cat: '🤝 Pihak Pertama (Penjual / Yang Melakukan Pengoperan)',
         items: [
           { key: 'nama_pihak_pertama', label: 'Nama Penjual (Pihak 1)', val: dr.penjual_nama || dr.pemberi_nama || dr.pihak1_nama || '' },
+          { key: 'penjual_agama', label: 'Agama Penjual', val: dr.penjual_agama || dr.agama || 'Islam' },
           { key: 'penjual_umur', label: 'Umur Penjual ({{PENJUAL_UMUR}})', val: dr.penjual_umur || dr.pemberi_umur || ageFrom(dr.penjual_tanggal_lahir || dr.pemberi_tanggal_lahir) || '' },
           { key: 'pekerjaan', label: 'Pekerjaan Penjual ({{PEKERJAAN}})', val: dr.penjual_pekerjaan || dr.pemberi_pekerjaan || dr.pekerjaan || '' },
           { key: 'alamat_pihak_pertama', label: 'Alamat Penjual (Pihak 1)', val: dr.penjual_alamat || dr.pemberi_alamat || dr.alamat || '' }
@@ -1530,6 +1533,7 @@
         cat: '🤝 Pihak Kedua (Pembeli / Yang Menerima Pengoperan)',
         items: [
           { key: 'nama_lengkap_pihak_kedua', label: 'Nama Pembeli (Pihak 2)', val: dr.pembeli_nama || dr.penerima_nama || (match ? match.nama : '') || '' },
+          { key: 'pembeli_agama', label: 'Agama Pembeli', val: dr.pembeli_agama || dr.agama || 'Islam' },
           { key: 'pembeli_umur', label: 'Umur Pembeli ({{PEMBELI_UMUR}})', val: dr.pembeli_umur || dr.penerima_umur || ageFrom(dr.pembeli_tanggal_lahir || dr.penerima_tanggal_lahir || dr.tanggal_lahir) || '' },
           { key: 'pekerjaan_pihak_kedua', label: 'Pekerjaan Pembeli', val: dr.pembeli_pekerjaan || dr.penerima_pekerjaan || '' },
           { key: 'alamat_pihak_kedua', label: 'Alamat Pembeli', val: dr.pembeli_alamat || dr.penerima_alamat || dr.alamat || '' }
