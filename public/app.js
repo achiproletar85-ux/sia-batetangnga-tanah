@@ -1414,8 +1414,12 @@
     panel.style.display = 'block';
 
     let dr = {};
-    if (match && match.data_raw) {
-      try { dr = typeof match.data_raw === 'string' ? JSON.parse(match.data_raw) : match.data_raw; } catch (_) {}
+    if (match) {
+      let rawObj = {};
+      if (match.data_raw) {
+        try { rawObj = typeof match.data_raw === 'string' ? JSON.parse(match.data_raw) : match.data_raw; } catch (_) {}
+      }
+      dr = { ...match, ...(rawObj || {}) };
     }
 
     const ageFrom = (tglISO) => {
@@ -7208,7 +7212,7 @@ hideChangePwMsg();
     const id = btn.dataset.id;
     if (action === 'surat') cetakSporadik(id);
     else if (action === 'surat-sporadik') cetakSporadik(id, 'SPORADIK');
-    else if (action === 'open-docs') openDocsForId(id, 'SPORADIK');
+    else if (action === 'open-docs') openDocsForId(id);
   });
   $('uploadBody').addEventListener('click', (e) => {
     const del = e.target.closest('[data-del-up]');
