@@ -1763,86 +1763,92 @@
   }
 }
 
-async function openDocsForId(id, jenis) {
-  if (!id) return;
-  const targetId = String(id).trim();
-  
-  // 1. Pindah ke tab surat docs
-  switchTab('suratdocs');
-  
-  // 2. Set ID pada input
-  const idInput = $('docsIdReg');
-  if (idInput) {
-    idInput.value = targetId;
-  }
+  async function openDocsForId(id, jenis) {
+    if (!id) return;
+    const targetId = String(id).trim();
+    const idInput = $('docsIdReg');
 
-  // 3. Pastikan data pendaftaran termuat
-  if (!allData || !allData.length) {
-    try { await loadData(); } catch (_) {}
-  }
-  
-  // 4. Cari match di allData / rowsCache
-  const cleanId = targetId.replace(/^REG-/i, '').trim();
-  let match = (allData || []).find(x => {
-    if (!x) return false;
-    const xId = String(x.id || '').toUpperCase();
-    const xIdClean = xId.replace(/^REG-/, '');
-    return xId === targetId.toUpperCase() || xIdClean === cleanId.toUpperCase();
-  });
+    // Set ID SEBELUM apa pun — jadi input tidak sempat tampil kosong meski ada
+    // error di tahap berikutnya (switchTab, loadData, render, dll).
+    if (idInput) idInput.value = targetId;
 
-  if (!match && rowsCache && rowsCache.length) {
-    const hit = rowsCache.find(c => {
-      const x = c.r;
+    // 1. Pindah ke tab surat docs
+    try { switchTab('suratdocs'); } catch (_) {}
+
+    // Pastikan tetap terisi setelah tab tampil
+    if (idInput) idInput.value = targetId;
+
+    // 2. Pastikan data pendaftaran termuat
+    if (!allData || !allData.length) {
+      try { await loadData(); } catch (_) {}
+    }
+
+    // 3. Cari match di allData / rowsCache
+    const cleanId = targetId.replace(/^REG-/i, '').trim();
+    let match = (allData || []).find(x => {
       if (!x) return false;
       const xId = String(x.id || '').toUpperCase();
       const xIdClean = xId.replace(/^REG-/, '');
       return xId === targetId.toUpperCase() || xIdClean === cleanId.toUpperCase();
     });
-    if (hit) match = hit.r;
-  }
 
-  // Fallback: ambil langsung dari API bila tidak ditemukan di cache lokal
-  // (mis. allData belum termuat / belum dibuild ulang).
-  if (!match) {
+    if (!match && rowsCache && rowsCache.length) {
+      const hit = rowsCache.find(c => {
+        const x = c.r;
+        if (!x) return false;
+        const xId = String(x.id || '').toUpperCase();
+        const xIdClean = xId.replace(/^REG-/, '');
+        return xId === targetId.toUpperCase() || xIdClean === cleanId.toUpperCase();
+      });
+      if (hit) match = hit.r;
+    }
+
+    // Fallback: ambil langsung dari API bila tidak ditemukan di cache lokal
+    // (mis. allData belum termuat / belum dibuild ulang).
+    if (!match) {
+      try {
+        const res = await fetch('/api/permohonan/' + encodeURIComponent(targetId));
+        const json = await res.json();
+        if (json && json.success && json.data) match = json.data;
+      } catch (_) {}
+    }
+
+    const targetJenis = (match && match.layanan && ['HIBAH', 'JUALBELI', 'AHLIWARIS'].includes(String(match.layanan).toUpperCase()))
+      ? String(match.layanan).toUpperCase()
+      : (jenis || docsState.jenis || 'SPORADIK');
+
+    docsState.jenis = targetJenis;
+    if ($('docsSelectJenisDropdown')) {
+      $('docsSelectJenisDropdown').value = targetJenis;
+    }
+
+    // Jamin nilai tetap terisi sebelum render field
+    if (idInput) idInput.value = targetId;
+
+    // Render field kiri — dibungkus try/catch agar kegagalan render tidak
+    // menyebabkan ID kembali kosong.
     try {
-      const res = await fetch('/api/permohonan/' + encodeURIComponent(targetId));
-      const json = await res.json();
-      if (json && json.success && json.data) match = json.data;
-    } catch (_) {}
+      docsRenderDropdownSelector(match || null);
+      docsRenderAllLeftFields(match || null);
+      docsOnRegIdChange();
+    } catch (e) {
+      console.warn('docs: render field gagal:', e && e.message);
+    }
+
+    if (idInput) {
+      idInput.value = targetId;
+      try {
+        idInput.dispatchEvent(new Event('input', { bubbles: true }));
+        idInput.dispatchEvent(new Event('change', { bubbles: true }));
+      } catch (_) {}
+    }
+
+    // Muat preview template (tidak langsung men-generate file baru agar pengguna bisa cek data terlebih dahulu)
+    try { await docsLoadTemplate(targetJenis); } catch (_) {}
+
+    // Jamin nilai tetap terisi setelah semua proses async selesai
+    if (idInput) idInput.value = targetId;
   }
-
-  const targetJenis = (match && match.layanan && ['HIBAH', 'JUALBELI', 'AHLIWARIS'].includes(String(match.layanan).toUpperCase()))
-    ? String(match.layanan).toUpperCase()
-    : (jenis || docsState.jenis || 'SPORADIK');
-
-  docsState.jenis = targetJenis;
-  if ($('docsSelectJenisDropdown')) {
-    $('docsSelectJenisDropdown').value = targetJenis;
-  }
-
-  if (idInput) {
-    idInput.value = targetId;
-  }
-
-  docsRenderDropdownSelector(match || null);
-  docsRenderAllLeftFields(match || null);
-  docsOnRegIdChange();
-
-  if (idInput) {
-    idInput.value = targetId;
-    try {
-      idInput.dispatchEvent(new Event('input', { bubbles: true }));
-      idInput.dispatchEvent(new Event('change', { bubbles: true }));
-    } catch (_) {}
-  }
-
-  // Muat preview template (tidak langsung men-generate file baru agar pengguna bisa cek data terlebih dahulu)
-  await docsLoadTemplate(targetJenis);
-
-  if (idInput) {
-    idInput.value = targetId;
-  }
-}
 window.openDocsForId = openDocsForId;
 
   function openCekTbPanel() {
