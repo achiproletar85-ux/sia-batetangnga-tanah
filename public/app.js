@@ -1826,10 +1826,12 @@ async function openDocsForId(id, jenis) {
     } catch (_) {}
   }
 
-  docsLoadTemplate(targetJenis).then(() => {
-    if (idInput) idInput.value = targetId;
-    docsRender();
-  });
+  // Muat preview template (tidak langsung men-generate file baru agar pengguna bisa cek data terlebih dahulu)
+  await docsLoadTemplate(targetJenis);
+
+  if (idInput) {
+    idInput.value = targetId;
+  }
 }
 window.openDocsForId = openDocsForId;
 
