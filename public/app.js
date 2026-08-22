@@ -1681,7 +1681,7 @@
     }
 
     const cleanVal = val.replace(/^REG-/i, '').trim();
-    const match = (allData || []).find(x => {
+    let match = (allData || []).find(x => {
       if (!x) return false;
       const xId = String(x.id || '').toUpperCase();
       const xIdClean = xId.replace(/^REG-/, '');
@@ -1690,6 +1690,20 @@
              xIdClean === cleanVal.toUpperCase() || 
              (val.length >= 3 && xNama.includes(val.toLowerCase()));
     });
+
+    if (!match && rowsCache && rowsCache.length) {
+      const hit = rowsCache.find(c => {
+        const x = c.r;
+        if (!x) return false;
+        const xId = String(x.id || '').toUpperCase();
+        const xIdClean = xId.replace(/^REG-/, '');
+        const xNama = String(x.nama || '').toLowerCase();
+        return xId === val.toUpperCase() || 
+               xIdClean === cleanVal.toUpperCase() || 
+               (val.length >= 3 && xNama.includes(val.toLowerCase()));
+      });
+      if (hit) match = hit.r;
+    }
 
     if (match) {
       const lay = String(match.layanan || '').toUpperCase();
@@ -1727,78 +1741,93 @@
     }
   }
 
-    if ($('docsIdReg')) {
-      $('docsIdReg').addEventListener('input', docsOnRegIdChange);
-      $('docsIdReg').addEventListener('change', docsOnRegIdChange);
-      $('docsIdReg').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); docsRender(); } });
-    }
-
-    docsFetchAllMasterLinks().then(() => docsLoadTemplate(docsState.jenis));
-    const body = $('docsHistoryBody');
-    if (body) {
-      body.addEventListener('click', (e) => {
-        const o = e.target.closest('[data-docs-open]');
-        if (o) { docsOpenHistory(o.dataset.docsOpen); return; }
-        const v = e.target.closest('[data-docs-view]');
-        if (v) { docsLoadHistory(v.dataset.docsView); return; }
-        const p = e.target.closest('[data-docs-print]');
-        if (p) { docsPrintHistory(p.dataset.docsPrint); return; }
-        const d = e.target.closest('[data-docs-del]');
-        if (d) { docsDeleteHistory(d.dataset.docsDel); }
-      });
-    }
+  if ($('docsIdReg')) {
+    $('docsIdReg').addEventListener('input', docsOnRegIdChange);
+    $('docsIdReg').addEventListener('change', docsOnRegIdChange);
+    $('docsIdReg').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); docsRender(); } });
   }
 
-  async function openDocsForId(id, jenis) {
-    if (!id) return;
-    const targetId = String(id).trim();
-    
-    // Pindah ke tab surat docs
-    switchTab('suratdocs');
-    
-    // Set ID pada input
-    const idInput = $('docsIdReg');
-    if (idInput) {
-      idInput.value = targetId;
-    }
+  docsFetchAllMasterLinks().then(() => docsLoadTemplate(docsState.jenis));
+  const body = $('docsHistoryBody');
+  if (body) {
+    body.addEventListener('click', (e) => {
+      const o = e.target.closest('[data-docs-open]');
+      if (o) { docsOpenHistory(o.dataset.docsOpen); return; }
+      const v = e.target.closest('[data-docs-view]');
+      if (v) { docsLoadHistory(v.dataset.docsView); return; }
+      const p = e.target.closest('[data-docs-print]');
+      if (p) { docsPrintHistory(p.dataset.docsPrint); return; }
+      const d = e.target.closest('[data-docs-del]');
+      if (d) { docsDeleteHistory(d.dataset.docsDel); }
+    });
+  }
+}
 
-    // Pastikan data pendaftaran termuat
-    if (!allData || !allData.length) {
-      try { await loadData(); } catch (_) {}
-    }
-    
-    // Set kembali ID untuk memastikan tidak tertimpa
-    if (idInput) {
-      idInput.value = targetId;
-    }
+async function openDocsForId(id, jenis) {
+  if (!id) return;
+  const targetId = String(id).trim();
+  
+  // 1. Pindah ke tab surat docs
+  switchTab('suratdocs');
+  
+  // 2. Set ID pada input
+  const idInput = $('docsIdReg');
+  if (idInput) {
+    idInput.value = targetId;
+  }
 
-    const cleanId = targetId.replace(/^REG-/i, '').trim();
-    const match = (allData || []).find(x => {
+  // 3. Pastikan data pendaftaran termuat
+  if (!allData || !allData.length) {
+    try { await loadData(); } catch (_) {}
+  }
+  
+  // 4. Cari match di allData / rowsCache
+  const cleanId = targetId.replace(/^REG-/i, '').trim();
+  let match = (allData || []).find(x => {
+    if (!x) return false;
+    const xId = String(x.id || '').toUpperCase();
+    const xIdClean = xId.replace(/^REG-/, '');
+    return xId === targetId.toUpperCase() || xIdClean === cleanId.toUpperCase();
+  });
+
+  if (!match && rowsCache && rowsCache.length) {
+    const hit = rowsCache.find(c => {
+      const x = c.r;
       if (!x) return false;
       const xId = String(x.id || '').toUpperCase();
-      return xId === targetId.toUpperCase() || xId.replace(/^REG-/, '') === cleanId.toUpperCase();
+      const xIdClean = xId.replace(/^REG-/, '');
+      return xId === targetId.toUpperCase() || xIdClean === cleanId.toUpperCase();
     });
-
-    const targetJenis = jenis || (match && match.layanan) || 'SPORADIK';
-    docsState.jenis = targetJenis;
-    if ($('docsSelectJenisDropdown')) {
-      $('docsSelectJenisDropdown').value = targetJenis;
-    }
-
-    docsLoadTemplate(targetJenis);
-    docsRenderDropdownSelector(match || null);
-    docsRenderAllLeftFields(match || null);
-    docsOnRegIdChange();
-
-    if (idInput) {
-      idInput.value = targetId;
-    }
-
-    setTimeout(() => {
-      docsRender();
-    }, 150);
+    if (hit) match = hit.r;
   }
-  window.openDocsForId = openDocsForId;
+
+  const targetJenis = (match && match.layanan && ['HIBAH', 'JUALBELI', 'AHLIWARIS'].includes(String(match.layanan).toUpperCase()))
+    ? String(match.layanan).toUpperCase()
+    : (jenis || docsState.jenis || 'SPORADIK');
+
+  docsState.jenis = targetJenis;
+  if ($('docsSelectJenisDropdown')) {
+    $('docsSelectJenisDropdown').value = targetJenis;
+  }
+
+  if (idInput) {
+    idInput.value = targetId;
+  }
+
+  docsRenderDropdownSelector(match || null);
+  docsRenderAllLeftFields(match || null);
+  docsOnRegIdChange();
+
+  if (idInput) {
+    idInput.value = targetId;
+  }
+
+  docsLoadTemplate(targetJenis).then(() => {
+    if (idInput) idInput.value = targetId;
+    docsRender();
+  });
+}
+window.openDocsForId = openDocsForId;
 
   function openCekTbPanel() {
     fetchPemohonList();
