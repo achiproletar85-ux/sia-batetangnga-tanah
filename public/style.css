@@ -3329,7 +3329,8 @@ canvas, #chartDusun, #chartLayanan {
 
 .docs-live-iframe {
   width: 100%;
-  height: 650px;
+  height: 850px;
+  min-height: 800px;
   border: none;
   border-radius: 0 0 16px 16px;
   transition: height 0.25s ease;
@@ -3338,7 +3339,8 @@ canvas, #chartDusun, #chartLayanan {
 }
 
 .docs-live-iframe.tall {
-  height: 950px;
+  height: 1100px;
+  min-height: 1000px;
 }
 
 .docs-link-status-text {
