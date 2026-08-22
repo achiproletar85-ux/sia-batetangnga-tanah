@@ -2678,7 +2678,7 @@ app.post('/api/keuangan/import-from-sheet', requireAuth, requireRole('bendahara'
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    version: '2026-08-22_02:53_dotted_leader',
+    version: '2026-08-22_16:36_clean_colons',
     tables: [TABLE_DB, TABLE_UP],
     timestamp: new Date().toISOString()
   });
