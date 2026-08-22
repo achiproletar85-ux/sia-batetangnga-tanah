@@ -1473,7 +1473,7 @@ async function buildDocValues(record, extraValues) {
     }).join('\n\n\n\n').trim();
   };
 
-  // 5) Generasi KIRI dan KANAN secara terpisah (Untuk Tabel 1 Baris 2 Kolom di Google Docs)
+  // 5) Generasi KIRI (GANJIL: 1, 3, 5, ...) dan KANAN (GENAP: 2, 4, 6, ...) untuk Tabel 2 Kolom Google Docs
   const buildTabelAhliWarisKiri = (list) => {
     if (!list || !list.length) return '';
     const blocks = [];
@@ -1493,7 +1493,7 @@ async function buildDocValues(record, extraValues) {
       const l4 = `   Alamat`.padEnd(13, ' ') + `: ${leftAlmt}`;
       blocks.push(l1 + '\n' + l2 + '\n' + l3 + '\n' + l4);
     }
-    return blocks.join('\n');
+    return blocks.join('\n\n');
   };
 
   const buildTabelAhliWarisKanan = (list) => {
@@ -1515,7 +1515,7 @@ async function buildDocValues(record, extraValues) {
       const r4 = `   Alamat`.padEnd(13, ' ') + `: ${rightAlmt}`;
       blocks.push(r1 + '\n' + r2 + '\n' + r3 + '\n' + r4);
     }
-    return blocks.join('\n');
+    return blocks.join('\n\n');
   };
 
   const buildTtdAhliWarisKiri = (list) => {
@@ -1524,9 +1524,9 @@ async function buildDocValues(record, extraValues) {
     for (let i = 0; i < list.length; i += 2) {
       const leftNo = i + 1;
       const leftNm = String(list[i].nama || '').trim().toUpperCase();
-      blocks.push(`${leftNo}. ${leftNm}\t\t( ........................ )`);
+      blocks.push(`${leftNo}. ${leftNm}\n   ( ........................ )`);
     }
-    return blocks.join('\n\n\n\n');
+    return blocks.join('\n\n\n');
   };
 
   const buildTtdAhliWarisKanan = (list) => {
@@ -1535,9 +1535,9 @@ async function buildDocValues(record, extraValues) {
     for (let i = 1; i < list.length; i += 2) {
       const rightNo = i + 1;
       const rightNm = String(list[i].nama || '').trim().toUpperCase();
-      blocks.push(`${rightNo}. ${rightNm}\t\t( ........................ )`);
+      blocks.push(`${rightNo}. ${rightNm}\n   ( ........................ )`);
     }
-    return blocks.join('\n\n\n\n');
+    return blocks.join('\n\n\n');
   };
 
   const buildTtdAhliWarisNama = (list) => {
@@ -1685,8 +1685,26 @@ async function buildDocValues(record, extraValues) {
     tabel_ahli_waris_kanan: tabelAhliWarisKananStr,
     tabel_aw_kiri: tabelAhliWarisKiriStr,
     tabel_aw_kanan: tabelAhliWarisKananStr,
+    tabel_aw_ganjil: tabelAhliWarisKiriStr,
+    tabel_aw_genap: tabelAhliWarisKananStr,
+    tabel_ganjil: tabelAhliWarisKiriStr,
+    tabel_genap: tabelAhliWarisKananStr,
+    tabelawkiri: tabelAhliWarisKiriStr,
+    tabelawkanan: tabelAhliWarisKananStr,
+    tabelawganjil: tabelAhliWarisKiriStr,
+    tabelawgenap: tabelAhliWarisKananStr,
+    ttd_ahli_waris_kiri: ttdAhliWarisKiriStr,
+    ttd_ahli_waris_kanan: ttdAhliWarisKananStr,
     ttd_aw_kiri: ttdAhliWarisKiriStr,
     ttd_aw_kanan: ttdAhliWarisKananStr,
+    ttd_aw_ganjil: ttdAhliWarisKiriStr,
+    ttd_aw_genap: ttdAhliWarisKananStr,
+    ttd_ganjil: ttdAhliWarisKiriStr,
+    ttd_genap: ttdAhliWarisKananStr,
+    ttdawkiri: ttdAhliWarisKiriStr,
+    ttdawkanan: ttdAhliWarisKananStr,
+    ttdawganjil: ttdAhliWarisKiriStr,
+    ttdawgenap: ttdAhliWarisKananStr,
     ttd_aw_nama: ttdAhliWarisNamaStr,
     ttd_nama: ttdAhliWarisNamaStr,
     ttdawnama: ttdAhliWarisNamaStr,
