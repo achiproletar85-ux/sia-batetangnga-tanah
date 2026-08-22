@@ -3535,6 +3535,29 @@ canvas, #chartDusun, #chartLayanan {
   font-size: 13px;
 }
 
+.docs-history-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1d4ed8;
+  text-decoration: none;
+  padding: 4px 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  background: #eff6ff;
+  white-space: nowrap;
+}
+.docs-history-link:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+.docs-history-nolink {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
 @media screen and (max-width: 1024px) {
   .docs-layout {
     grid-template-columns: 1fr;

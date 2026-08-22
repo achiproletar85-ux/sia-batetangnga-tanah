@@ -1199,6 +1199,9 @@
           <td>${esc(tgl)}</td>
           <td><strong>${esc(r.id_registrasi || '-')}</strong></td>
           <td class="wrap">${esc(r.judul || 'Surat')}</td>
+          <td>${r.generated_doc_id
+            ? `<a class="docs-history-link" href="https://docs.google.com/document/d/${encodeURIComponent(r.generated_doc_id)}/edit" target="_blank" rel="noopener">🔗 Buka</a>`
+            : '<span class="docs-history-nolink">—</span>'}</td>
           <td>${esc(r.created_by || '-')}</td>
           <td>
             <div class="docs-history-actions">
