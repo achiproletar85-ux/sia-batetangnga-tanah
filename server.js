@@ -1454,10 +1454,10 @@ async function buildDocValues(record, extraValues) {
       const pekr = item.pekerjaan || '-';
       const almt = item.alamat || '-';
 
-      const l1 = `${no}. Nama\t\t: ${nm}`;
-      const l2 = `   TTL\t\t: ${ttl}`;
-      const l3 = `   Pekerjaan\t: ${pekr}`;
-      const l4 = `   Alamat\t\t: ${almt}`;
+      const l1 = `${no}. Nama : ${nm}`;
+      const l2 = `   TTL : ${ttl}`;
+      const l3 = `   Pekerjaan : ${pekr}`;
+      const l4 = `   Alamat : ${almt}`;
 
       return l1 + '\n' + l2 + '\n' + l3 + '\n' + l4;
     }).join('\n');
@@ -1487,10 +1487,10 @@ async function buildDocValues(record, extraValues) {
       const leftPekr = left.pekerjaan || '-';
       const leftAlmt = left.alamat || '-';
       
-      const l1 = `${leftNo}. Nama\t\t: ${leftNm}`;
-      const l2 = `   TTL\t\t: ${leftTtl}`;
-      const l3 = `   Pekerjaan\t: ${leftPekr}`;
-      const l4 = `   Alamat\t\t: ${leftAlmt}`;
+      const l1 = `${leftNo}. Nama : ${leftNm}`;
+      const l2 = `   TTL : ${leftTtl}`;
+      const l3 = `   Pekerjaan : ${leftPekr}`;
+      const l4 = `   Alamat : ${leftAlmt}`;
       blocks.push(l1 + '\n' + l2 + '\n' + l3 + '\n' + l4);
     }
     return blocks.join('\n\n');
@@ -1509,10 +1509,10 @@ async function buildDocValues(record, extraValues) {
       const rightPekr = right.pekerjaan || '-';
       const rightAlmt = right.alamat || '-';
 
-      const r1 = `${rightNo}. Nama\t\t: ${rightNm}`;
-      const r2 = `   TTL\t\t: ${rightTtl}`;
-      const r3 = `   Pekerjaan\t: ${rightPekr}`;
-      const r4 = `   Alamat\t\t: ${rightAlmt}`;
+      const r1 = `${rightNo}. Nama : ${rightNm}`;
+      const r2 = `   TTL : ${rightTtl}`;
+      const r3 = `   Pekerjaan : ${rightPekr}`;
+      const r4 = `   Alamat : ${rightAlmt}`;
       blocks.push(r1 + '\n' + r2 + '\n' + r3 + '\n' + r4);
     }
     return blocks.join('\n\n');
