@@ -68,7 +68,7 @@ async function getUserByUsername(username) {
   } catch (_) { return null; }
 }
 async function upsertAdminRecord({ username, name, password_hash }) {
-  const rec = { id: 1, username, name, password_hash, updated_at: new Date().toISOString() };
+  const rec = { id: 1, username, name, password_hash, role: 'admin', updated_at: new Date().toISOString() };
   const { error } = await supabase.from(TABLE_USERS).upsert(rec, { onConflict: 'id' });
   if (error) throw new Error(error.message);
 }
@@ -172,15 +172,17 @@ app.post('/api/login', async (req, res) => {
       name = rec.name || u;
       // Bila kolom role belum dibuat (belum migration), akun admin fallback bendahara.
       const r = rec.role;
-      role = (r === 'admin' || r === 'bendahara' || r === 'user') ? r : (u === AUTH_USER ? 'bendahara' : 'user');
+      role = (r === 'admin' || r === 'bendahara' || r === 'user') ? r : (u === AUTH_USER ? 'admin' : 'user');
     }
   } else if (u === AUTH_USER && p === AUTH_PASS) {
-    matched = true;
-    role = 'bendahara';
-    // Migrasi awal: semai kredensial env ke tabel app_users (untuk fitur ubah sandi).
-    hashPassword(p).then((h) => upsertAdminRecord({ username: u, name: AUTH_NAME, password_hash: h })).catch(() => {});
-  }
-  if (!matched) {
+      matched = true;
+      role = 'admin';
+      // Migrasi awal: semai kredensial env ke tabel app_users (untuk fitur ubah sandi).
+      hashPassword(p).then((h) => upsertAdminRecord({ username: u, name: AUTH_NAME, password_hash: h })).catch(() => {});
+    }
+    // Akun admin utama (dari env AUTH_USER) selalu berhak akses penuh (admin).
+    if (matched && u === AUTH_USER) role = 'admin';
+    if (!matched) {
     return res.status(401).json({ success: false, error: 'Username atau kata sandi salah.' });
   }
   const token = signToken({ username: u, name, role, exp: Date.now() + SESSION_TTL_MS });
@@ -2591,7 +2593,7 @@ function parseSheetTime(v) {
 }
 
 // POST /api/keuangan/import-from-sheet -> Tarik semua transaksi dari tab TRANSAKSI (upsert).
-app.post('/api/keuangan/import-from-sheet', requireAuth, requireRole('bendahara'), async (req, res) => {
+app.post('/api/keuangan/import-from-sheet', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     const gasRes = await fetch(KEUANGAN_SHEET_URL, { redirect: 'follow' });
     if (!gasRes.ok) {

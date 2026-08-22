@@ -130,6 +130,7 @@
   }
 
   function renderKeuanganTable() {
+    if (!isBendahara()) return;
     const q = $('keuSearchInput').value.toLowerCase().trim();
     const body = $('keuBody');
     body.innerHTML = '';
@@ -297,6 +298,7 @@
 
   // Render seluruh dashboard keuangan berdasarkan keuState.
   function renderKeuanganDashboard() {
+    if (!isBendahara()) return;
     const months = keuMonthly();
     const totalPemasukan = months.reduce((s, m) => s + m.masuk, 0);
     const totalPengeluaran = months.reduce((s, m) => s + m.keluar, 0);
@@ -3252,6 +3254,10 @@ window.openDocsForId = openDocsForId;
     // (ringkasan, grafik, rekap, tabel, cetak, & input transaksi).
     const dash = document.getElementById('keuDashboard');
     if (dash) dash.hidden = !canInput;
+
+    // Tombol "Tarik dari Sheet" di dashboard keuangan hanya untuk Admin.
+    const impK = document.getElementById('btnImportKeuangan');
+    if (impK) impK.style.display = isAdmin() ? '' : 'none';
 
     // Cek Tagihan & Berkas tetap tersedia untuk semua user.
     const cekBtn = document.getElementById('btnCekTagihanBerkas');
