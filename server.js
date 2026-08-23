@@ -233,10 +233,47 @@ app.post('/api/change-password', requireAuth, requireRole('admin'), async (req, 
 
 app.get('/api/permohonan', requireAuth, async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from(TABLE_DB)
-      .select('*')
-      .order('updated_at', { ascending: false });
+    const { page, limit, search, layanan, status } = req.query;
+    
+    let query = supabase.from(TABLE_DB).select('*', { count: 'exact' });
+
+    if (layanan) {
+      query = query.eq('layanan', String(layanan).trim().toUpperCase());
+    }
+    if (status) {
+      query = query.eq('status_berkas', String(status).trim().toUpperCase());
+    }
+    if (search) {
+      const s = String(search).trim();
+      query = query.or(`id.ilike.%${s}%,nama.ilike.%${s}%,layanan.ilike.%${s}%,catatan_admin.ilike.%${s}%`);
+    }
+
+    query = query.order('updated_at', { ascending: false });
+
+    // Jika parameter page dan limit diberikan, terapkan server-side range pagination
+    if (page && limit) {
+      const p = Math.max(1, parseInt(page, 10) || 1);
+      const l = Math.max(1, Math.min(100, parseInt(limit, 10) || 15));
+      const from = (p - 1) * l;
+      const to = from + l - 1;
+      query = query.range(from, to);
+
+      const { data, count, error } = await query;
+      if (error) throw error;
+      return res.json({
+        success: true,
+        data: data || [],
+        pagination: {
+          page: p,
+          limit: l,
+          total: count || 0,
+          totalPages: Math.ceil((count || 0) / l)
+        }
+      });
+    }
+
+    // Kompatibilitas mundur penuh jika tanpa pagination
+    const { data, error } = await query;
     if (error) throw error;
     res.json({ success: true, data: data || [] });
   } catch (e) {
@@ -1070,9 +1107,32 @@ async function findRecordByRegOrName(idRegRaw) {
   return byName || null;
 }
 
+async function fetchWithRetry(url, options = {}, retries = 3, backoffMs = 800) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if ((res.status === 429 || res.status >= 500) && attempt < retries) {
+        console.warn(`[Google API Retry] Percobaan ${attempt} status ${res.status}. Mengulang dalam ${backoffMs}ms...`);
+        await new Promise(r => setTimeout(r, backoffMs));
+        backoffMs *= 2;
+        continue;
+      }
+      return res;
+    } catch (err) {
+      if (attempt < retries) {
+        console.warn(`[Google API Retry] Gangguan jaringan percobaan ${attempt}: ${err.message}. Mengulang dalam ${backoffMs}ms...`);
+        await new Promise(r => setTimeout(r, backoffMs));
+        backoffMs *= 2;
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 async function fetchDocContent(docId) {
   const token = await googleAccessToken();
-  const res = await fetch('https://docs.googleapis.com/v1/documents/' + encodeURIComponent(docId), {
+  const res = await fetchWithRetry('https://docs.googleapis.com/v1/documents/' + encodeURIComponent(docId), {
     headers: { Authorization: 'Bearer ' + token }
   });
   const j = await res.json();
@@ -1098,7 +1158,7 @@ function paragraphText(p) {
 // Salin dokumen Google Docs via Drive API (file asli digandakan, placeholder tetap utuh).
 async function copyDriveDoc(docId, newName) {
   const token = await googleAccessToken();
-  const res = await fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(docId) + '/copy', {
+  const res = await fetchWithRetry('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(docId) + '/copy', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: newName })
@@ -1121,7 +1181,7 @@ async function fillDocText(docId, replacements) {
       replaceText: r.to
     }
   }));
-  const res = await fetch('https://docs.googleapis.com/v1/documents/' + encodeURIComponent(docId) + ':batchUpdate', {
+  const res = await fetchWithRetry('https://docs.googleapis.com/v1/documents/' + encodeURIComponent(docId) + ':batchUpdate', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify({ requests })
