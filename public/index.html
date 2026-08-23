@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260823_1622" />
+  <link rel="stylesheet" href="style.css?v=20260823_1627" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) { window.lucide.createIcons(); } });</script>
   <script>
@@ -687,13 +687,13 @@
     <form id="changePwForm">
       <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
         <label style="font-size:12px; font-weight:700;">Kata Sandi Saat Ini
-          <input type="password" id="currentPassword" class="docs-select-input" required style="margin-top:4px;" />
+          <input type="password" id="currentPassword" class="docs-select-input" required autocomplete="current-password" style="margin-top:4px;" />
         </label>
         <label style="font-size:12px; font-weight:700;">Kata Sandi Baru (Min. 6 Karakter)
-          <input type="password" id="newPassword" class="docs-select-input" required minlength="6" style="margin-top:4px;" />
+          <input type="password" id="newPassword" class="docs-select-input" required minlength="6" autocomplete="new-password" style="margin-top:4px;" />
         </label>
         <label style="font-size:12px; font-weight:700;">Konfirmasi Kata Sandi Baru
-          <input type="password" id="confirmPassword" class="docs-select-input" required minlength="6" style="margin-top:4px;" />
+          <input type="password" id="confirmPassword" class="docs-select-input" required minlength="6" autocomplete="new-password" style="margin-top:4px;" />
         </label>
       </div>
       <div class="modal-foot">
@@ -766,10 +766,10 @@
       <div class="modal-body" style="display:flex; flex-direction:column; gap:14px;">
         <div id="loginError" class="badge err" style="display:none; padding:8px 12px; font-size:12px; white-space:normal;"></div>
         <label style="font-size:12px; font-weight:700;">Username / Akun
-          <input type="text" id="loginEmail" class="docs-select-input" placeholder="admin" required style="margin-top:4px;" />
+          <input type="text" id="loginEmail" class="docs-select-input" placeholder="admin" required autocomplete="username" style="margin-top:4px;" />
         </label>
         <label style="font-size:12px; font-weight:700;">Kata Sandi
-          <input type="password" id="loginPassword" class="docs-select-input" placeholder="••••••••" required style="margin-top:4px;" />
+          <input type="password" id="loginPassword" class="docs-select-input" placeholder="••••••••" required autocomplete="current-password" style="margin-top:4px;" />
         </label>
       </div>
       <div class="modal-foot">
@@ -826,6 +826,6 @@
   </dialog>
 
   <!-- Script Global App -->
-  <script src="app.js?v=20260823_1622"></script>
+  <script src="app.js?v=20260823_1627"></script>
 </body>
 </html>

@@ -7219,15 +7219,15 @@ hideChangePwMsg();
   $('btnRefresh').addEventListener('click', loadData);
   const pageRenderers = { pendaftaran: render, sporadik: renderSporadik, uploads: renderUploads };
   const resetPage = (key) => { pageState[key].p = 1; };
-  $('searchInput').addEventListener('input', () => { resetPage('pendaftaran'); render(); });
-  $('filterLayanan').addEventListener('change', () => { resetPage('pendaftaran'); render(); });
-  $('filterStatus').addEventListener('change', () => { resetPage('pendaftaran'); render(); });
-  $('spSearch').addEventListener('input', () => { resetPage('sporadik'); renderSporadik(); });
-  $('spFilterLayanan').addEventListener('change', () => { resetPage('sporadik'); renderSporadik(); });
-  $('spFilterKelengkapan').addEventListener('change', () => { resetPage('sporadik'); renderSporadik(); });
-  $('uploadSearch').addEventListener('input', () => { resetPage('uploads'); renderUploads(); });
+  on('searchInput', 'input', () => { resetPage('pendaftaran'); render(); });
+  on('filterLayanan', 'change', () => { resetPage('pendaftaran'); render(); });
+  on('filterStatus', 'change', () => { resetPage('pendaftaran'); render(); });
+  on('spSearch', 'input', () => { resetPage('sporadik'); renderSporadik(); });
+  on('spFilterLayanan', 'change', () => { resetPage('sporadik'); renderSporadik(); });
+  on('spFilterKelengkapan', 'change', () => { resetPage('sporadik'); renderSporadik(); });
+  on('uploadSearch', 'input', () => { resetPage('uploads'); renderUploads(); });
   [['pagerPendaftaran', 'pendaftaran'], ['pagerSporadik', 'sporadik'], ['pagerUploads', 'uploads'], ['pagerKeuangan', 'keuangan']].forEach(([pid, key]) => {
-    $(pid).addEventListener('click', (e) => {
+    on(pid, 'click', (e) => {
       const btn = e.target.closest('.pg-btn');
       if (!btn || btn.disabled) return;
       const pg = parseInt(btn.dataset.pg, 10);
@@ -7237,7 +7237,7 @@ hideChangePwMsg();
       if (renderer) renderer();
     });
   });
-  $('topSearch').addEventListener('input', () => {
+  on('topSearch', 'input', () => {
     const q = $('topSearch').value;
     let el = null;
     if (activeTab === 'pendaftaran') el = $('searchInput');
@@ -7248,15 +7248,15 @@ hideChangePwMsg();
     el.value = q;
     el.dispatchEvent(new Event('input'));
   });
-  $('btnSpLoad').addEventListener('click', loadSpData);
-  $('btnSpReset').addEventListener('click', resetSpForm);
-  $('spLoadInput').addEventListener('keydown', (e) => {
+  on('btnSpLoad', 'click', loadSpData);
+  on('btnSpReset', 'click', resetSpForm);
+  on('spLoadInput', 'keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); loadSpData(); }
   });
   document.querySelectorAll('.tabbtn').forEach((b) =>
-    b.addEventListener('click', () => switchTab(b.dataset.tab))
+    on(b, 'click', () => switchTab(b.dataset.tab))
   );
-  $('dataBody').addEventListener('click', (e) => {
+  on('dataBody', 'click', (e) => {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
     const action = btn.dataset.action;
@@ -7265,7 +7265,7 @@ hideChangePwMsg();
     if (action === 'edit') openEdit(id);
     if (action === 'delete') deleteRow(id);
   });
-  $('sporadikBody').addEventListener('click', (e) => {
+  on('sporadikBody', 'click', (e) => {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
     const action = btn.dataset.action;
@@ -7274,39 +7274,39 @@ hideChangePwMsg();
     else if (action === 'surat-sporadik') cetakSporadik(id, 'SPORADIK');
     else if (action === 'open-docs') openDocsForId(id);
   });
-  $('uploadBody').addEventListener('click', (e) => {
+  on('uploadBody', 'click', (e) => {
     const del = e.target.closest('[data-del-up]');
     if (del) deleteUpload(del.dataset.delUp);
   });
-  $('btnCloseModal').addEventListener('click', () => $('detailModal').close());
-  $('btnCloseEdit').addEventListener('click', () => $('editModal').close());
-  $('btnTambahData').addEventListener('click', openTambahData);
-  $('btnCloseTambah').addEventListener('click', () => $('tambahModal').close());
-  $('btnRekapAlamat').addEventListener('click', () => openRekap('alamat', 'REKAP DATA BERDASARKAN DUSUN'));
-  $('btnTabelKosong').addEventListener('click', () => openRekap('tabelKosong', 'TABEL KOSONG / DAFTAR PENGUKURAN'));
-  $('btnGroupByNIK').addEventListener('click', () => openRekap('nik', 'GROUP BY NIK / NAMA'));
-  $('btnCloseRekap').addEventListener('click', () => $('rekapModal').close());
-  $('btnCetakRekap').addEventListener('click', cetakRekap);
-  $('btnBackSurat').addEventListener('click', backToSporadik);
-  $('btnPrintSurat').addEventListener('click', handleCetak);
-  $('btnSaveSuratEdit').addEventListener('click', handleSimpan);
+  on('btnCloseModal', 'click', () => $('detailModal') && $('detailModal').close());
+  on('btnCloseEdit', 'click', () => $('editModal') && $('editModal').close());
+  on('btnTambahData', 'click', openTambahData);
+  on('btnCloseTambah', 'click', () => $('tambahModal') && $('tambahModal').close());
+  on('btnRekapAlamat', 'click', () => openRekap('alamat', 'REKAP DATA BERDASARKAN DUSUN'));
+  on('btnTabelKosong', 'click', () => openRekap('tabelKosong', 'TABEL KOSONG / DAFTAR PENGUKURAN'));
+  on('btnGroupByNIK', 'click', () => openRekap('nik', 'GROUP BY NIK / NAMA'));
+  on('btnCloseRekap', 'click', () => $('rekapModal') && $('rekapModal').close());
+  on('btnCetakRekap', 'click', cetakRekap);
+  on('btnBackSurat', 'click', backToSporadik);
+  on('btnPrintSurat', 'click', handleCetak);
+  on('btnSaveSuratEdit', 'click', handleSimpan);
   if ($('btnOpenDocsFromSporadik')) {
-    $('btnOpenDocsFromSporadik').addEventListener('click', () => {
+    on('btnOpenDocsFromSporadik', 'click', () => {
       if (currentSurat && currentSurat.r && currentSurat.r.id) {
         openDocsForId(currentSurat.r.id, currentSuratTemplate || 'SPORADIK');
       }
     });
   }
-  $('srTgl').addEventListener('input', renderSurat);
-  maskDmyInput($('srTgl'));
-  $('srNoUrut').addEventListener('input', renderSurat);
+  on('srTgl', 'input', renderSurat);
+  if ($('srTgl')) maskDmyInput($('srTgl'));
+  on('srNoUrut', 'input', renderSurat);
   // Kunci SEMUA pop-up: tidak bisa hilang oleh klik luar / tombol Esc.
   // Hanya tombol close (✕ / Batal) masing-masing yang boleh menutupnya.
   document.querySelectorAll('dialog').forEach((d) => {
-    d.addEventListener('click', (e) => {
+    on(d, 'click', (e) => {
       if (e.target === d) e.preventDefault();
     });
-    d.addEventListener('cancel', (e) => e.preventDefault());
+    on(d, 'cancel', (e) => e.preventDefault());
   });
 
   // Tutup semua dropdown autocomplete saat klik di luar field autocomplete.
@@ -7317,14 +7317,14 @@ hideChangePwMsg();
     document.querySelectorAll('.ac-dd').forEach((el) => { if (!el.hidden) el.hidden = true; });
   });
 
-  $('btnOpenLogin').addEventListener('click', openLogin);
-  $('btnOpenLoginNotice').addEventListener('click', openLogin);
-  $('btnCloseLogin').addEventListener('click', closeLogin);
-  $('loginForm').addEventListener('submit', handleLogin);
-  $('togglePassword').addEventListener('click', togglePassword);
-  $('btnCloseChangePw').addEventListener('click', closeChangePw);
-  $('changePwForm').addEventListener('submit', handleChangePw);
-  $('toggleCpNew').addEventListener('click', () => {
+  on('btnOpenLogin', 'click', openLogin);
+  on('btnOpenLoginNotice', 'click', openLogin);
+  on('btnCloseLogin', 'click', closeLogin);
+  on('loginForm', 'submit', handleLogin);
+  on('togglePassword', 'click', togglePassword);
+  on('btnCloseChangePw', 'click', closeChangePw);
+  on('changePwForm', 'submit', handleChangePw);
+  on('toggleCpNew', 'click', () => {
     const inp = $('cpNew');
     if (!inp) return;
     const show = inp.type === 'password';
