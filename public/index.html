@@ -7,12 +7,12 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Sync Surat Tanah - Batetangnga</title>
+  <title>SIA Batetangnga — Sistem Pertanahan Digital</title>
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260823_1616" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260823_1625" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) { window.lucide.createIcons(); } });</script>
   <script>
@@ -28,946 +28,804 @@
   <script>tailwind.config = { corePlugins: { preflight: false } };</script>
 </head>
 <body>
-  <div class="app-container">
-    <header class="app-header topbar">
-      <div class="app-brand brand-section">
-        <span class="sidebar-logo brand-logo-badge" style="background:#ffffff; box-shadow:0 8px 16px rgba(2,44,34,.18); overflow:hidden;">
-          <img src="logo-desa.png" alt="Logo Desa Batetangnga" class="brand-logo-img" style="width:100%; height:100%; object-fit:contain; display:block;">
-        </span>
-        <div class="brand-info">
-          <h1 class="app-title">Surat Tanah — Batetangnga</h1>
-          <p class="app-subtitle">Pengelolaan Pendaftaran &#8644; Supabase &amp; Surat Digital</p>
+
+  <div class="app-shell">
+
+    <!-- =========================================================
+         SIDEBAR KIRI MODERN (NAVIGASI UTAMA APPS)
+         ========================================================= -->
+    <aside class="app-sidebar" id="appSidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <img src="logo-desa.png" alt="Logo Desa Batetangnga" />
+        </div>
+        <div class="sidebar-brand-text">
+          <h1>SIA Batetangnga</h1>
+          <p>Pertanahan Digital</p>
         </div>
       </div>
-      <div class="topbar-right">
-        <div class="tb-status auth-data">
-          <span id="connStatus" class="badge">⏳ Menghubungkan…</span>
-          <span id="countBadge" class="badge">0 baris</span>
-          <span id="spSummary" class="badge"></span>
-          <span id="appVersion" class="badge" title="Versi aplikasi yang sedang berjalan">v121</span>
+
+      <nav class="sidebar-nav" aria-label="Menu Utama">
+        <div class="nav-item-title">Menu Utama</div>
+
+        <button class="tabbtn sidebar-btn active" data-tab="dashboard">
+          <i data-lucide="layout-dashboard" style="width:18px; height:18px;"></i>
+          <span>Dashboard</span>
+        </button>
+
+        <button class="tabbtn sidebar-btn" data-tab="pendaftaran">
+          <i data-lucide="file-text" style="width:18px; height:18px;"></i>
+          <span>Pendaftaran</span>
+        </button>
+
+        <button class="tabbtn sidebar-btn" data-tab="sporadik">
+          <i data-lucide="award" style="width:18px; height:18px;"></i>
+          <span>Surat SPORADIK</span>
+        </button>
+
+        <button class="tabbtn sidebar-btn" data-tab="uploads">
+          <i data-lucide="paperclip" style="width:18px; height:18px;"></i>
+          <span>Berkas Upload</span>
+        </button>
+
+        <button class="tabbtn sidebar-btn" data-tab="keuangan">
+          <i data-lucide="wallet" style="width:18px; height:18px;"></i>
+          <span>Kas Keuangan</span>
+        </button>
+
+        <button class="tabbtn sidebar-btn" data-tab="suratdocs">
+          <i data-lucide="file-signature" style="width:18px; height:18px;"></i>
+          <span>Studio Docs</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer auth-data">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <span style="font-size:11px; font-weight:700; color:var(--slate-500);">SISTEM INFO</span>
+          <span id="appVersion" class="badge" style="font-size:10px; padding:2px 6px;">v121</span>
         </div>
-        <span id="tbTitle" class="tb-title auth-data">Dashboard</span>
-        <input id="topSearch" type="search" class="tb-search auth-data" placeholder="Cari di tab aktif…" autocomplete="off" />
-        <button id="btnRefresh" class="tb-icon auth-data" title="Muat ulang data">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-        </button>
-        <span class="tb-icon" title="Notifikasi">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        </span>
-        <button id="btnOpenLogin" class="btn-login-header" style="display: none; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 10px; background: #064e3b; color: #ffffff; border: none; font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 2px 8px rgba(6,78,59,0.2);">
-          <i data-lucide="log-in" style="width: 16px; height: 16px;"></i> Masuk / Login
-        </button>
-        <div id="userProfileNav" style="display: none; align-items: center; gap: 12px;">
-          <div style="text-align: right; line-height: 1.2;">
-            <div id="displayUserName" style="font-size: 13px; font-weight: 700; color: #0f172a;">Admin Desa</div>
-            <div id="displayUserRole" style="font-size: 11px; color: #059669; font-weight: 600;">&#9679; Aktif</div>
+        <div style="font-size:11px; color:var(--slate-600); line-height:1.4;">
+          Pemerintah Desa Batetangnga<br>Kab. Polewali Mandar
+        </div>
+      </div>
+    </aside>
+
+    <!-- =========================================================
+         MAIN LAYOUT: TOPBAR + WORKSPACE
+         ========================================================= -->
+    <div class="app-main-layout">
+
+      <!-- Executive Topbar -->
+      <header class="topbar-header">
+        <div class="topbar-left">
+          <span id="tbTitle" class="tb-title auth-data" style="display:inline-flex; align-items:center; gap:6px;">
+            <i data-lucide="compass" style="width:15px; height:15px;"></i> Dashboard
+          </span>
+
+          <div class="topbar-search-wrap auth-data">
+            <i data-lucide="search" class="topbar-search-icon"></i>
+            <input id="topSearch" type="search" class="tb-search" placeholder="Cari di tab aktif (Ctrl+K)..." autocomplete="off" />
           </div>
-          <button id="btnChangePw" onclick="openChangePw()" title="Ubah Kata Sandi" style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;">
-            <i data-lucide="key-round" style="width: 14px; height: 14px;"></i> Ubah Sandi
+        </div>
+
+        <div class="topbar-right">
+          <div class="tb-status auth-data">
+            <span id="connStatus" class="badge ok">⏳ Menghubungkan…</span>
+            <span id="countBadge" class="badge">0 baris</span>
+            <span id="spSummary" class="badge"></span>
+          </div>
+
+          <button id="btnRefresh" class="tb-icon auth-data" title="Segarkan Data">
+            <i data-lucide="refresh-cw" style="width:16px; height:16px;"></i>
           </button>
-          <button id="btnImportSheet" onclick="importFromSheet()" title="Tarik data dari spreadsheet ke Supabase (manual)" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;">
-            <i data-lucide="download" style="width: 14px; height: 14px;"></i> Tarik dari Sheet
+
+          <button id="btnOpenLogin" class="btn primary btn-login-header" style="display:none; font-size:12.5px; padding:7px 16px;">
+            <i data-lucide="log-in" style="width:15px; height:15px;"></i> Masuk
           </button>
-          <button id="btnLogout" onclick="handleLogout()" title="Keluar Sistem" style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;">
-            <i data-lucide="log-out" style="width: 14px; height: 14px;"></i> Keluar
-          </button>
-        </div>
-        <div class="user-avatar-badge" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; overflow: hidden; background: #ffffff; border: 1.5px solid #e2e8f0; box-shadow: 0 2px 6px rgba(0,0,0,0.06); cursor: pointer;">
-          <img src="/logo.bmp" alt="Logo Kabupaten Polewali Mandar" style="width: 100%; height: 100%; object-fit: contain; padding: 2px; display: block;" onerror="this.onerror=null; this.src='logo.bmp';">
-        </div>
-      </div>
-    </header>
 
-    <div id="authGuestNotice" class="auth-guest-notice" style="display: none;">
-      <div class="auth-guest-card">
-        <img src="logo-desa.png" alt="Logo Desa Batetangnga" class="auth-guest-logo" />
-        <h2>Silakan login untuk mengelola berkas</h2>
-        <p>Anda perlu masuk dengan akun petugas desa untuk melihat data pendaftaran, surat SPORADIK, dan mengelola berkas.</p>
-        <button id="btnOpenLoginNotice" class="btn-login-header" style="align-items: center; gap: 8px; padding: 10px 22px; border-radius: 10px; background: #064e3b; color: #ffffff; border: none; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 2px 8px rgba(6,78,59,0.2);">
-          <i data-lucide="log-in" style="width: 16px; height: 16px;"></i> Masuk / Login
-        </button>
-      </div>
-    </div>
-
-    <div id="appWorkspace">
-    <nav class="tabs tab-navigation nav-tab-wrapper" aria-label="Menu utama">
-      <button class="tabbtn nav-tab-item active" data-tab="dashboard">
-        <svg class="tab-ic" viewBox="0 0 24 24" aria-hidden="true">
-          <rect class="ic-fill" x="4" y="11" width="4" height="8" rx="1.3"/>
-          <rect class="ic-fill" x="10" y="6" width="4" height="13" rx="1.3"/>
-          <rect class="ic-line" x="16" y="3" width="4" height="16" rx="1.3"/>
-          <line class="ic-line" x1="3" y1="21" x2="21" y2="21"/>
-        </svg>
-        Dashboard
-      </button>
-      <button class="tabbtn nav-tab-item" data-tab="pendaftaran">
-        <svg class="tab-ic" viewBox="0 0 24 24" aria-hidden="true">
-          <path class="ic-line" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline class="ic-line" points="14 2 14 8 20 8"/>
-          <line class="ic-line" x1="8" y1="13" x2="16" y2="13"/>
-          <line class="ic-line" x1="8" y1="17" x2="13" y2="17"/>
-        </svg>
-        Pendaftaran
-      </button>
-      <button class="tabbtn nav-tab-item" data-tab="sporadik">
-        <svg class="tab-ic" viewBox="0 0 24 24" aria-hidden="true">
-          <path class="ic-fill" d="M12 2 14 7.5 20 8l-4.5 4 1.2 6L12 15l-4.7 3 1.2-6L4 8l6-.5z"/>
-          <line class="ic-line" x1="12" y1="3" x2="10" y2="21"/>
-        </svg>
-        Surat SPORADIK
-      </button>
-      <button class="tabbtn nav-tab-item" data-tab="uploads">
-        <svg class="tab-ic" viewBox="0 0 24 24" aria-hidden="true">
-          <rect class="ic-line" x="3" y="3" width="18" height="18" rx="2"/>
-          <path class="ic-line" d="m7.5 12.5 3 3 6-6"/>
-        </svg>
-        Uploads
-      </button>
-      <button class="tabbtn nav-tab-item" data-tab="keuangan">
-        <svg class="tab-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 8c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4Z"></path>
-            <path d="M22 12c0 5.5-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2s10 4.5 10 10Z"></path>
-            <path d="M8 12h.01"></path>
-            <path d="M16 12h.01"></path>
-            <path d="M12 16h.01"></path>
-            <path d="M12 8h.01"></path>
-        </svg>
-        Keuangan
-      </button>
-      <button class="tabbtn nav-tab-item" data-tab="suratdocs">
-        <svg class="tab-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-        </svg>
-        Surat Docs
-      </button>
-    </nav>
-
-    <main class="main-card main-card-workspace">
-
-    <section id="tab-dashboard">
-      <div class="dash-grid">
-        <div class="dash-card total"><div class="dash-ic">📊</div><div><div class="dash-val" id="dbTotal">0</div><div class="dash-lb">Total Pendaftaran</div></div></div>
-        <div class="dash-card up"><div class="dash-ic">📎</div><div><div class="dash-val" id="dbUpload">0</div><div class="dash-lb">Total Upload</div></div></div>
-        <div class="dash-card ok"><div class="dash-ic">🖨</div><div><div class="dash-val" id="dbLengkap">0</div><div class="dash-lb">Siap Cetak SPORADIK</div></div></div>
-        <div class="dash-card ko"><div class="dash-ic">⚠️</div><div><div class="dash-val" id="dbKurang">0</div><div class="dash-lb">Perlu Lengkapi Data</div></div></div>
-      </div>
-      <div class="dash-grid">
-        <div class="dash-card"><div class="dash-ic">📅</div><div><div class="dash-val" id="dbHariIni">0</div><div class="dash-lb">Pendaftaran Hari Ini</div></div></div>
-        <div class="dash-card"><div class="dash-ic">⏳</div><div><div class="dash-val" id="dbPending">0</div><div class="dash-lb">Pending</div></div></div>
-        <div class="dash-card"><div class="dash-ic">✅</div><div><div class="dash-val" id="dbSelesai">0</div><div class="dash-lb">Selesai</div></div></div>
-        <div class="dash-card"><div class="dash-ic">📏</div><div><div class="dash-val" id="dbDiukur">0</div><div class="dash-lb">Sudah Diukur</div></div></div>
-        <div class="dash-card"><div class="dash-ic">🖨️</div><div><div class="dash-val" id="dbCetak">0</div><div class="dash-lb">Sudah Cetak</div></div></div>
-      </div>
-
-      <div class="dash-sec-title">Grafik</div>
-
-      <div class="dash-row">
-        <div class="dash-block">
-          <h3 class="panel-title">📈 Grafik Batang — Layanan</h3>
-          <div class="dash-body chart-bar" id="chartBarLayanan"></div>
-        </div>
-        <div class="dash-block">
-          <h3 class="panel-title">📈 Grafik Batang — Status Berkas</h3>
-          <div class="dash-body chart-bar" id="chartBarStatus"></div>
-        </div>
-        <div class="dash-block wide">
-          <h3 class="panel-title">📉 Grafik Garis — Tren Pendaftaran (per tanggal)</h3>
-          <div class="dash-body chart-line" id="chartLineTren"></div>
-        </div>
-        <div class="dash-block">
-          <h3 class="panel-title">🥧 Grafik Pie — Layanan</h3>
-          <div class="dash-body chart-pie" id="chartPieLayanan"></div>
-        </div>
-        <div class="dash-block">
-          <h3 class="panel-title">🥧 Grafik Pie — Status Berkas</h3>
-          <div class="dash-body chart-pie" id="chartPieStatus"></div>
-        </div>
-        <div class="dash-block wide">
-          <h3 class="panel-title">📍 Distribusi Berdasarkan Dusun</h3>
-          <div class="dash-body" id="chartDusun"></div>
-        </div>
-      </div>
-
-      <div class="dash-sec-title">Tabel Silang</div>
-
-      <div class="dash-row">
-        <div class="dash-block wide">
-          <h3 class="panel-title">🔀 Tabel 3 Arah — Layanan × Status Berkas × Pembayaran</h3>
-          <div class="dash-body dt-wrap" id="t3LayananStatusBayar"></div>
-        </div>
-        <div class="dash-block">
-          <h3 class="panel-title">🔀 Tabel 2 Arah — Layanan × Status Berkas</h3>
-          <div class="dash-body dt-wrap" id="t2LayananStatus"></div>
-        </div>
-        <div class="dash-block">
-          <h3 class="panel-title">🔀 Tabel 2 Arah — Layanan × Pembayaran</h3>
-          <div class="dash-body dt-wrap" id="t2LayananBayar"></div>
-        </div>
-      </div>
-
-      <div class="dash-sec-title">Frekuensi</div>
-
-      <div class="dash-row freq">
-        <div class="dash-block">
-          <h3 class="panel-title">📋 Frekuensi Layanan</h3>
-          <div class="dash-body dt-wrap" id="t1Layanan"></div>
-        </div>
-        <div class="dash-block">
-          <h3 class="panel-title">📋 Frekuensi Status Berkas</h3>
-          <div class="dash-body dt-wrap" id="t1Status"></div>
-        </div>
-        <div class="dash-block">
-          <h3 class="panel-title">📋 Frekuensi Pembayaran</h3>
-          <div class="dash-body dt-wrap" id="t1Bayar"></div>
-        </div>
-        <div class="dash-block">
-          <h3 class="panel-title">📋 Frekuensi Jenis Tanah</h3>
-          <div class="dash-body dt-wrap" id="t1Tanah"></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="tab-pendaftaran" hidden>
-      <div class="toolbar toolbar-container">
-        <div class="search-input-group">
-          <i data-lucide="search" class="search-icon-inside"></i>
-          <input id="searchInput" type="search" placeholder="Cari ID / nama / layanan / dusun / status…" />
-        </div>
-        <select id="filterLayanan">
-          <option value="">Semua Layanan</option>
-          <option value="HIBAH">HIBAH</option>
-          <option value="JUALBELI">JUAL BELI</option>
-          <option value="AHLIWARIS">AHLI WARIS</option>
-        </select>
-        <select id="filterStatus">
-          <option value="">Semua Status</option>
-        </select>
-        <button id="btnTambahData" class="btn primary btn-action-primary" title="Tambah pendaftaran baru">
-          <i data-lucide="plus-circle" style="width:16px; height:16px;"></i> Tambah Data
-        </button>
-        <button id="btnRekapAlamat" class="btn btn-action-secondary" title="Rekap data berdasarkan dusun">
-          <i data-lucide="clipboard-list" style="width:16px; height:16px;"></i> Rekap Alamat
-        </button>
-        <button id="btnTabelKosong" class="btn btn-action-secondary" title="Daftar lengkap untuk pengukuran">
-          <i data-lucide="table" style="width:16px; height:16px;"></i> Tabel Kosong
-        </button>
-        <button id="btnGroupByNIK" class="btn btn-action-secondary" title="Kelompokkan berdasarkan NIK/Nama">
-          <i data-lucide="users" style="width:16px; height:16px;"></i> Group by NIK/Nama
-        </button>
-      </div>
-
-      <div class="table-wrap">
-        <table id="dataTable">
-          <thead>
-            <tr>
-              <th>Aksi</th>
-              <th>ID</th>
-              <th>Tanggal</th>
-              <th>Layanan</th>
-              <th>Jenis Tanah</th>
-              <th>Pemohon</th>
-              <th>Pihak Pertama</th>
-              <th>No. Surat</th>
-              <th>Alamat</th>
-              <th>Catatan</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="dataBody"></tbody>
-        </table>
-        <p id="emptyMsg" class="empty" hidden>Belum ada data.</p>
-      </div>
-      <div class="pager" id="pagerPendaftaran"></div>
-    </section>
-
-    <section id="tab-sporadik" hidden>
-      <div class="toolbar sp-cari toolbar-container">
-        <div class="search-input-group">
-          <i data-lucide="search" class="search-icon-inside"></i>
-          <input id="spLoadInput" type="search" list="spLoadList" placeholder="Cari & muat ID / Nomor Surat / Nama… (contoh: 996158 atau nama)" autocomplete="off" />
-        </div>
-        <datalist id="spLoadList"></datalist>
-        <button id="btnSpLoad" class="btn primary btn-action-primary">📂 Muat Data</button>
-        <button id="btnSpReset" class="btn">↺ Reset / ID Baru</button>
-      </div>
-      <div id="sporadikPanel">
-        <div class="toolbar toolbar-container">
-          <div class="search-input-group">
-            <i data-lucide="search" class="search-icon-inside"></i>
-            <input id="spSearch" type="search" placeholder="Cari ID / nama / layanan…" />
-          </div>
-          <select id="spFilterLayanan">
-            <option value="">Semua Layanan</option>
-            <option value="HIBAH">HIBAH</option>
-            <option value="JUALBELI">JUAL BELI</option>
-            <option value="AHLIWARIS">AHLI WARIS</option>
-          </select>
-          <select id="spFilterKelengkapan">
-            <option value="">Semua Kelengkapan</option>
-            <option value="ok">Lengkap (siap cetak)</option>
-            <option value="ko">Kurang lengkap</option>
-          </select>
-        </div>
-
-        <div class="table-wrap">
-          <table id="sporadikTable">
-            <thead>
-              <tr>
-                <th>Aksi</th>
-                <th>ID</th>
-                <th>Tanggal</th>
-                <th>Layanan</th>
-                <th>Jenis Tanah</th>
-                <th>Pemohon</th>
-                <th>Pihak Pertama</th>
-                <th>No. Surat</th>
-                <th>Alamat</th>
-                <th>Catatan</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="sporadikBody"></tbody>
-          </table>
-          <p id="spEmpty" class="empty" hidden>Belum ada data.</p>
-        </div>
-        <div class="pager" id="pagerSporadik"></div>
-      </div>
-
-      <div id="suratView" hidden>
-        <div class="surat-view-head print-hide">
-          <div>
-            <h2 id="suratTitle">Surat SPORADIK</h2>
-            <p id="suratIdLine" class="muted-line"></p>
-          </div>
-          <div class="modal-actions" style="margin-top:0">
-            <button id="btnBackSurat" class="btn-ghost">← Kembali</button>
-            <button id="btnSaveSuratEdit" class="btn">💾 Simpan Data</button>
-            <button id="btnOpenDocsFromSporadik" class="btn" style="background:#0284c7; color:#fff; font-weight:600;">📄 Buka di Surat Docs</button>
-            <button id="btnPrintSurat" class="btn primary">🖨 Cetak / Simpan PDF</button>
-          </div>
-        </div>
-
-        <div class="surat-controls print-hide">
-          <label>Tanggal Surat <input id="srTgl" type="text" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY" /></label>
-          <label>Nomor Urut <input id="srNoUrut" type="text" inputmode="numeric" maxlength="3" placeholder="001" /></label>
-          <label>Nomor Surat <input id="srNoSurat" readonly /></label>
-        </div>
-
-        <div class="surat-view-grid">
-          <div class="surat-editor-col print-hide">
-            <div class="surat-editor-head">
-              <h3 class="panel-title">🖊 Data Surat</h3>
-              <p class="surat-edit-hint">Isi field yang masih kosong (input aktif). Yang sudah terisi terkunci.</p>
-            </div>
-            <div id="suratEditFields" class="se-grid"></div>
-            <p id="seStatus" class="rev-note"></p>
-          </div>
-          <div class="surat-preview-col">
-            <h3 class="panel-title print-hide">📄 Pratinjau Surat</h3>
-            <div id="suratBody"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="tab-uploads" hidden>
-      <div class="toolbar toolbar-container">
-        <div class="search-input-group">
-          <i data-lucide="search" class="search-icon-inside"></i>
-          <input id="uploadSearch" type="search" placeholder="Cari ID registrasi / jenis upload / nama file…" />
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table id="uploadTable">
-          <thead>
-            <tr>
-              <th>ID Registrasi</th>
-              <th>Jenis Upload</th>
-              <th>Nama File</th>
-              <th>Timestamp</th>
-              <th>File</th>
-            </tr>
-          </thead>
-          <tbody id="uploadBody"></tbody>
-        </table>
-        <p id="uploadEmpty" class="empty" hidden>Belum ada upload.</p>
-      </div>
-      <div class="pager" id="pagerUploads"></div>
-    </section>
-
-    <section id="tab-keuangan" hidden>
-        <div class="toolbar toolbar-container" style="margin-top:0;">
-            <button id="btnCekTagihanBerkas" class="btn btn-action-primary" style="display:flex; align-items: center; gap: 6px;" title="Cek tagihan dan berkas berdasarkan ID pendaftaran (tersedia untuk semua user)">
-                <i data-lucide="search-check" style="width:16px; height:16px;"></i> Cek Tagihan & Berkas
-            </button>
-        </div>
-
-        <div id="cekTbPanel" class="card" style="display:none; margin-top:16px; padding:20px;">
-            <div class="modal-head" style="border-bottom:none; padding:0 0 12px 0;">
-                <h2 style="margin:0; font-size:16px;">Cek Tagihan & Berkas</h2>
-                <button id="btnCloseCekTb" class="btn-ghost">✕</button>
-            </div>
-            <div class="form" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
-                <label style="flex:1; min-width:220px;">ID Pendaftaran
-                    <input id="cekTbId" list="pemohonList" placeholder="Contoh: REG-907237" />
-                </label>
-                <button id="btnCekTbCari" class="btn primary">Cari</button>
-            </div>
-            <div id="cekTbResult" style="margin-top:16px;"></div>
-        </div>
-
-        <div id="keuDashboard" hidden>
-            <div id="keuRingkasan" class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-                <div class="dash-card total">
-                    <div class="dash-ic" style="background-color: #e0f2fe;">💰</div>
-                    <div>
-                        <div class="dash-val" id="keuTotalPemasukan">Rp 0</div>
-                        <div class="dash-lb">Total Pemasukan</div>
-                    </div>
-                </div>
-                <div class="dash-card ko">
-                    <div class="dash-ic" style="background-color: #fee2e2;">💸</div>
-                    <div>
-                        <div class="dash-val" id="keuTotalPengeluaran">Rp 0</div>
-                        <div class="dash-lb">Total Pengeluaran</div>
-                    </div>
-                </div>
-                <div class="dash-card ok">
-                    <div class="dash-ic" style="background-color: #ecfdf5;">🏦</div>
-                    <div>
-                        <div class="dash-val" id="keuSaldoAkhir">Rp 0</div>
-                        <div class="dash-lb">Saldo Akhir</div>
-                    </div>
-                </div>
-                <div class="dash-card up">
-                    <div class="dash-ic" style="background-color: #e0e7ff;">🧾</div>
-                    <div>
-                        <div class="dash-val" id="keuJumlahTransaksi">0</div>
-                        <div class="dash-lb">Jumlah Transaksi</div>
-                    </div>
-                </div>
-                <div class="dash-card">
-                    <div class="dash-ic" style="background-color: #d1fae5;">📥</div>
-                    <div>
-                        <div class="dash-val" id="keuPemasukanBulanIni">Rp 0</div>
-                        <div class="dash-lb">Pemasukan Bulan Ini</div>
-                    </div>
-                </div>
-                <div class="dash-card">
-                    <div class="dash-ic" style="background-color: #fef3c7;">📤</div>
-                    <div>
-                        <div class="dash-val" id="keuPengeluaranBulanIni">Rp 0</div>
-                        <div class="dash-lb">Pengeluaran Bulan Ini</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="dash-sec-title">Grafik Keuangan</div>
-
-            <div class="dash-row">
-                <div class="dash-block wide">
-                    <h3 class="panel-title">📊 Pemasukan vs Pengeluaran per Bulan</h3>
-                    <div class="dash-body chart-bar" id="keuChartBulan"></div>
-                </div>
-                <div class="dash-block wide">
-                    <h3 class="panel-title">📉 Tren Saldo Kas Kumulatif</h3>
-                    <div class="dash-body chart-line" id="keuChartSaldo"></div>
-                </div>
-                <div class="dash-block">
-                    <h3 class="panel-title">🥧 Distribusi Jumlah Transaksi per Jenis</h3>
-                    <div class="dash-body chart-pie" id="keuChartJenis"></div>
-                </div>
-                <div class="dash-block">
-                    <h3 class="panel-title">📋 Ringkasan Nilai per Jenis</h3>
-                    <div class="dash-body dt-wrap" id="keuRekapJenis"></div>
-                </div>
-            </div>
-
-            <div class="dash-sec-title">Rekap Bulanan</div>
-
-            <div class="dash-row">
-                <div class="dash-block wide">
-                    <h3 class="panel-title">📅 Pemasukan, Pengeluaran & Saldo per Bulan</h3>
-                    <div class="dash-body dt-wrap" id="keuRekapBulan"></div>
-                </div>
-            </div>
-
-            <div class="toolbar toolbar-container" style="margin-top: 24px;">
-                <div class="search-input-group">
-                    <i data-lucide="search" class="search-icon-inside"></i>
-                    <input id="keuSearchInput" type="search" placeholder="Cari keterangan, ID pemohon, jenis...">
-                </div>
-                <button id="btnImportKeuangan" onclick="importKeuanganFromSheet()" title="Tarik data transaksi dari spreadsheet ke Supabase (manual)" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px;">
-                    <i data-lucide="download" style="width: 14px; height: 14px;"></i> Tarik dari Sheet
-                </button>
-                <button id="btnCetakKeuangan" class="btn" style="background: #2E7D32; border: 1px solid #FBC02D; color: #ffffff; display:flex; align-items: center; gap: 6px; font-weight: 700;" title="Cetak Laporan Rekapitulasi Keuangan (Pemasukan & Pengeluaran Kas Desa)">
-                    <i data-lucide="printer" style="width:16px; height:16px;"></i> Cetak Laporan Keuangan
-                </button>
-                <button id="btnTambahTransaksi" class="btn primary btn-action-primary" style="display:flex; align-items: center; gap: 6px;">
-                    <i data-lucide="plus-circle" style="width:16px; height:16px;"></i> Tambah Transaksi
-                </button>
-            </div>
-
-            <div id="keuTableWrap" class="table-wrap">
-                <table id="keuTable">
-                    <thead>
-                        <tr>
-                            <th>Tanggal</th>
-                            <th>Jenis</th>
-                            <th>Pemohon</th>
-                            <th>Nominal</th>
-                            <th>Keterangan</th>
-                            <th>Bukti</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="keuBody"></tbody>
-                </table>
-                <p id="keuEmpty" class="empty" hidden>Belum ada data transaksi.</p>
-            </div>
-            <div class="pager" id="pagerKeuangan"></div>
-        </div>
-    </section>
-
-    <section id="tab-suratdocs" hidden>
-      <!-- Sub-Header Tab Surat Docs -->
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px; background:#fff; padding:14px 20px; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-        <div>
-          <h2 style="margin:0; font-size:18px; font-weight:800; color:#1e293b; display:flex; align-items:center; gap:8px;">
-            <i data-lucide="file-check-2" style="width:22px; height:22px; color:#2E7D32;"></i> Surat Docs Generator &amp; Live View
-          </h2>
-          <p style="margin:2px 0 0; font-size:13px; color:#64748b;">Kelola master template surat, generate dokumen otomatis, dan pratinjau live Google Docs.</p>
-        </div>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <button id="btnToggleLinkTable" type="button" class="btn btn-action-primary" style="font-size:13px; padding:8px 14px;">
-            <i data-lucide="table" style="width:15px; height:15px;"></i> Master Tabel Link Surat
-          </button>
-          <button id="btnDocsStatus" type="button" class="btn btn-action-secondary" style="font-size:13px; padding:8px 14px;" title="Cek Integrasi OAuth Google">
-            <i data-lucide="stethoscope" style="width:15px; height:15px;"></i> Cek Integrasi Google
-          </button>
-        </div>
-      </div>
-
-      <!-- Section 1: Tabel Master Link Template Surat (Tabel Khusus Terpisah & Rapi) -->
-      <div id="cardMasterLinkTable" class="card" style="margin-bottom:20px; border-radius:14px; border:1px solid #cbd5e1; overflow:hidden;">
-        <div style="padding:16px 20px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <div>
-            <h3 style="margin:0; font-size:15px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
-              <i data-lucide="link-2" style="width:18px; height:18px; color:#2E7D32;"></i>
-              Tabel Master Template &amp; Link Google Docs
-            </h3>
-            <p style="margin:2px 0 0; font-size:12.5px; color:#64748b;">Daftar seluruh jenis surat desa dan link template Google Docs resmi yang terpasang.</p>
-          </div>
-          <button id="btnDocsAddJenisTable" type="button" class="btn primary" style="font-size:12.5px; padding:6px 12px;">
-            ➕ Tambah Jenis Surat Baru
-          </button>
-        </div>
-
-        <div style="overflow-x:auto; padding:0;">
-          <table class="docs-history-table" style="width:100%; border-collapse:collapse; margin:0;">
-            <thead>
-              <tr style="background:#f1f5f9; color:#475569; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">
-                <th style="padding:10px 16px; text-align:left; width:220px;">Jenis Surat</th>
-                <th style="padding:10px 16px; text-align:left;">Link / ID Template Google Docs</th>
-                <th style="padding:10px 16px; text-align:center; width:140px;">Status Template</th>
-                <th style="padding:10px 16px; text-align:center; width:220px;">Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="masterLinkTableBody">
-              <!-- Rendered dynamically by app.js -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Panel Status Diagnostik Google (Hidden default) -->
-      <div id="docsStatusPanel" class="card docs-status-panel" style="display:none; margin-bottom:20px;">
-        <div class="docs-status-head">
-          <h2>🔧 Status Integrasi Google</h2>
-          <button id="btnDocsStatusClose" class="btn-ghost">✕</button>
-        </div>
-        <div id="docsStatusResult"></div>
-      </div>
-
-      <!-- Section 2: Generator & Live Viewer (2 Kolom Rapi) -->
-      <div class="docs-layout">
-
-        <!-- Panel Kiri: Form Pembuatan Surat (Fokus, Bersih, & Elegan) -->
-        <div class="docs-controls">
-          <div class="card docs-step" style="border:1px solid #cbd5e1; border-radius:16px; padding:20px; background:#ffffff; box-shadow:0 4px 20px -5px rgba(0,0,0,0.05); margin-bottom:20px;">
-            <div class="docs-step-head" style="display:flex; align-items:center; gap:12px; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
-              <span class="docs-step-num" style="background:linear-gradient(135deg, #047857, #064e3b); color:#fff; font-weight:800; border-radius:50%; width:28px; height:28px; display:inline-flex; justify-content:center; align-items:center; font-size:13px;">1</span>
-              <div>
-                <h3 style="margin:0; font-size:15px; font-weight:800; color:#065f46; font-family:'Space Grotesk', sans-serif;">Pilih Jenis Surat &amp; Pendaftar</h3>
-                <p style="margin:2px 0 0; font-size:12.5px; color:#64748b;">Pilih jenis dokumen dan data pemohon tanah.</p>
+          <div id="userProfileNav" style="display:none; align-items:center; gap:10px;">
+            <div class="user-profile-badge">
+              <div class="user-profile-info">
+                <div id="displayUserName" class="user-name">Admin Desa</div>
+                <div id="displayUserRole" class="user-role-tag">● Aktif</div>
               </div>
             </div>
 
-            <!-- Selector Dropdown Jenis Surat -->
-            <div class="docs-field-group" style="margin-top:12px;">
-              <label class="docs-field-label" style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#334155;">Jenis Surat Dokumen</label>
-              <select id="docsSelectJenisDropdown" class="docs-select-input" style="font-weight:700; color:#0f172a; cursor:pointer; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; background:#ffffff;">
-                <!-- Dynamically populated -->
+            <button id="btnChangePw" onclick="openChangePw()" class="btn btn-action-secondary" title="Ubah Kata Sandi" style="padding:6px 10px; font-size:12px;">
+              <i data-lucide="key-round" style="width:14px; height:14px;"></i> Sandi
+            </button>
+
+            <button id="btnImportSheet" onclick="importFromSheet()" class="btn btn-action-secondary" title="Tarik dari Sheet" style="padding:6px 10px; font-size:12px; color:var(--primary-700);">
+              <i data-lucide="download" style="width:14px; height:14px;"></i> Sync
+            </button>
+
+            <button id="btnLogout" onclick="handleLogout()" class="btn danger" title="Keluar Sistem" style="padding:6px 10px; font-size:12px;">
+              <i data-lucide="log-out" style="width:14px; height:14px;"></i>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Auth Guest Notice (Bila Belum Login) -->
+      <div id="authGuestNotice" class="auth-guest-notice" style="display:none;">
+        <div class="auth-guest-card">
+          <img src="logo-desa.png" alt="Logo Desa Batetangnga" class="auth-guest-logo" />
+          <h2>Akses Terbatas Sistem Pertanahan</h2>
+          <p>Silakan masuk menggunakan akun resmi petugas desa untuk melihat data pendaftaran, mencetak surat, dan mengelola berkas.</p>
+          <button id="btnOpenLoginNotice" class="btn primary" style="padding:10px 24px; font-size:14px; margin:0 auto;">
+            <i data-lucide="log-in" style="width:16px; height:16px;"></i> Masuk ke Sistem
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Workspace Container -->
+      <main class="main-workspace" id="appWorkspace">
+
+        <!-- =========================================================
+             TAB 1: DASHBOARD
+             ========================================================= -->
+        <section id="tab-dashboard">
+          <div class="stat-grid" id="statsRow">
+            <!-- Rendered dynamically by app.js -->
+          </div>
+
+          <div id="dashCharts" style="margin-top:20px;">
+            <!-- Rendered dynamically by app.js -->
+          </div>
+        </section>
+
+        <!-- =========================================================
+             TAB 2: PENDAFTARAN
+             ========================================================= -->
+        <section id="tab-pendaftaran" hidden>
+          <div class="card">
+            <div class="card-header-clean">
+              <div class="card-header-title">
+                <i data-lucide="database" style="color:var(--primary-700);"></i>
+                <span>Database Registrasi Pendaftaran</span>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <button id="btnTambahData" class="btn primary">
+                  <i data-lucide="plus-circle" style="width:15px; height:15px;"></i> Tambah Data
+                </button>
+                <button id="btnRekapAlamat" class="btn btn-action-secondary">
+                  <i data-lucide="map-pin" style="width:14px; height:14px;"></i> Rekap Dusun
+                </button>
+                <button id="btnTabelKosong" class="btn btn-action-secondary">
+                  <i data-lucide="file-spreadsheet" style="width:14px; height:14px;"></i> Tabel Pengukuran
+                </button>
+                <button id="btnGroupByNIK" class="btn btn-action-secondary">
+                  <i data-lucide="users" style="width:14px; height:14px;"></i> Group NIK
+                </button>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+              <input id="searchInput" type="search" class="tb-search" style="width:280px;" placeholder="Cari ID, Nama, NIK, Catatan..." />
+              <select id="filterLayanan" class="docs-select-input" style="width:180px;">
+                <option value="">Semua Layanan</option>
+                <option value="SPORADIK">SPORADIK</option>
+                <option value="HIBAH">HIBAH</option>
+                <option value="JUALBELI">JUAL BELI</option>
+                <option value="AHLIWARIS">AHLI WARIS</option>
+              </select>
+              <select id="filterStatus" class="docs-select-input" style="width:180px;">
+                <option value="">Semua Status</option>
+                <option value="SELESAI">Selesai</option>
+                <option value="PROSES">Proses</option>
+                <option value="PENDING">Pending</option>
               </select>
             </div>
 
-            <!-- Selector Pemohon / Pendaftaran -->
-            <div class="docs-field-group" style="margin-top:12px;">
-              <label class="docs-field-label" style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#334155;">ID Pendaftaran / Pemohon</label>
-              <input id="docsIdReg" list="pemohonList" class="docs-select-input" placeholder="Contoh: REG-907237 atau Nama Pemohon" style="font-weight:600; color:#0f172a; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; background:#ffffff;" />
-            </div>
-
-            <!-- Status Template Aktif & Link Supabase Resmi -->
-            <div id="docsJenisActiveInfo" class="docs-active-jenis-box" style="margin-top:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-                <span style="font-size:12px; font-weight:700; color:#334155;">Status Template:</span>
-                <span id="docsActiveJenisStatusBadge" class="docs-summary-badge">Memuat...</span>
-              </div>
-            </div>
-
-            <!-- Field Link Google Docs Template Resmi Supabase -->
-            <div class="docs-field-group" style="margin-top:12px;">
-              <label class="docs-field-label" style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#334155; display:flex; justify-content:space-between; align-items:center;">
-                <span>Link Google Docs Template (Resmi Supabase)</span>
-              </label>
-              <div style="display:flex; gap:6px; margin-top:4px;">
-                <input id="docsLink" type="text" class="docs-select-input" placeholder="https://docs.google.com/document/d/..." style="font-size:12px; border:1px solid #cbd5e1; border-radius:8px; padding:8px 12px;" />
-                <button id="btnDocsSaveLink" type="button" class="btn btn-action-secondary" style="font-size:11.5px; padding:6px 12px; white-space:nowrap; border-radius:8px; font-weight:700;" title="Simpan Link ke Supabase">
-                  💾 Simpan
-                </button>
-              </div>
-              <small style="color:#64748b; font-size:11px; display:block; margin-top:4px;">
-                ✅ Link ini tersimpan secara aman di Supabase database.
-              </small>
-            </div>
-
-            <!-- Tombol Aksi Utama (Bersih & Elegan Gaya SPORADIK) -->
-            <div style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
-              <button id="btnDocsRender" class="btn primary docs-btn-wide" style="justify-content:center; padding:12px 18px; font-size:14px; font-weight:800; background:linear-gradient(135deg, #047857, #064e3b); border:none; color:#ffffff; border-radius:10px; box-shadow:0 10px 24px -10px rgba(6,78,59,0.7); cursor:pointer;">
-                <i data-lucide="wand-2" style="width:18px; height:18px;"></i> Render Surat Otomatis
-              </button>
-              <button id="btnDocsDetect" class="btn btn-action-secondary docs-btn-wide" style="justify-content:center; font-size:12.5px; padding:9px 14px; border-radius:8px; font-weight:700;">
-                <i data-lucide="scan-search" style="width:15px; height:15px;"></i> Deteksi Placeholder {{...}}
-              </button>
-            </div>
-            
-            <div id="docsDetectResult" class="docs-detect-result" style="margin-top:12px; font-size:12px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px;">
-              Pilih pendaftaran lalu klik <strong>Render Surat Otomatis</strong> untuk mengisi dokumen.
-            </div>
-          </div>
-
-          <!-- Step 2: Form Edit Field Manual (Selalu Terlihat - Desain Elegan SPORADIK) -->
-          <div class="card docs-step docs-manual-card" id="docsManualPanel" style="display:block; border:1px solid #cbd5e1; border-radius:16px; padding:20px; background:#ffffff; box-shadow:0 4px 20px -5px rgba(0,0,0,0.05);">
-            <div class="docs-step-head" style="display:flex; align-items:center; gap:12px; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
-              <span class="docs-step-num docs-step-num-warn" style="background:#f59e0b; color:#fff; font-weight:800; border-radius:50%; width:28px; height:28px; display:inline-flex; justify-content:center; align-items:center; font-size:13px;">📋</span>
-              <div>
-                <h3 style="margin:0; font-size:15px; font-weight:800; color:#065f46; font-family:'Space Grotesk', sans-serif;">Tinjau &amp; Edit Data Field Surat</h3>
-                <p style="margin:2px 0 0; font-size:12.5px; color:#64748b;">Seluruh field placeholder ditampilkan di sini. Cek &amp; sesuaikan jika ada yang kurang.</p>
-              </div>
-            </div>
-            <div class="docs-manual-scroll" style="max-height:540px; overflow-y:auto; padding-right:4px;">
-              <div id="docsManualFields" class="docs-manual-grid"></div>
-            </div>
-            <button id="btnDocsRenderManual" class="btn primary docs-btn-wide" style="margin-top:16px; justify-content:center; padding:12px 18px; font-size:14px; font-weight:800; background:linear-gradient(135deg, #047857, #064e3b); border:none; color:#ffffff; border-radius:10px; box-shadow:0 10px 24px -10px rgba(6,78,59,0.7); cursor:pointer; width:100%;">
-              <i data-lucide="wand-2" style="width:18px; height:18px;"></i> Render Ulang dengan Field Ini
-            </button>
-          </div>
-        </div>
-
-        <!-- Panel Utama Kanan (Live Preview & Riwayat) -->
-        <div class="docs-main">
-
-          <!-- Card Live Google Docs (Tampilan Live Kanan) -->
-          <div class="card docs-live-card" id="docsLiveCard">
-            <div class="docs-live-header">
-              <div class="docs-live-title">
-                <h2 style="display:flex; align-items:center; gap:8px; margin:0; font-size:16px; font-weight:800;">
-                  <i data-lucide="file-text" style="width:20px; height:20px; color:#2E7D32;"></i>
-                  <span>Live Google Docs</span>
-                </h2>
-                <span class="docs-live-sub">ID: <code id="docsLiveDocIdDisplay">-</code></span>
-              </div>
-              <div class="docs-live-toolbar">
-                <div class="docs-mode-segmented">
-                  <button id="btnDocsModePreview" class="btn-mode active" title="Pratinjau Dokumen Google">
-                    <i data-lucide="eye" style="width:14px; height:14px;"></i> Preview
-                  </button>
-                  <button id="btnDocsModeEdit" class="btn-mode" title="Mode Edit Langsung Google Docs">
-                    <i data-lucide="edit-3" style="width:14px; height:14px;"></i> Edit
-                  </button>
-                </div>
-                <a id="btnDocsLiveOpenTab" class="btn btn-action-secondary docs-btn-sm" href="#" target="_blank" rel="noopener" style="display:none;" title="Buka di tab baru browser">
-                  <i data-lucide="external-link" style="width:14px; height:14px;"></i> Buka Tab Baru
-                </a>
-                <button id="btnDocsToggleHeight" class="btn btn-action-secondary docs-btn-sm" title="Perbesar / Perkecil Tinggi Layar">
-                  <i data-lucide="maximize-2" style="width:14px; height:14px;"></i>
-                </button>
-              </div>
-            </div>
-
-            <!-- Banner Dokumen Hasil Baru yang berhasil digenerate -->
-            <div id="docsGeneratedBanner" style="display:none; background:#ecfdf5; border-bottom:1px solid #a7f3d0; padding:12px 18px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-              <div style="display:flex; align-items:center; gap:10px;">
-                <span style="font-size:20px;">📄</span>
-                <div>
-                  <div style="font-weight:800; font-size:13.5px; color:#065f46;" id="docsGeneratedBannerTitle">Dokumen Baru Berhasil Dibuat di Google Drive!</div>
-                  <div style="font-size:12px; color:#047857;" id="docsGeneratedBannerSub">Seluruh placeholder telah terisi penuh. Dokumen ini adalah file salinan mandiri.</div>
-                </div>
-              </div>
-              <div style="display:flex; gap:8px;">
-                <a id="btnDocsOpenGeneratedDirect" href="#" target="_blank" rel="noopener" class="btn primary" style="background:#059669; border:none; font-weight:800; font-size:12.5px; padding:7px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px; color:#ffffff; text-decoration:none;">
-                  <i data-lucide="external-link" style="width:14px; height:14px;"></i> Buka di Tab Google Docs ↗
-                </a>
-              </div>
-            </div>
-
-            <div class="docs-live-body" id="docsLiveBody">
-              <!-- Notice bila link belum diisi -->
-              <div id="docsLiveEmptyNotice" class="docs-live-empty">
-                <div class="docs-empty-icon">📄</div>
-                <h3 style="margin:8px 0 4px; font-weight:700; color:#1e293b;">Live Google Docs View</h3>
-                <p style="margin:0; font-size:13px; color:#64748b;">Tempelkan link atau ID Google Docs pada panel kiri untuk menampilkan dokumen secara live di sini.</p>
-              </div>
-
-              <!-- Live Iframe -->
-              <iframe id="docsLiveIframe" class="docs-live-iframe" style="display:none;" title="Live Google Docs Preview" allow="autoplay"></iframe>
-            </div>
-          </div>
-
-
-
-          <!-- Card Riwayat Surat -->
-          <div class="card docs-history-card">
-            <div class="docs-preview-head">
-              <h2>📜 Riwayat Cetak & Render Surat</h2>
-              <button id="btnDocsHistoryClear" class="btn-ghost" title="Muat ulang riwayat">↻ Segarkan</button>
-            </div>
             <div class="table-wrap">
-              <table id="docsHistoryTable" class="docs-history-table">
+              <table id="dataTable">
                 <thead>
                   <tr>
-                    <th style="width: 120px;">Tanggal</th>
-                    <th style="width: 130px;">ID Pendaftaran</th>
-                    <th>Judul Surat</th>
-                    <th style="width: 160px;">Link</th>
-                    <th style="width: 120px;">Dibuat oleh</th>
-                    <th style="width: 220px; text-align: center;">Aksi</th>
+                    <th>Aksi</th>
+                    <th>ID</th>
+                    <th>Tanggal</th>
+                    <th>Layanan</th>
+                    <th>Jenis Tanah</th>
+                    <th>Pemohon</th>
+                    <th>Pihak Pertama</th>
+                    <th>No. Surat</th>
+                    <th>Alamat</th>
+                    <th>Catatan</th>
                   </tr>
                 </thead>
-                <tbody id="docsHistoryBody"></tbody>
+                <tbody id="dataBody"></tbody>
               </table>
-              <p id="docsHistoryEmpty" class="empty" hidden>Belum ada riwayat surat tersimpan.</p>
+              <p id="emptyMsg" class="docs-live-empty" hidden style="min-height:160px; padding:20px;">Belum ada data pendaftaran yang sesuai filter.</p>
+            </div>
+
+            <div class="pager-wrap" id="pagerPendaftaran"></div>
+          </div>
+        </section>
+
+        <!-- =========================================================
+             TAB 3: SPORADIK
+             ========================================================= -->
+        <section id="tab-sporadik" hidden>
+          <div id="sporadikPanel" class="card">
+            <div class="card-header-clean">
+              <div class="card-header-title">
+                <i data-lucide="award" style="color:var(--primary-700);"></i>
+                <span>Pengelolaan Surat SPORADIK Fisik</span>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button id="btnCekTbModal" class="btn btn-action-secondary">
+                  <i data-lucide="search" style="width:14px; height:14px;"></i> Cek Berkas Pemohon
+                </button>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+              <input id="spSearch" type="search" class="tb-search" style="width:280px;" placeholder="Cari ID, Nama, atau Layanan..." />
+              <select id="spFilterLayanan" class="docs-select-input" style="width:180px;">
+                <option value="">Semua Layanan</option>
+                <option value="HIBAH">HIBAH</option>
+                <option value="JUALBELI">JUAL BELI</option>
+                <option value="AHLIWARIS">AHLI WARIS</option>
+              </select>
+              <select id="spFilterKelengkapan" class="docs-select-input" style="width:180px;">
+                <option value="">Semua Kelengkapan</option>
+                <option value="ok">🟢 Lengkap (Siap Cetak)</option>
+                <option value="ko">🔴 Kurang Lengkap</option>
+              </select>
+            </div>
+
+            <div class="table-wrap">
+              <table id="sporadikTable">
+                <thead>
+                  <tr>
+                    <th>Aksi</th>
+                    <th>ID</th>
+                    <th>Tanggal</th>
+                    <th>Layanan</th>
+                    <th>Jenis Tanah</th>
+                    <th>Pemohon</th>
+                    <th>Pihak Pertama</th>
+                    <th>No. Surat</th>
+                    <th>Alamat</th>
+                    <th>Catatan</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="sporadikBody"></tbody>
+              </table>
+              <p id="spEmpty" class="docs-live-empty" hidden style="min-height:160px; padding:20px;">Belum ada data SPORADIK.</p>
+            </div>
+
+            <div class="pager-wrap" id="pagerSporadik"></div>
+          </div>
+
+          <!-- Preview & Editor Surat Cetak Fisik -->
+          <div id="suratView" class="surat-view-wrap" hidden>
+            <div class="card-header-clean print-hide">
+              <div>
+                <h2 id="suratTitle" style="font-size:18px; font-weight:800; color:var(--primary-900);">Surat SPORADIK</h2>
+                <p id="suratIdLine" style="font-size:12.5px; color:var(--slate-500); margin:0;"></p>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button id="btnBackSurat" class="btn btn-ghost">← Kembali</button>
+                <button id="btnSaveSuratEdit" class="btn btn-action-secondary">💾 Simpan Data</button>
+                <button id="btnOpenDocsFromSporadik" class="btn" style="background:#0284c7; color:#fff; font-weight:700;">📄 Buka di Surat Docs</button>
+                <button id="btnPrintSurat" class="btn primary">🖨 Cetak / PDF</button>
+              </div>
+            </div>
+
+            <div class="print-hide" style="display:flex; gap:12px; margin-bottom:18px; background:var(--slate-50); padding:14px; border-radius:var(--radius-md); border:1px solid var(--slate-200); flex-wrap:wrap;">
+              <label style="font-size:12px; font-weight:700;">Tanggal Surat:
+                <input id="srTgl" type="text" class="docs-select-input" style="width:140px; margin-left:6px;" maxlength="10" placeholder="DD-MM-YYYY" />
+              </label>
+              <label style="font-size:12px; font-weight:700;">Nomor Urut:
+                <input id="srNoUrut" type="text" class="docs-select-input" style="width:90px; margin-left:6px;" maxlength="3" placeholder="001" />
+              </label>
+              <label style="font-size:12px; font-weight:700;">Nomor Surat:
+                <input id="srNoSurat" class="docs-select-input" style="width:240px; margin-left:6px; background:#f1f5f9;" readonly />
+              </label>
+            </div>
+
+            <div style="display:grid; grid-template-columns:380px 1fr; gap:24px;" class="print-hide">
+              <div style="background:#ffffff; border:1px solid var(--slate-200); border-radius:var(--radius-md); padding:16px;">
+                <h3 style="font-size:14px; font-weight:800; color:var(--primary-900); margin-bottom:8px;">🖊 Editor Field Cepat</h3>
+                <p style="font-size:11.5px; color:var(--slate-500); margin-bottom:12px;">Isi field yang masih kosong, klik simpan untuk menyimpan permanen.</p>
+                <div id="suratEditFields" style="display:flex; flex-direction:column; gap:8px;"></div>
+                <p id="seStatus" style="font-size:11px; margin-top:8px; font-weight:700;"></p>
+              </div>
+
+              <div>
+                <div id="suratBody"></div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-      </div>
-    </section>
-  </main>
+        <!-- =========================================================
+             TAB 4: UPLOADS
+             ========================================================= -->
+        <section id="tab-uploads" hidden>
+          <div class="card">
+            <div class="card-header-clean">
+              <div class="card-header-title">
+                <i data-lucide="paperclip" style="color:var(--primary-700);"></i>
+                <span>Daftar Berkas & Dokumen Upload</span>
+              </div>
+            </div>
+
+            <div style="margin-bottom:16px;">
+              <input id="uploadSearch" type="search" class="tb-search" style="width:300px;" placeholder="Cari ID, jenis upload, atau nama file..." />
+            </div>
+
+            <div class="table-wrap">
+              <table id="uploadTable">
+                <thead>
+                  <tr>
+                    <th>ID Registrasi</th>
+                    <th>Jenis Upload</th>
+                    <th>Nama File</th>
+                    <th>Timestamp</th>
+                    <th>Berkas</th>
+                  </tr>
+                </thead>
+                <tbody id="uploadBody"></tbody>
+              </table>
+              <p id="uploadEmpty" class="docs-live-empty" hidden style="min-height:160px; padding:20px;">Belum ada berkas yang di-upload.</p>
+            </div>
+
+            <div class="pager-wrap" id="pagerUploads"></div>
+          </div>
+        </section>
+
+        <!-- =========================================================
+             TAB 5: KEUANGAN
+             ========================================================= -->
+        <section id="tab-keuangan" hidden>
+          <div class="card">
+            <div class="card-header-clean">
+              <div class="card-header-title">
+                <i data-lucide="wallet" style="color:var(--primary-700);"></i>
+                <span>Kas Keuangan Administrasi Pertanahan</span>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button id="btnKeuTambah" class="btn primary">
+                  <i data-lucide="plus-circle" style="width:15px; height:15px;"></i> Tambah Transaksi
+                </button>
+                <button id="btnKeuImportSheet" class="btn btn-action-secondary">
+                  <i data-lucide="download" style="width:14px; height:14px;"></i> Sync Spreadsheet
+                </button>
+              </div>
+            </div>
+
+            <div id="keuDashboard" style="margin-bottom:24px;">
+              <div class="keu-stat-grid" id="keuRingkasan">
+                <div class="keu-card-in">
+                  <div style="font-size:12px; font-weight:700; color:#166534;">TOTAL PEMASUKAN</div>
+                  <div class="stat-val" id="keuTotalPemasukan" style="color:#166534;">Rp 0</div>
+                </div>
+                <div class="keu-card-out">
+                  <div style="font-size:12px; font-weight:700; color:#991b1b;">TOTAL PENGELUARAN</div>
+                  <div class="stat-val" id="keuTotalPengeluaran" style="color:#991b1b;">Rp 0</div>
+                </div>
+                <div class="keu-card-balance">
+                  <div style="font-size:12px; font-weight:700; color:#075985;">SALDO KAS SAAT INI</div>
+                  <div class="stat-val" id="keuSaldoAkhir" style="color:#075985;">Rp 0</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-bottom:16px;">
+              <input id="keuSearchInput" type="search" class="tb-search" style="width:300px;" placeholder="Cari transaksi kas..." />
+            </div>
+
+            <div class="table-wrap">
+              <table id="keuTable">
+                <thead>
+                  <tr>
+                    <th>Aksi</th>
+                    <th>ID</th>
+                    <th>Tanggal</th>
+                    <th>Tipe</th>
+                    <th>Kategori</th>
+                    <th>Jumlah</th>
+                    <th>Keterangan</th>
+                    <th>Pemohon</th>
+                    <th>Bukti</th>
+                  </tr>
+                </thead>
+                <tbody id="keuBody"></tbody>
+              </table>
+              <p id="keuEmpty" class="docs-live-empty" hidden style="min-height:160px; padding:20px;">Belum ada riwayat transaksi kas.</p>
+            </div>
+
+            <div class="pager-wrap" id="pagerKeuangan"></div>
+          </div>
+        </section>
+
+        <!-- =========================================================
+             TAB 6: SURAT DOCS STUDIO
+             ========================================================= -->
+        <section id="tab-suratdocs" hidden>
+          <div class="docs-layout">
+
+            <!-- Panel Kiri: Inspector & Form -->
+            <div class="docs-controls">
+
+              <!-- Step 1: Selector -->
+              <div class="card docs-step">
+                <div class="docs-step-head">
+                  <span class="docs-step-num">1</span>
+                  <div>
+                    <h3 style="font-size:14.5px; font-weight:800; color:var(--primary-900);">Pilih Jenis Surat &amp; Pendaftar</h3>
+                    <p style="font-size:12px; color:var(--slate-500);">Pilih jenis surat dan data pemohon tanah.</p>
+                  </div>
+                </div>
+
+                <div class="docs-field-group">
+                  <label class="docs-field-label">Jenis Dokumen Surat</label>
+                  <select id="docsSelectJenisDropdown" class="docs-select-input"></select>
+                </div>
+
+                <div class="docs-field-group">
+                  <label class="docs-field-label">ID Pendaftaran / Pemohon</label>
+                  <input id="docsIdReg" list="pemohonList" class="docs-select-input" placeholder="Ketik ID (misal: REG-996633) atau Nama" />
+                </div>
+
+                <div id="docsJenisActiveInfo" class="docs-active-jenis-box">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:12px; font-weight:700; color:var(--slate-700);">Status Template:</span>
+                    <span id="docsActiveJenisStatusBadge" class="badge">Memuat...</span>
+                  </div>
+                </div>
+
+                <div class="docs-field-group">
+                  <label class="docs-field-label">Link Template Google Docs (Supabase)</label>
+                  <div style="display:flex; gap:6px;">
+                    <input id="docsLink" type="text" class="docs-select-input" placeholder="https://docs.google.com/document/d/..." />
+                    <button id="btnDocsSaveLink" class="btn btn-action-secondary" title="Simpan Link ke Database">💾 Simpan</button>
+                  </div>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+                  <button id="btnDocsRender" class="btn primary" style="padding:12px; font-size:13.5px; width:100%;">
+                    <i data-lucide="wand-2" style="width:16px; height:16px;"></i> Render Surat Otomatis
+                  </button>
+                  <button id="btnDocsDetect" class="btn btn-action-secondary" style="padding:8px; font-size:12px; width:100%;">
+                    <i data-lucide="scan-search" style="width:14px; height:14px;"></i> Deteksi Placeholder {{...}}
+                  </button>
+                </div>
+
+                <div id="docsDetectResult" style="font-size:11.5px; color:var(--slate-600); background:var(--slate-50); border:1px solid var(--slate-200); border-radius:var(--radius-md); padding:10px;">
+                  Pilih data pemohon lalu klik <strong>Render Surat Otomatis</strong> untuk men-generate dokumen.
+                </div>
+              </div>
+
+              <!-- Step 2: Form Field Editor -->
+              <div class="card docs-step" id="docsManualPanel">
+                <div class="docs-step-head">
+                  <span class="docs-step-num docs-step-num-warn">📋</span>
+                  <div>
+                    <h3 style="font-size:14.5px; font-weight:800; color:var(--primary-900);">Tinjau &amp; Edit Data Field Surat</h3>
+                    <p style="font-size:12px; color:var(--slate-500);">Seluruh field data ditampilkan di bawah ini.</p>
+                  </div>
+                </div>
+
+                <div style="max-height:560px; overflow-y:auto; padding-right:4px;">
+                  <div id="docsManualFields" class="docs-manual-grid"></div>
+                </div>
+
+                <button id="btnDocsRenderManual" class="btn primary" style="padding:12px; font-size:13.5px; width:100%; margin-top:10px;">
+                  <i data-lucide="wand-2" style="width:16px; height:16px;"></i> Render Ulang dengan Field Ini
+                </button>
+              </div>
+
+            </div>
+
+            <!-- Panel Kanan: Live Studio & History -->
+            <div class="docs-main">
+
+              <!-- Live Google Docs Card -->
+              <div class="card docs-live-card" id="docsLiveCard">
+                <div class="docs-live-header">
+                  <div class="docs-live-title">
+                    <h2>
+                      <i data-lucide="file-text" style="color:var(--primary-700);"></i>
+                      <span>Live Google Docs Studio</span>
+                    </h2>
+                    <span class="docs-live-sub">Doc ID: <code id="docsLiveDocIdDisplay">-</code></span>
+                  </div>
+
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <div class="docs-mode-segmented">
+                      <button id="btnDocsModePreview" class="btn-mode active">Preview</button>
+                      <button id="btnDocsModeEdit" class="btn-mode">Edit</button>
+                    </div>
+
+                    <a id="btnDocsLiveOpenTab" class="btn btn-action-secondary" href="#" target="_blank" rel="noopener" style="display:none; padding:6px 12px; font-size:12px;">
+                      <i data-lucide="external-link" style="width:14px; height:14px;"></i> Tab Baru ↗
+                    </a>
+
+                    <button id="btnDocsToggleHeight" class="btn btn-action-secondary" title="Perbesar / Perkecil Layar" style="padding:6px 10px;">
+                      <i data-lucide="maximize-2" style="width:14px; height:14px;"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Banner Dokumen Ter-Render -->
+                <div id="docsGeneratedBanner" style="display:none; background:#ecfdf5; border-bottom:1px solid #a7f3d0; padding:12px 18px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                  <div>
+                    <div style="font-weight:800; font-size:13.5px; color:#065f46;" id="docsGeneratedBannerTitle">Dokumen Baru Berhasil Dibuat di Google Drive!</div>
+                    <div style="font-size:12px; color:#047857;" id="docsGeneratedBannerSub">Seluruh data telah terisi utuh ke dokumen Google Drive.</div>
+                  </div>
+                  <a id="btnDocsOpenGeneratedDirect" href="#" target="_blank" rel="noopener" class="btn primary" style="padding:6px 14px; font-size:12.5px;">
+                    Buka di Tab Google Docs ↗
+                  </a>
+                </div>
+
+                <div class="docs-live-body" id="docsLiveBody">
+                  <div id="docsLiveEmptyNotice" class="docs-live-empty">
+                    <div class="docs-empty-icon">📄</div>
+                    <h3 style="font-size:16px; font-weight:800; color:var(--slate-800); margin-bottom:4px;">Live Google Docs Studio</h3>
+                    <p style="font-size:13px; color:var(--slate-500); max-width:420px;">Pilih data pemohon di panel kiri atau tentukan jenis dokumen untuk memuat pratinjau live di sini.</p>
+                  </div>
+
+                  <iframe id="docsLiveIframe" class="docs-live-iframe" style="display:none;" title="Live Google Docs Preview" allow="autoplay"></iframe>
+                </div>
+              </div>
+
+              <!-- History Card -->
+              <div class="card">
+                <div class="card-header-clean">
+                  <div class="card-header-title">
+                    <i data-lucide="history" style="color:var(--primary-700);"></i>
+                    <span>Riwayat Cetak &amp; Render Surat Docs</span>
+                  </div>
+                  <button id="btnDocsHistoryClear" class="btn btn-ghost">↻ Segarkan Riwayat</button>
+                </div>
+
+                <div class="table-wrap">
+                  <table id="docsHistoryTable">
+                    <thead>
+                      <tr>
+                        <th>Waktu</th>
+                        <th>Layanan</th>
+                        <th>Pemohon</th>
+                        <th>Status</th>
+                        <th>Dokumen Hasil</th>
+                        <th>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="docsHistoryBody"></tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+
+    </div>
+
   </div>
 
-  </div>
+  <!-- Datalist Autocomplete -->
+  <datalist id="pemohonList"></datalist>
 
+  <!-- =========================================================
+       MODALS & DIALOGS
+       ========================================================= -->
+
+  <!-- Modal Detail -->
   <dialog id="detailModal">
     <div class="modal-head">
-      <h2 id="detailTitle">Detail</h2>
+      <h2>Detail Lengkap Pendaftaran</h2>
       <button id="btnCloseModal" class="btn-ghost">✕</button>
     </div>
-    <div id="detailBody"></div>
+    <div class="modal-body" id="detailContent"></div>
+    <div class="modal-foot">
+      <button class="btn btn-action-secondary" onclick="$('detailModal').close()">Tutup</button>
+    </div>
   </dialog>
 
+  <!-- Modal Edit Pendaftaran -->
   <dialog id="editModal">
     <div class="modal-head">
-      <h2>✏️ Edit Data</h2>
+      <h2>Edit Data Pendaftaran</h2>
       <button id="btnCloseEdit" class="btn-ghost">✕</button>
     </div>
-    <div id="editBody"></div>
-  </dialog>
-
-  <dialog id="tambahModal">
-    <div class="modal-head">
-      <h2>Tambah Pendaftaran</h2>
-      <button id="btnCloseTambah" class="btn-ghost">✕</button>
-    </div>
-    <div id="tambahBody"></div>
-  </dialog>
-
-  <dialog id="rekapModal" class="rekap-modal">
-    <div class="rekap-head">
-      <h3 id="rekapTitle">Rekap Data</h3>
-      <button id="btnCloseRekap" class="btn" title="Tutup">&times;</button>
-    </div>
-    <div id="rekapToolbar" class="rekap-toolbar"></div>
-    <div id="rekapInfo" class="rekap-info"></div>
-    <div id="rekapContent" class="rekap-content"></div>
-    <div class="rekap-foot">
-      <span id="rekapTotal"></span>
-      <button id="btnCetakRekap" class="btn primary" title="Cetak / Simpan PDF">
-        <i data-lucide="printer" style="width:16px; height:16px;"></i> Cetak / PDF
-      </button>
-    </div>
-  </dialog>
-
-  <dialog id="loginModal" class="login-modal">
-    <div class="login-modal-card">
-      <button id="btnCloseLogin" class="login-close" title="Tutup">&times;</button>
-      <div class="login-modal-brand">
-        <img src="logo-desa.png" alt="Logo Desa Batetangnga" class="login-modal-logo" />
-        <h2>Masuk ke Sistem</h2>
-        <p>Surat Tanah — Desa Batetangnga</p>
-      </div>
-      <form id="loginForm" autocomplete="on">
-        <label class="login-field">
-          <span>Username / Email</span>
-          <input id="loginEmail" type="text" placeholder="Masukkan username" autocomplete="username" required />
-        </label>
-        <label class="login-field">
-          <span>Kata Sandi</span>
-          <span class="pw-wrap">
-            <input id="loginPassword" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password" required />
-            <button type="button" id="togglePassword" class="pw-toggle" title="Lihat sandi">
-              <i data-lucide="eye" style="width: 17px; height: 17px;"></i>
-            </button>
-          </span>
-        </label>
-        <div id="loginError" class="login-error" style="display: none;">Username atau kata sandi salah.</div>
-        <button type="submit" id="btnLoginSubmit" class="login-submit">
-          <span id="loginSubmitLabel">Masuk ke Sistem</span>
-          <span id="loginSpinner" class="login-spinner" style="display: none;"></span>
-        </button>
-      </form>
-      <p class="login-hint">Gunakan akun petugas desa yang telah ditetapkan.</p>
-    </div>
-  </dialog>
-
-  <dialog id="changePwModal" class="login-modal">
-    <div class="login-modal-card">
-      <button id="btnCloseChangePw" class="login-close" title="Tutup">&times;</button>
-      <div class="login-modal-brand">
-        <img src="logo-desa.png" alt="Logo Desa Batetangnga" class="login-modal-logo" />
-        <h2>Ubah Kata Sandi</h2>
-        <p>Perbarui kata sandi akun petugas desa</p>
-      </div>
-      <form id="changePwForm">
-        <input type="text" name="username" autocomplete="username" value="admin" style="display:none;" aria-hidden="true" />
-        <label class="login-field">
-          <span>Kata Sandi Lama</span>
-          <input id="cpCurrent" type="password" placeholder="Kata sandi saat ini" autocomplete="current-password" required />
-        </label>
-        <label class="login-field">
-          <span>Kata Sandi Baru</span>
-          <span class="pw-wrap">
-            <input id="cpNew" type="password" placeholder="Minimal 6 karakter" autocomplete="new-password" required />
-            <button type="button" id="toggleCpNew" class="pw-toggle" title="Lihat sandi">
-              <i data-lucide="eye" style="width: 17px; height: 17px;"></i>
-            </button>
-          </span>
-        </label>
-        <label class="login-field">
-          <span>Ulangi Kata Sandi Baru</span>
-          <input id="cpConfirm" type="password" placeholder="Ulangi kata sandi baru" autocomplete="new-password" required />
-        </label>
-        <div id="changePwError" class="login-error" style="display: none;"></div>
-        <div id="changePwOk" class="login-ok" style="display: none;"></div>
-        <button type="submit" id="btnChangePwSubmit" class="login-submit">
-          <span id="changePwSubmitLabel">Simpan Kata Sandi</span>
-          <span id="changePwSpinner" class="login-spinner" style="display: none;"></span>
-        </button>
-      </form>
-      <p class="login-hint">Kata sandi disimpan terenkripsi (scrypt) di tabel app_users Supabase.</p>
-    </div>
-  </dialog>
-
-  <dialog id="trxModal">
-    <div class="modal-head">
-      <h2 id="trxModalTitle">Tambah Transaksi</h2>
-      <button id="btnCloseTrx" class="btn-ghost">✕</button>
-    </div>
-    <form id="trxForm" class="form">
-      <input type="hidden" id="trxId" />
-      <label>Tanggal Transaksi <input id="trxTanggal" type="date" required /></label>
-      
-      <label>Jenis Transaksi
-        <select id="trxJenis" required>
-          <option value="">-- Pilih Jenis --</option>
-          <option value="Pemasukan Cicilan">Pemasukan Cicilan</option>
-          <option value="Pemasukan Lainnya">Pemasukan Lainnya</option>
-          <option value="Pengeluaran">Pengeluaran</option>
-        </select>
-      </label>
-      
-      <label id="trxPemohonLabel" style="display:none;">ID Pemohon
-        <input id="trxIdPemohon" list="pemohonList" placeholder="Ketik ID Pemohon/Pendaftar" />
-        <datalist id="pemohonList"></datalist>
-      </label>
-      
-      <label>Nominal (Rp) <input id="trxNominal" type="number" inputmode="numeric" required placeholder="Contoh: 50000" /></label>
-      
-      <label>Keterangan <textarea id="trxKeterangan" rows="3" placeholder="Contoh: Pembayaran tahap 1"></textarea></label>
-      
-      <label>Bukti Pembayaran — File Otomatis ke Google Drive (Opsional, maks 8 MB)
-        <input id="trxBukti" type="file" accept="image/*,.pdf,.jpg,.jpeg,.png" />
-        <input id="trxBuktiOld" type="hidden" />
-        <div id="trxBuktiPreview" class="file-preview"></div>
-        <small id="trxBuktiNote" style="opacity:.7;display:block;margin-top:4px">Pilih file bukti — otomatis diunggah & disimpan ke Google Drive, lalu linknya dicatat.</small>
-      </label>
-      
-      <div class="form-actions">
-        <button id="btnSaveTrx" type="submit" class="btn primary">Simpan</button>
+    <form id="editForm">
+      <div class="modal-body" id="editFields"></div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-action-secondary" onclick="$('editModal').close()">Batal</button>
+        <button type="submit" class="btn primary">💾 Simpan Perubahan</button>
       </div>
     </form>
   </dialog>
 
-  <!-- Modal Kelola / Tambah Jenis Dokumen -->
-  <dialog id="modalManageJenis" class="modal">
-    <div class="modal-card" style="max-width:500px; width:90%; background:#fff; border-radius:16px; padding:0; overflow:hidden;">
-      <div class="modal-head" style="padding:16px 20px; background:#2E7D32; color:#fff; display:flex; justify-content:space-between; align-items:center;">
-        <h2 style="margin:0; font-size:16px; font-weight:800; color:#ffffff;">⚙️ Kelola Jenis Surat &amp; Dokumen</h2>
-        <button id="btnModalManageJenisClose" class="login-close" style="color:#fff; background:transparent;">✕</button>
-      </div>
-      <div class="modal-body" style="padding:20px;">
-        <form id="formAddJenis" style="margin-bottom:20px; padding-bottom:16px; border-bottom:1px dashed #cbd5e1;">
-          <h4 style="margin:0 0 10px; font-size:14px; font-weight:800; color:#1e293b;">➕ Tambah / Edit Jenis Surat</h4>
-          <div style="display:flex; gap:8px; margin-bottom:10px;">
-            <input id="newJenisIcon" type="text" placeholder="Emoji (📜)" style="width:80px;" class="docs-select-input" value="📄" />
-            <input id="newJenisNama" type="text" placeholder="Nama Jenis Surat (cth: Surat Pelepasan Hak)" class="docs-select-input" required style="flex:1;" />
-          </div>
-          <button type="submit" class="btn primary" style="width:100%; justify-content:center;">Simpan Jenis Surat Baru</button>
-        </form>
-
-        <h4 style="margin:0 0 10px; font-size:14px; font-weight:800; color:#1e293b;">📋 Daftar Jenis Surat (Terhubung ke Supabase)</h4>
-        <div id="listJenisDokumen" style="display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto;"></div>
-      </div>
+  <!-- Modal Tambah Data Baru -->
+  <dialog id="tambahModal">
+    <div class="modal-head">
+      <h2>Tambah Data Pendaftaran Baru</h2>
+      <button id="btnCloseTambah" class="btn-ghost">✕</button>
     </div>
-  <!-- Modal Edit / Pasang Link Template Surat -->
-  <dialog id="modalEditLinkTemplate" class="modal">
-    <div class="modal-card" style="max-width:520px; width:92%; background:#fff; border-radius:16px; padding:0; overflow:hidden;">
-      <div class="modal-head" style="padding:16px 20px; background:#2E7D32; color:#fff; display:flex; justify-content:space-between; align-items:center;">
-        <h2 style="margin:0; font-size:16px; font-weight:800; color:#ffffff;" id="modalEditLinkTitle">✏️ Edit Link Template Surat</h2>
-        <button id="btnModalEditLinkClose" class="login-close" style="color:#fff; background:transparent;">✕</button>
-      </div>
-      <form id="formEditLinkTemplate" style="padding:20px;">
-        <input type="hidden" id="editLinkJenisId" />
+    <form id="formTambahData">
+      <div class="modal-body">
         <div style="margin-bottom:14px;">
-          <label class="docs-field-label" style="font-weight:700;">Jenis Surat:</label>
-          <input type="text" id="editLinkJenisNamaDisplay" class="docs-select-input" readonly style="background:#f1f5f9; font-weight:700; color:#1e293b;" />
+          <label style="font-size:12px; font-weight:700; display:block; margin-bottom:4px;">Jenis Layanan Surat</label>
+          <select id="tambahLayanan" class="docs-select-input" style="font-weight:700;">
+            <option value="HIBAH">Surat Hibah</option>
+            <option value="JUALBELI">Surat Jual Beli / Pengoperan Hak</option>
+            <option value="AHLIWARIS">Surat Keterangan Ahli Waris</option>
+          </select>
         </div>
-        <div style="margin-bottom:16px;">
-          <label class="docs-field-label" style="font-weight:700;">Link / ID Google Docs Resmi:</label>
-          <input type="text" id="editLinkInput" class="docs-select-input" placeholder="https://docs.google.com/document/d/1AbC.../edit" required style="font-size:13px;" />
-          <small style="color:#64748b; margin-top:4px; display:block;">Dokumen Google Docs disetel <em>"Anyone with link can view"</em> agar dapat di-render &amp; live preview.</small>
+        <div id="tambahFormFields"></div>
+        <div style="margin-top:14px;">
+          <label style="font-size:12px; font-weight:700; display:block; margin-bottom:4px;">Catatan Admin (Opsional)</label>
+          <textarea id="tambahCatatanAdmin" class="docs-select-input" rows="2" placeholder="Catatan internal desa..."></textarea>
         </div>
-        <div style="display:flex; justify-content:flex-end; gap:8px;">
-          <button type="button" id="btnModalEditLinkCancel" class="btn btn-action-secondary">Batal</button>
-          <button type="submit" class="btn primary">💾 Simpan Link Template</button>
-        </div>
-      </form>
+      </div>
+      <div class="modal-foot">
+        <button type="button" id="btnBatalTambah" class="btn btn-action-secondary">Batal</button>
+        <button type="submit" class="btn primary">💾 Simpan Data Pendaftaran</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal Ubah Sandi -->
+  <dialog id="modalChangePw">
+    <div class="modal-head">
+      <h2>Ubah Kata Sandi Admin</h2>
+      <button class="btn-ghost" onclick="$('modalChangePw').close()">✕</button>
+    </div>
+    <form id="changePwForm">
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
+        <label style="font-size:12px; font-weight:700;">Kata Sandi Saat Ini
+          <input type="password" id="currentPassword" class="docs-select-input" required style="margin-top:4px;" />
+        </label>
+        <label style="font-size:12px; font-weight:700;">Kata Sandi Baru (Min. 6 Karakter)
+          <input type="password" id="newPassword" class="docs-select-input" required minlength="6" style="margin-top:4px;" />
+        </label>
+        <label style="font-size:12px; font-weight:700;">Konfirmasi Kata Sandi Baru
+          <input type="password" id="confirmPassword" class="docs-select-input" required minlength="6" style="margin-top:4px;" />
+        </label>
+      </div>
+      <div class="modal-foot">
+        <button type="button" id="btnCancelChangePw" class="btn btn-action-secondary">Batal</button>
+        <button type="submit" class="btn primary">💾 Simpan Sandi Baru</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal Rekap Cetak -->
+  <dialog id="rekapModal">
+    <div class="modal-head">
+      <div>
+        <h2 id="rekapModalTitle">Rekap Data</h2>
+        <p id="rekapModalSubtitle" style="font-size:12px; color:var(--slate-500); margin:0;"></p>
+      </div>
+      <button id="btnCloseRekap" class="btn-ghost">✕</button>
+    </div>
+    <div class="modal-body" id="rekapModalBody"></div>
+    <div class="modal-foot">
+      <button id="btnCetakRekap" class="btn primary">🖨 Cetak Rekap</button>
+      <button class="btn btn-action-secondary" onclick="$('rekapModal').close()">Tutup</button>
     </div>
   </dialog>
 
-  <script src="app.js?v=20260823_1616"></script>
+  <!-- Modal Transaksi Keuangan -->
+  <dialog id="keuModalTransaksi">
+    <div class="modal-head">
+      <h2 id="keuModalTrxTitle">Tambah Transaksi Keuangan</h2>
+      <button class="btn-ghost" onclick="$('keuModalTransaksi').close()">✕</button>
+    </div>
+    <form id="keuFormTransaksi">
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
+        <label style="font-size:12px; font-weight:700;">Tipe Transaksi
+          <select id="trxJenis" class="docs-select-input" style="margin-top:4px;">
+            <option value="PEMASUKAN">Pemasukan (Uang Masuk)</option>
+            <option value="PENGELUARAN">Pengeluaran (Uang Keluar)</option>
+          </select>
+        </label>
+        <label style="font-size:12px; font-weight:700;">Kategori Transaksi
+          <input type="text" id="trxKategori" class="docs-select-input" placeholder="Misal: Biaya Pengukuran, Kas Desa" style="margin-top:4px;" required />
+        </label>
+        <label style="font-size:12px; font-weight:700;">Jumlah Nominal (Rp)
+          <input type="number" id="trxJumlah" class="docs-select-input" placeholder="Contoh: 150000" style="margin-top:4px;" required min="1" />
+        </label>
+        <label style="font-size:12px; font-weight:700;">Keterangan
+          <input type="text" id="trxKeterangan" class="docs-select-input" placeholder="Rincian peruntukan transaksi..." style="margin-top:4px;" />
+        </label>
+        <label style="font-size:12px; font-weight:700;">Terkait ID Pemohon (Opsional)
+          <input type="text" id="trxIdPemohon" list="pemohonList" class="docs-select-input" placeholder="Ketik ID atau Nama..." style="margin-top:4px;" />
+        </label>
+        <label style="font-size:12px; font-weight:700;">Tanggal Transaksi
+          <input type="date" id="trxTgl" class="docs-select-input" style="margin-top:4px;" required />
+        </label>
+      </div>
+      <div class="modal-foot">
+        <button type="button" id="btnKeuCancelTrx" class="btn btn-action-secondary" onclick="$('keuModalTransaksi').close()">Batal</button>
+        <button type="submit" class="btn primary">💾 Simpan Transaksi</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal Login Petugas Desa -->
+  <dialog id="loginModal">
+    <div class="modal-head">
+      <h2>Masuk ke Sistem Pertanahan</h2>
+      <button class="btn-ghost" onclick="closeLogin()">✕</button>
+    </div>
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:14px;">
+        <div id="loginError" class="badge err" style="display:none; padding:8px 12px; font-size:12px; white-space:normal;"></div>
+        <label style="font-size:12px; font-weight:700;">Username / Akun
+          <input type="text" id="loginEmail" class="docs-select-input" placeholder="admin" required style="margin-top:4px;" />
+        </label>
+        <label style="font-size:12px; font-weight:700;">Kata Sandi
+          <input type="password" id="loginPassword" class="docs-select-input" placeholder="••••••••" required style="margin-top:4px;" />
+        </label>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-action-secondary" onclick="closeLogin()">Batal</button>
+        <button type="submit" id="btnLoginSubmit" class="btn primary">
+          <span id="loginSpinner" style="display:none;">⏳</span>
+          <span id="loginSubmitLabel">Masuk ke Sistem</span>
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal Kelola Jenis Dokumen -->
+  <dialog id="docsManageModal">
+    <div class="modal-head">
+      <h2>Kelola Jenis Dokumen &amp; Template</h2>
+      <button class="btn-ghost" onclick="$('docsManageModal').close()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="listJenisDokumen" style="display:flex; flex-direction:column; gap:8px; margin-bottom:18px;"></div>
+      <form id="formTambahJenis" style="border-top:1px solid var(--slate-200); padding-top:14px; display:flex; gap:8px; align-items:flex-end;">
+        <label style="flex:1; font-size:12px; font-weight:700;">Nama Dokumen Baru
+          <input type="text" id="inputNamaJenis" class="docs-select-input" placeholder="Contoh: Surat Hibah Khusus" required style="margin-top:4px;" />
+        </label>
+        <label style="width:70px; font-size:12px; font-weight:700;">Ikon
+          <input type="text" id="inputIconJenis" class="docs-select-input" value="📄" style="margin-top:4px;" />
+        </label>
+        <button type="submit" class="btn primary">Tambah</button>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-action-secondary" onclick="$('docsManageModal').close()">Tutup</button>
+    </div>
+  </dialog>
+
+  <!-- Modal Edit Link Template -->
+  <dialog id="modalEditLink">
+    <div class="modal-head">
+      <h2>Edit Link Template Google Docs</h2>
+      <button class="btn-ghost" onclick="$('modalEditLink').close()">✕</button>
+    </div>
+    <form id="formModalEditLink">
+      <div class="modal-body">
+        <label style="font-size:12px; font-weight:700;">Link Google Docs
+          <input type="text" id="editLinkInput" class="docs-select-input" placeholder="https://docs.google.com/document/d/.../edit" required style="margin-top:4px;" />
+        </label>
+        <small style="color:var(--slate-500); margin-top:6px; display:block;">Pastikan akses Google Docs disetel <em>"Anyone with link can view"</em>.</small>
+      </div>
+      <div class="modal-foot">
+        <button type="button" id="btnModalEditLinkCancel" class="btn btn-action-secondary" onclick="$('modalEditLink').close()">Batal</button>
+        <button type="submit" class="btn primary">💾 Simpan Link</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Script Global App -->
+  <script src="app.js?v=20260823_1625"></script>
 </body>
 </html>

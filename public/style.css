@@ -1,12 +1,12 @@
 /* ==========================================================================
-   SIA BATETANGNGA — SYNC SURAT TANAH & DIGITAL GOOGLE DOCS
-   DESAIN UI/UX MODERN, BERSIH, ELEGAN, DAN PROFESIONAL (ENTERPRISE / GOV DASHBOARD)
+   SIA BATETANGNGA — WORLD-CLASS DIGITAL LAND PLATFORM (UI/UX 2026)
+   DESIGNED FOR MODERN GOVERNMENT & ENTERPRISE PERFORMANCE
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* Palet Warna Utama: Emerald & Deep Slate */
+  /* Palette: Emerald & Deep Executive Slate */
   --primary-950: #022c22;
   --primary-900: #064e3b;
   --primary-800: #065f46;
@@ -17,12 +17,11 @@
   --primary-100: #d1fae5;
   --primary-50:  #ecfdf5;
 
-  /* Aksen Emas / Warm Gold */
   --accent-gold: #d97706;
   --accent-gold-light: #fef3c7;
   --accent-gold-border: #fde68a;
 
-  /* Warna Netral & Slate */
+  --slate-950: #020617;
   --slate-900: #0f172a;
   --slate-800: #1e293b;
   --slate-700: #334155;
@@ -35,41 +34,37 @@
   --slate-50:  #f8fafc;
   --white:     #ffffff;
 
-  /* Warna Status */
-  --status-ok:    #059669;
-  --status-ok-bg: #ecfdf5;
-  --status-ok-bd: #a7f3d0;
+  /* Status Colors */
+  --status-ok:       #059669;
+  --status-ok-bg:    #ecfdf5;
+  --status-ok-bd:    #a7f3d0;
 
-  --status-warn:    #d97706;
-  --status-warn-bg: #fffbeb;
-  --status-warn-bd: #fde68a;
+  --status-warn:     #d97706;
+  --status-warn-bg:  #fffbeb;
+  --status-warn-bd:  #fde68a;
 
-  --status-bad:    #e11d48;
-  --status-bad-bg: #fff1f2;
-  --status-bad-bd: #fecdd3;
+  --status-bad:      #e11d48;
+  --status-bad-bg:   #fff1f2;
+  --status-bad-bd:   #fecdd3;
 
-  --status-info:    #0284c7;
-  --status-info-bg: #f0f9ff;
-  --status-info-bd: #bae6fd;
+  --status-info:     #0284c7;
+  --status-info-bg:  #f0f9ff;
+  --status-info-bd:  #bae6fd;
 
-  /* Variabel Kompatibilitas UI */
-  --bg: #f8fafc;
-  --panel: #ffffff;
-  --panel2: #f8fafc;
-  --border: #e2e8f0;
-  --border-soft: #cbd5e1;
-  --text: #0f172a;
-  --text-soft: #334155;
-  --muted: #64748b;
-  --green: #059669;
-  --red: #e11d48;
-  --amber: #d97706;
-  --cyan: #0284c7;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
-  --radius: 12px;
+  /* Elevation Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+  --shadow-card: 0 2px 8px -2px rgba(15, 23, 42, 0.05), 0 1px 4px -1px rgba(15, 23, 42, 0.03);
+
+  /* Radius System */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
 }
 
 * {
@@ -79,107 +74,221 @@
 }
 
 html {
-  scrollbar-color: var(--slate-300) transparent;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   color: var(--slate-900);
-  background: var(--slate-50);
+  background: var(--slate-100);
+  scrollbar-color: var(--slate-300) transparent;
 }
 
 body {
   min-height: 100vh;
-  background: var(--slate-50);
+  background: #f8fafc;
   color: var(--slate-900);
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--slate-300); border-radius: 999px; }
+::-webkit-scrollbar-thumb { background: var(--slate-300); border-radius: var(--radius-full); }
 ::-webkit-scrollbar-thumb:hover { background: var(--slate-400); }
 
 /* ==========================================================================
-   TOPBAR & HEADER BERSTANDAR PEMERINTAHAN MODERN
+   APP SHELL LAYOUT: SIDEBAR + MAIN AREA
    ========================================================================== */
-header, .app-header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  padding: 12px 24px;
-  background: #ffffff;
-  border-bottom: 1px solid var(--slate-200);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+.app-shell {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  min-height: 100vh;
+  width: 100%;
 }
 
-.app-brand, .brand {
+/* Sidebar Navigation */
+.app-sidebar {
+  width: 260px;
+  background: #ffffff;
+  border-right: 1px solid var(--slate-200);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 40;
+  box-shadow: 1px 0 3px 0 rgba(0, 0, 0, 0.02);
+}
+
+.sidebar-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--slate-200);
   display: flex;
   align-items: center;
   gap: 12px;
-  text-decoration: none;
 }
 
-.brand-logo-badge, .brand-logo {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+.sidebar-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
   background: #ffffff;
   border: 1px solid var(--slate-200);
-  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   padding: 2px;
+  box-shadow: var(--shadow-xs);
+  flex-shrink: 0;
 }
 
-.brand-logo-img {
+.sidebar-logo img {
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
 
-.brand-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.app-title, header h1 {
-  font-size: 16px;
+.sidebar-brand-text h1 {
+  font-size: 14.5px;
   font-weight: 800;
   color: var(--primary-900);
-  margin: 0;
   letter-spacing: -0.2px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  line-height: 1.2;
 }
 
-.app-subtitle, header h1 span {
-  font-size: 11.5px;
+.sidebar-brand-text p {
+  font-size: 11px;
+  font-weight: 600;
   color: var(--slate-500);
+}
+
+.sidebar-nav {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.nav-item-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--slate-400);
+  padding: 12px 10px 4px;
+}
+
+.sidebar-btn, .tabbtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--slate-600);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+}
+
+.sidebar-btn:hover, .tabbtn:hover {
+  background: var(--slate-100);
+  color: var(--slate-900);
+}
+
+.sidebar-btn.active, .tabbtn.active {
+  background: var(--primary-900);
+  color: #ffffff;
+  box-shadow: 0 4px 12px -2px rgba(6, 78, 59, 0.35);
+}
+
+.sidebar-btn.active svg, .tabbtn.active svg {
+  color: var(--primary-300);
+  stroke: var(--primary-300);
+}
+
+.sidebar-footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--slate-200);
+  background: var(--slate-50);
+}
+
+/* ==========================================================================
+   EXECUTIVE TOPBAR & HEADER
+   ========================================================================== */
+.app-main-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #f8fafc;
+}
+
+.topbar-header, header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--slate-200);
+  padding: 12px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.topbar-search-wrap {
+  position: relative;
+  width: 320px;
+}
+
+.topbar-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--slate-400);
+  width: 16px;
+  height: 16px;
+}
+
+.tb-search {
+  width: 100%;
+  padding: 8px 14px 8px 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--slate-200);
+  background: var(--slate-100);
+  font-size: 12.5px;
   font-weight: 500;
-  margin-top: 1px;
+  color: var(--slate-900);
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.tb-search:focus {
+  background: #ffffff;
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
 }
 
 .topbar-right {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
-}
-
-.tb-status, .status-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 
 .badge {
@@ -187,8 +296,8 @@ header, .app-header {
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11.5px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
   font-weight: 700;
   background: var(--slate-100);
   border: 1px solid var(--slate-200);
@@ -208,43 +317,41 @@ header, .app-header {
   border-color: var(--status-bad-bd);
 }
 
-.tb-title {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--primary-800);
-  background: var(--primary-50);
-  border: 1px solid var(--primary-100);
+.user-profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 4px 12px;
-  border-radius: 8px;
-}
-
-.tb-search {
-  padding: 8px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-md);
   background: var(--slate-50);
-  font-size: 12.5px;
-  color: var(--slate-900);
-  outline: none;
-  width: 200px;
-  transition: all 0.2s ease;
+  border: 1px solid var(--slate-200);
 }
 
-.tb-search:focus {
-  background: #ffffff;
-  border-color: var(--primary-600);
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
-  width: 240px;
+.user-profile-info {
+  text-align: right;
+  line-height: 1.2;
+}
+
+.user-name {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--slate-900);
+}
+
+.user-role-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--primary-700);
 }
 
 .tb-icon {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--slate-100);
+  background: #ffffff;
   border: 1px solid var(--slate-200);
   color: var(--slate-600);
   cursor: pointer;
@@ -252,108 +359,70 @@ header, .app-header {
 }
 
 .tb-icon:hover {
-  background: var(--slate-200);
-  color: var(--slate-900);
-}
-
-/* ==========================================================================
-   TAB NAVIGATION (MODERN SEGMENTED FLOATING TABS)
-   ========================================================================== */
-.tabs, .nav-tab-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #ffffff;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--slate-200);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.tabs::-webkit-scrollbar { display: none; }
-
-.tabbtn, .nav-tab-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 18px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--slate-600);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
-}
-
-.tabbtn:hover, .nav-tab-item:hover {
   background: var(--slate-100);
   color: var(--slate-900);
-}
-
-.tabbtn.active, .nav-tab-item.active {
-  background: var(--primary-900);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(6, 78, 59, 0.25);
-}
-
-.tab-ic {
-  width: 16px;
-  height: 16px;
-  stroke-width: 2;
+  border-color: var(--slate-300);
 }
 
 /* ==========================================================================
-   MAIN CONTAINER & CARD SYSTEM
+   WORKSPACE CONTENT & CARDS
    ========================================================================== */
-.app-container {
-  max-width: 1600px;
-  margin: 0 auto;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.main-card, .main-card-workspace {
-  padding: 24px;
+.main-workspace {
+  padding: 28px;
   flex: 1;
 }
 
 .card {
   background: #ffffff;
   border: 1px solid var(--slate-200);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  padding: 20px;
-  margin-bottom: 20px;
-  transition: box-shadow 0.2s ease;
+  padding: 22px;
+  margin-bottom: 24px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .card:hover {
-  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
-/* ==========================================================================
-   DASHBOARD STAT CARDS & METRICS
-   ========================================================================== */
-.stat-grid, .stats-row {
+.card-header-clean {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--slate-100);
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.card-header-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--slate-900);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Stat Cards */
+.stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
   margin-bottom: 24px;
 }
 
 .stat-card {
   background: #ffffff;
   border: 1px solid var(--slate-200);
-  border-radius: 14px;
-  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-card);
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: var(--shadow-sm);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -365,30 +434,31 @@ header, .app-header {
 .stat-icon-wrap {
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 22px;
+  flex-shrink: 0;
 }
 
 .stat-val {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   color: var(--slate-900);
-  line-height: 1.1;
   font-family: 'Space Grotesk', sans-serif;
+  line-height: 1.1;
 }
 
 .stat-lbl {
   font-size: 12px;
   font-weight: 600;
   color: var(--slate-500);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 /* ==========================================================================
-   BUTTONS & ACTION CONTROLS
+   BUTTONS & CONTROLS
    ========================================================================== */
 .btn {
   display: inline-flex;
@@ -396,8 +466,8 @@ header, .app-header {
   justify-content: center;
   gap: 6px;
   padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
   font-weight: 700;
   border: 1px solid var(--slate-300);
   background: #ffffff;
@@ -417,7 +487,7 @@ header, .app-header {
   background: var(--primary-700);
   border-color: var(--primary-700);
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(4, 120, 87, 0.25);
+  box-shadow: 0 2px 6px -1px rgba(4, 120, 87, 0.3);
 }
 
 .btn.primary:hover {
@@ -460,16 +530,15 @@ header, .app-header {
 }
 
 /* ==========================================================================
-   TABLES & DATA LISTS (PREMIUM MODERN TABLE)
+   ENTERPRISE DATA TABLES
    ========================================================================== */
-.table-wrap, .table-container {
+.table-wrap {
   width: 100%;
   overflow-x: auto;
   border: 1px solid var(--slate-200);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: #ffffff;
   box-shadow: var(--shadow-sm);
-  margin-top: 14px;
 }
 
 table {
@@ -482,15 +551,12 @@ table {
 thead th {
   background: var(--slate-50);
   color: var(--slate-700);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--slate-200);
-  position: sticky;
-  top: 0;
-  z-index: 10;
   white-space: nowrap;
 }
 
@@ -509,13 +575,12 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* Status Tags in Table */
 .tag {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 3px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
@@ -531,7 +596,7 @@ tbody tr:last-child td {
 .tag.st-bad { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; font-weight: 800; }
 
 /* ==========================================================================
-   SURAT DOCS WORKSPACE (STEP 1, STEP 2, & LIVE PREVIEW)
+   SURAT DOCS STUDIO (SPLIT-SCREEN WORKSPACE)
    ========================================================================== */
 .docs-layout {
   display: grid;
@@ -557,7 +622,7 @@ tbody tr:last-child td {
 .docs-step {
   background: #ffffff;
   border: 1px solid var(--slate-200);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   padding: 20px;
   box-shadow: var(--shadow-card);
   display: flex;
@@ -598,10 +663,10 @@ tbody tr:last-child td {
 }
 
 .docs-field-label {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
   color: var(--slate-700);
 }
 
@@ -609,7 +674,7 @@ tbody tr:last-child td {
   width: 100%;
   padding: 9px 12px;
   border: 1px solid var(--slate-300);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 13px;
   font-weight: 600;
   color: var(--slate-900);
@@ -623,15 +688,36 @@ tbody tr:last-child td {
   box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
 }
 
-.docs-manual-grid {
+.form-block {
+  background: #ffffff;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-xs);
+}
+
+.card-title {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--primary-900);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--slate-200);
+  margin-bottom: 10px;
+}
+
+.block-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .docs-manual-item {
-  border-radius: 10px;
-  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
   transition: all 0.15s ease;
 }
 
@@ -645,13 +731,11 @@ tbody tr:last-child td {
   border: 1px solid #fed7aa;
 }
 
-/* ==========================================================================
-   LIVE GOOGLE DOCS PREVIEW & CARD
-   ========================================================================== */
+/* Live Google Docs Frame */
 .docs-live-card {
   background: #ffffff;
   border: 1px solid var(--slate-200);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   overflow: hidden;
   display: flex;
@@ -679,22 +763,17 @@ tbody tr:last-child td {
   gap: 8px;
 }
 
-.docs-live-sub {
-  font-size: 11.5px;
-  color: var(--slate-500);
-}
-
 .docs-mode-segmented {
   display: inline-flex;
   padding: 3px;
   background: var(--slate-200);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   gap: 2px;
 }
 
 .btn-mode {
   padding: 5px 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 700;
   border: none;
@@ -709,14 +788,7 @@ tbody tr:last-child td {
 .btn-mode.active {
   background: #ffffff;
   color: var(--primary-900);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.docs-live-body {
-  width: 100%;
-  background: #ffffff;
-  min-height: 850px;
-  position: relative;
+  box-shadow: var(--shadow-xs);
 }
 
 .docs-live-iframe {
@@ -726,27 +798,60 @@ tbody tr:last-child td {
   border: none;
   background: #ffffff;
   display: block;
-  transition: height 0.25s ease;
 }
 
 .docs-live-iframe.tall {
   height: 1100px;
-  min-height: 1000px;
 }
 
-.docs-live-empty {
+/* ==========================================================================
+   MODALS & DIALOGS
+   ========================================================================== */
+dialog {
+  border: none;
+  border-radius: var(--radius-xl);
+  padding: 0;
+  box-shadow: var(--shadow-xl);
+  background: #ffffff;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+dialog::backdrop {
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(5px);
+}
+
+.modal-head {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 500px;
-  text-align: center;
-  padding: 40px 20px;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--slate-200);
+  background: var(--slate-50);
 }
 
-.docs-empty-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
+.modal-head h2, .modal-head h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--primary-900);
+  margin: 0;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  max-height: 75vh;
+}
+
+.modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--slate-200);
+  background: var(--slate-50);
 }
 
 /* ==========================================================================
@@ -774,7 +879,7 @@ tbody tr:last-child td {
   min-width: 32px;
   height: 32px;
   padding: 0 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 12.5px;
   font-weight: 700;
   background: #ffffff;
@@ -790,8 +895,8 @@ tbody tr:last-child td {
 }
 
 .pg-btn.active {
-  background: var(--primary-800);
-  border-color: var(--primary-800);
+  background: var(--primary-900);
+  border-color: var(--primary-900);
   color: #ffffff;
 }
 
@@ -801,63 +906,13 @@ tbody tr:last-child td {
 }
 
 /* ==========================================================================
-   MODALS & DIALOGS (BLURRED BACKDROP & POLISHED DIALOG)
-   ========================================================================== */
-dialog {
-  border: none;
-  border-radius: 16px;
-  padding: 0;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  background: #ffffff;
-  max-width: 90vw;
-  max-height: 90vh;
-}
-
-dialog::backdrop {
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 22px;
-  border-bottom: 1px solid var(--slate-200);
-  background: var(--slate-50);
-}
-
-.modal-head h2, .modal-head h3 {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--primary-900);
-  margin: 0;
-}
-
-.modal-body {
-  padding: 22px;
-  overflow-y: auto;
-  max-height: 75vh;
-}
-
-.modal-foot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 14px 22px;
-  border-top: 1px solid var(--slate-200);
-  background: var(--slate-50);
-}
-
-/* ==========================================================================
-   PRINT STYLES (PRESERVED 100% FOR SPORADIK & REKAP DUSUN)
+   PRINT STYLES (100% PRESERVED FOR SPORADIK & REKAP DUSUN)
    ========================================================================== */
 @media print {
-  header, .tabs, .topbar, .pager-wrap, .btn, .docs-controls, #btnRefresh, #topSearch {
+  .app-sidebar, header, .topbar-header, .tabs, .pager-wrap, .btn, .docs-controls, #btnRefresh, #topSearch {
     display: none !important;
   }
-  body, .app-container, .main-card {
+  body, .app-shell, .app-main-layout, .main-workspace {
     background: #ffffff !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -873,256 +928,14 @@ dialog::backdrop {
   }
 }
 
-/* ==========================================================================
-   AUTH GUEST & LOGIN NOTICE
-   ========================================================================== */
-.auth-guest-notice {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  padding: 30px;
-}
-
-.auth-guest-card {
-  background: #ffffff;
-  border: 1px solid var(--slate-200);
-  border-radius: 20px;
-  padding: 40px;
-  text-align: center;
-  max-width: 480px;
-  box-shadow: var(--shadow-card);
-}
-
-.auth-guest-logo {
-  width: 72px;
-  height: 72px;
-  object-fit: contain;
-  margin-bottom: 16px;
-}
-
-.auth-guest-card h2 {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--primary-900);
-  margin-bottom: 8px;
-}
-
-.auth-guest-card p {
-  font-size: 13.5px;
-  color: var(--slate-600);
-  margin-bottom: 24px;
-  line-height: 1.6;
-}
-
-/* ==========================================================================
-   SURAT FIELD BLOCKS & CHIPS (PANEL KIRI STEP 2)
-   ========================================================================== */
-.form-block {
-  background: #ffffff;
-  border: 1px solid var(--slate-200);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: var(--shadow-sm);
-}
-
-.card-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 13.5px;
-  font-weight: 800;
-  color: var(--primary-900);
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--slate-200);
-  margin-bottom: 12px;
-}
-
-.block-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-@media screen and (max-width: 640px) {
-  .block-grid {
+@media screen and (max-width: 1024px) {
+  .app-sidebar {
+    display: none;
+  }
+  .docs-layout {
     grid-template-columns: 1fr;
   }
+  .topbar-search-wrap {
+    width: 100%;
+  }
 }
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.chip-auto {
-  background: var(--slate-100);
-  color: var(--slate-600);
-  border: 1px solid var(--slate-200);
-}
-
-/* ==========================================================================
-   SURAT SPORADIK PREVIEW & CETAK SHEET
-   ========================================================================== */
-.surat-view-wrap {
-  background: #ffffff;
-  border: 1px solid var(--slate-200);
-  border-radius: 16px;
-  box-shadow: var(--shadow-card);
-  padding: 24px;
-}
-
-.surat-page {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  padding: 30mm 20mm;
-  margin: 0 auto 30px;
-  max-width: 210mm;
-  min-height: 297mm;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-  font-family: "Times New Roman", Times, serif;
-  font-size: 12pt;
-  line-height: 1.5;
-  color: #000000;
-}
-
-.surat-kop {
-  text-align: center;
-  border-bottom: 3px double #000000;
-  padding-bottom: 8px;
-  margin-bottom: 20px;
-}
-
-.surat-kop h2 {
-  font-size: 14pt;
-  font-weight: bold;
-  margin: 0;
-  text-transform: uppercase;
-}
-
-.surat-kop h1 {
-  font-size: 16pt;
-  font-weight: bold;
-  margin: 2px 0;
-  text-transform: uppercase;
-}
-
-.surat-kop p {
-  font-size: 10pt;
-  margin: 2px 0 0;
-}
-
-.surat-title {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.surat-title h3 {
-  font-size: 13pt;
-  font-weight: bold;
-  text-decoration: underline;
-  margin: 0;
-  text-transform: uppercase;
-}
-
-.surat-title p {
-  font-size: 11pt;
-  margin: 2px 0 0;
-}
-
-/* ==========================================================================
-   TAMBAH DATA FORM MODAL
-   ========================================================================== */
-.tambah-section {
-  background: #ffffff;
-  border: 1px solid var(--slate-200);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.tambah-section-title {
-  font-size: 13.5px;
-  font-weight: 800;
-  color: var(--primary-900);
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--slate-200);
-}
-
-.tambah-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
-}
-
-.tambah-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.tambah-field label {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--slate-700);
-}
-
-.tambah-field input, .tambah-field select, .tambah-field textarea {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--slate-300);
-  font-size: 12.5px;
-  outline: none;
-  font-family: inherit;
-}
-
-.tambah-field input:focus, .tambah-field select:focus, .tambah-field textarea:focus {
-  border-color: var(--primary-600);
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
-}
-
-/* ==========================================================================
-   KEUANGAN MODULE STATS & TABLES
-   ========================================================================== */
-.keu-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.keu-card-in {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 14px;
-  padding: 18px 20px;
-}
-
-.keu-card-out {
-  background: #fff1f2;
-  border: 1px solid #fecdd3;
-  border-radius: 14px;
-  padding: 18px 20px;
-}
-
-.keu-card-balance {
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 14px;
-  padding: 18px 20px;
-}
-
