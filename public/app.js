@@ -3985,9 +3985,11 @@ hideChangePwMsg();
 
   // Tabel 1 arah: frekuensi + persen.
   function freqTable(obj, elId) {
+    const el = $('t1' + elId);
+    if (!el) return;
     const rows = Object.entries(obj).sort((a, b) => b[1] - a[1]);
     const n = rows.reduce((s, [, v]) => s + v, 0);
-    $('t1' + elId).innerHTML = `
+    el.innerHTML = `
       <table class="dt c1">
         <thead><tr><th>Kategori</th><th>Frekuensi</th><th>Persen</th></tr></thead>
         <tbody>
@@ -4022,11 +4024,13 @@ hideChangePwMsg();
   }
 
   function cross2Table(elId, keyA, keyB) {
+    const el = $('t2' + elId);
+    if (!el) return;
     const { keysA, keysB, grid } = cross2(keyA, keyB);
     const colTotals = keysB.map((b) => keysA.reduce((s, a) => s + (grid[a + '\u0000' + b] || 0), 0));
     const rowTotals = keysA.map((a) => keysB.reduce((s, b) => s + (grid[a + '\u0000' + b] || 0), 0));
     const grand = rowTotals.reduce((s, v) => s + v, 0);
-    $('t2' + elId).innerHTML = `
+    el.innerHTML = `
       <table class="dt c2">
         <thead>
           <tr><th>${esc(keyA)} ↓ / ${esc(typeof keyB === 'function' ? 'pembayaran' : keyB)} →</th>
@@ -4059,7 +4063,9 @@ hideChangePwMsg();
     });
     const dTotals = cols.map((b) => inner.map((c) => dim.reduce((s, a) => s + (grid[a + '\u0000' + b + '\u0000' + c] || 0), 0)));
     const grand = dim.reduce((s, a) => s + cols.reduce((s2, b) => s2 + inner.reduce((s3, c) => s3 + (grid[a + '\u0000' + b + '\u0000' + c] || 0), 0), 0), 0);
-    $('t3' + elId).innerHTML = `
+    const el = $('t3' + elId);
+    if (!el) return;
+    el.innerHTML = `
       <table class="dt c3">
         <thead>
           <tr><th>Layanan ↓</th>${cols.map((b) => `<th colspan="${inner.length + 1}">${esc(b)}</th>`).join('')}<th>Total</th></tr>
@@ -4180,10 +4186,13 @@ hideChangePwMsg();
     const total = allData.length;
     const lengkap = rowsCache.filter((c) => c.coreMissing.length === 0).length;
     const kurang = total - lengkap;
-    $('dbTotal').textContent = total;
-    $('dbUpload').textContent = uploads.length;
-    $('dbLengkap').textContent = lengkap;
-    $('dbKurang').textContent = kurang;
+    const setTxt = (id, val) => { const el = $(id); if (el) el.textContent = val; };
+    const setHtml = (id, val) => { const el = $(id); if (el) el.innerHTML = val; };
+
+    setTxt('dbTotal', total);
+    setTxt('dbUpload', uploads.length);
+    setTxt('dbLengkap', lengkap);
+    setTxt('dbKurang', kurang);
 
     // Stat tambahan: hari ini / pending / selesai / sudah diukur / sudah cetak.
     const todayStr = new Date().toISOString().slice(0, 10);
@@ -4201,11 +4210,11 @@ hideChangePwMsg();
         return ts && String(ts).includes(todayId.split(',')[0].trim()) && String(ts).includes(new Date().getFullYear());
       }).length;
     }
-    $('dbHariIni').textContent = hariIni;
-    $('dbPending').textContent = allData.filter((r) => r.status_berkas === 'PENDING').length;
-    $('dbSelesai').textContent = allData.filter((r) => r.status_berkas === 'SELESAI').length;
-    $('dbDiukur').textContent = allData.filter((r) => r.status_berkas === 'SUDAH_DIUKUR').length;
-    $('dbCetak').textContent = allData.filter((r) => String(r.data_raw && r.data_raw._nomorSuratTercetak || '').trim()).length;
+    setTxt('dbHariIni', hariIni);
+    setTxt('dbPending', allData.filter((r) => r.status_berkas === 'PENDING').length);
+    setTxt('dbSelesai', allData.filter((r) => r.status_berkas === 'SELESAI').length);
+    setTxt('dbDiukur', allData.filter((r) => r.status_berkas === 'SUDAH_DIUKUR').length);
+    setTxt('dbCetak', allData.filter((r) => String(r.data_raw && r.data_raw._nomorSuratTercetak || '').trim()).length);
 
     const fLay = freq(allData.map((r) => r.layanan));
     const fSta = freq(allData.map((r) => r.status_berkas));
@@ -4213,8 +4222,8 @@ hideChangePwMsg();
     const fTan = freq(rowsCache.map((c) => c.info.jenis_tanah || c.info.luas_tanah || ''));
 
     // Grafik batang.
-    $('chartBarLayanan').innerHTML = barChartSVG(fLay);
-    $('chartBarStatus').innerHTML = barChartSVG(fSta);
+    setHtml('chartBarLayanan', barChartSVG(fLay));
+    setHtml('chartBarStatus', barChartSVG(fSta));
 
     // Grafik garis — tren pendaftaran per tanggal (kolom `timestamp` = waktu pendaftaran asli).
     const byDate = {};
@@ -4225,21 +4234,19 @@ hideChangePwMsg();
       byDate[ds] = (byDate[ds] || 0) + 1;
     });
     const sortedDates = Object.keys(byDate).sort();
-    $('chartLineTren').innerHTML = lineChartSVG(sortedDates.map((ds) => ({ x: ds, y: byDate[ds] })));
+    setHtml('chartLineTren', lineChartSVG(sortedDates.map((ds) => ({ x: ds, y: byDate[ds] }))));
 
     // Grafik pie.
-    $('chartPieLayanan').innerHTML = pieChartSVG(fLay);
-    $('chartPieStatus').innerHTML = pieChartSVG(fSta);
+    setHtml('chartPieLayanan', pieChartSVG(fLay));
+    setHtml('chartPieStatus', pieChartSVG(fSta));
 
     // Grafik dusun (dari field dusun pada data sporadik).
     const fDusun = freq(rowsCache.map((c) => (c.info.dusun || '').trim()).filter(Boolean));
-    $('chartDusun').innerHTML = Object.keys(fDusun).length
+    setHtml('chartDusun', Object.keys(fDusun).length
       ? barChartSVG(fDusun)
-      : '<div class="chart-empty">Belum ada data dusun pada pendaftaran.</div>';
+      : '<div class="chart-empty">Belum ada data dusun pada pendaftaran.</div>');
 
     // Tabel 1 arah (frekuensi + persen).
-    freqTable(fLay, 'Layanan');
-    freqTable(fSta, 'Status');
     freqTable(fBay, 'Bayar');
     freqTable(fTan, 'Tanah');
 
