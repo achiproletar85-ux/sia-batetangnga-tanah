@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260823_1627" />
+  <link rel="stylesheet" href="style.css?v=20260823_1628" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) { window.lucide.createIcons(); } });</script>
   <script>
@@ -685,6 +685,7 @@
       <button class="btn-ghost" onclick="$('modalChangePw').close()">✕</button>
     </div>
     <form id="changePwForm">
+      <input type="text" name="username" autocomplete="username" style="display:none;" aria-hidden="true" value="admin" />
       <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
         <label style="font-size:12px; font-weight:700;">Kata Sandi Saat Ini
           <input type="password" id="currentPassword" class="docs-select-input" required autocomplete="current-password" style="margin-top:4px;" />
@@ -826,6 +827,6 @@
   </dialog>
 
   <!-- Script Global App -->
-  <script src="app.js?v=20260823_1627"></script>
+  <script src="app.js?v=20260823_1628"></script>
 </body>
 </html>

@@ -13,6 +13,10 @@
   const renderedFp = {};
 
   const $ = (id) => document.getElementById(id);
+  const on = (id, evt, handler) => {
+    const el = typeof id === 'string' ? $(id) : id;
+    if (el) el.addEventListener(evt, handler);
+  };
 
   // Indikator "sedang bekerja" pada tombol: nonaktifkan + spinner + label
   // (label asli disimpan agar bisa dipulihkan setelah selesai).
