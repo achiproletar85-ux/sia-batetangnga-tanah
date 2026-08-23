@@ -20,7 +20,34 @@ const KEUANGAN_SHEET_URL = process.env.KEUANGAN_SHEET_URL ||
 // Zona waktu spreadsheet (jam offset dari UTC). WITA (Sulawesi Barat) = UTC+8.
 const SHEET_TZ_H = parseInt(process.env.SHEET_TZ_H || '8', 10);
 
-app.use(cors());
+// Middleware Security Headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// CORS Terproteksi: Hanya izinkan domain resmi Vercel dan lingkungan lokal
+const ALLOWED_ORIGINS = [
+  'https://sia-batetangnga-tanah.vercel.app',
+  'http://localhost:3344',
+  'http://localhost:3000',
+  'http://127.0.0.1:3344',
+  'http://127.0.0.1:3000'
+];
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Akses diblokir oleh kebijakan keamanan CORS.'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json({ limit: '10mb' }));
 
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -160,7 +187,55 @@ function restToRaw(row) {
   return Object.keys(o).length ? o : null;
 }
 
-app.post('/api/login', async (req, res) => {
+// Rate Limiter untuk Login (Anti Brute-Force: Maks 5x gagal per 15 menit)
+const loginAttempts = new Map();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 menit
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 menit
+
+function checkLoginRateLimit(req, res, next) {
+  const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const record = loginAttempts.get(ip);
+
+  if (record) {
+    if (record.blockedUntil && now < record.blockedUntil) {
+      const remainingMin = Math.ceil((record.blockedUntil - now) / 60000);
+      return res.status(429).json({
+        success: false,
+        error: `⛔ Terlalu banyak percobaan login gagal. Akun/IP diblokir sementara. Silakan coba lagi dalam ${remainingMin} menit demi keamanan.`
+      });
+    }
+    if (now - record.firstAttempt > LOGIN_WINDOW_MS) {
+      loginAttempts.delete(ip);
+    }
+  }
+  next();
+}
+
+function recordFailedLogin(req) {
+  const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  let record = loginAttempts.get(ip);
+
+  if (!record || now - record.firstAttempt > LOGIN_WINDOW_MS) {
+    record = { count: 1, firstAttempt: now, blockedUntil: 0 };
+  } else {
+    record.count++;
+    if (record.count >= MAX_LOGIN_ATTEMPTS) {
+      record.blockedUntil = now + LOGIN_LOCKOUT_MS;
+      console.warn(`[Security Alert] IP ${ip} diblokir sementara karena ${record.count}x gagal login.`);
+    }
+  }
+  loginAttempts.set(ip, record);
+}
+
+function clearLoginAttempts(req) {
+  const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  loginAttempts.delete(ip);
+}
+
+app.post('/api/login', checkLoginRateLimit, async (req, res) => {
   const u = String(req.body && req.body.username || '').trim();
   const p = String(req.body && req.body.password || '');
   let matched = false, name = AUTH_NAME, role = 'bendahara';
@@ -175,16 +250,18 @@ app.post('/api/login', async (req, res) => {
       role = (r === 'admin' || r === 'bendahara' || r === 'user') ? r : (u === AUTH_USER ? 'admin' : 'user');
     }
   } else if (u === AUTH_USER && p === AUTH_PASS) {
-      matched = true;
-      role = 'admin';
-      // Migrasi awal: semai kredensial env ke tabel app_users (untuk fitur ubah sandi).
-      hashPassword(p).then((h) => upsertAdminRecord({ username: u, name: AUTH_NAME, password_hash: h })).catch(() => {});
-    }
-    // Akun admin utama (dari env AUTH_USER) selalu berhak akses penuh (admin).
-    if (matched && u === AUTH_USER) role = 'admin';
-    if (!matched) {
+    matched = true;
+    role = 'admin';
+    // Migrasi awal: semai kredensial env ke tabel app_users (untuk fitur ubah sandi).
+    hashPassword(p).then((h) => upsertAdminRecord({ username: u, name: AUTH_NAME, password_hash: h })).catch(() => {});
+  }
+  // Akun admin utama (dari env AUTH_USER) selalu berhak akses penuh (admin).
+  if (matched && u === AUTH_USER) role = 'admin';
+  if (!matched) {
+    recordFailedLogin(req);
     return res.status(401).json({ success: false, error: 'Username atau kata sandi salah.' });
   }
+  clearLoginAttempts(req);
   const token = signToken({ username: u, name, role, exp: Date.now() + SESSION_TTL_MS });
   res.json({ success: true, token, user: { username: u, name, role } });
 });
