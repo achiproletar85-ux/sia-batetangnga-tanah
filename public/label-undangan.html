@@ -95,18 +95,20 @@
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col font-sans relative">
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen font-sans">
 
-  <!-- FULL SCREEN LOGIN GATE (TAMPIL DI AWAL JIKA BELUM LOGIN) -->
-  <div id="loginGateScreen" class="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300">
-    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 space-y-5 border border-slate-100 transform transition-all">
+  <!-- ======================================================== -->
+  <!-- 1. FULL SCREEN LOGIN GATE (TAMPIL DI AWAL & MENGUNCI TOTAL) -->
+  <!-- ======================================================== -->
+  <div id="loginGateScreen" class="fixed inset-0 z-50 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 space-y-6 border border-slate-100/20 transform transition-all">
       <div class="text-center space-y-2">
-        <div class="w-16 h-16 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-2xl mx-auto flex items-center justify-center text-white shadow-lg shadow-emerald-200">
-          <i data-lucide="lock" class="w-8 h-8"></i>
+        <div class="w-16 h-16 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-2xl mx-auto flex items-center justify-center text-white shadow-xl shadow-emerald-900/30">
+          <i data-lucide="shield-check" class="w-8 h-8"></i>
         </div>
         <div>
-          <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">Sistem Cetak Label Undangan</h2>
-          <p class="text-xs font-medium text-slate-500">Silakan login untuk mengakses database & mencetak label</p>
+          <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">Login Pengelola SIA</h2>
+          <p class="text-xs font-medium text-slate-500 mt-0.5">Sistem Pengelolaan & Cetak Label Stiker Undangan</p>
         </div>
       </div>
 
@@ -120,7 +122,7 @@
           <label class="block text-xs font-bold text-slate-700 mb-1.5">Username / Nama Pengguna:</label>
           <div class="relative">
             <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5"></i>
-            <input type="text" id="gateUsername" required placeholder="Contoh: admin" 
+            <input type="text" id="gateUsername" required placeholder="admin" autofocus
               class="w-full pl-10 pr-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none font-medium transition" />
           </div>
         </div>
@@ -129,7 +131,7 @@
           <label class="block text-xs font-bold text-slate-700 mb-1.5">Kata Sandi (Password):</label>
           <div class="relative">
             <i data-lucide="key" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5"></i>
-            <input type="password" id="gatePassword" required placeholder="Masukkan kata sandi" 
+            <input type="password" id="gatePassword" required placeholder="••••••••" 
               class="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none font-medium transition" />
             <button type="button" onclick="toggleGateShowPassword()" class="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600">
               <i data-lucide="eye" id="gateIconEye" class="w-4 h-4"></i>
@@ -142,510 +144,521 @@
             <input type="checkbox" id="gateRememberMe" checked class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4">
             <span class="font-medium">Ingat login saya</span>
           </label>
-          <span class="text-slate-400 text-[11px] bg-slate-100 px-2 py-0.5 rounded font-mono">admin / admin123</span>
+          <span class="text-emerald-700 font-semibold text-[11px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-mono">admin / admin123</span>
         </div>
 
-        <button type="submit" id="btnGateSubmit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-bold rounded-xl shadow-lg shadow-emerald-200 transition flex items-center justify-center space-x-2">
+        <button type="submit" id="btnGateSubmit" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-bold rounded-xl shadow-lg shadow-emerald-200 transition flex items-center justify-center space-x-2">
           <i data-lucide="log-in" class="w-4 h-4"></i>
-          <span id="btnGateText">Masuk Sekarang</span>
+          <span id="btnGateText">Masuk ke Aplikasi</span>
         </button>
       </form>
+
+      <div class="text-center text-[11px] text-slate-400 pt-2 border-t border-slate-100">
+        Terhubung ke <strong class="text-emerald-600 font-bold">Supabase Cloud Database</strong>
+      </div>
     </div>
   </div>
 
-  <!-- TOP NAVBAR -->
-  <header class="no-print bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <a href="/" class="flex items-center space-x-2 text-slate-600 hover:text-emerald-600 transition" title="Kembali ke Dashboard Utama SIA">
-          <i data-lucide="arrow-left" class="w-5 h-5"></i>
-        </a>
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-200">
-          <i data-lucide="tag" class="w-5 h-5"></i>
-        </div>
-        <div>
-          <div class="flex items-center space-x-2">
-            <h1 class="text-lg font-bold text-slate-900 leading-tight">Cetak Stiker Label Undangan</h1>
-            <span id="dbStatusBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-              ⭐ Kertas Terkalibrasi (153 × 193 mm)
-            </span>
+  <!-- ======================================================== -->
+  <!-- 2. MAIN APP WRAPPER (TERKUNCI & TERSEMBUNYI SAMPAI LOGIN) -->
+  <!-- ======================================================== -->
+  <div id="mainAppWrapper" class="hidden min-h-screen flex flex-col">
+
+    <!-- TOP NAVBAR -->
+    <header class="no-print bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <a href="/" class="flex items-center space-x-2 text-slate-600 hover:text-emerald-600 transition" title="Kembali ke Dashboard Utama SIA">
+            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+          </a>
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-200">
+            <i data-lucide="tag" class="w-5 h-5"></i>
           </div>
-          <p class="text-xs text-slate-500 font-medium flex items-center gap-1.5">
-            <span>Manual Sesuai Ketikan</span>
-            <span>•</span>
-            <span id="supaStatusBadge" class="text-emerald-700 font-bold flex items-center gap-1">
-              <i data-lucide="database" class="w-3 h-3"></i> Supabase Cloud DB
-            </span>
-          </p>
-        </div>
-      </div>
-
-      <div class="flex items-center space-x-2 sm:space-x-3">
-        <!-- User Auth Badge & Action -->
-        <div id="authContainer" class="flex items-center space-x-1.5">
-          <!-- Rendered dynamically -->
-        </div>
-
-        <!-- Sync / Save to Database -->
-        <button onclick="saveToDatabaseServer()" id="btnSyncDB" class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 rounded-lg transition flex items-center space-x-1.5 shadow-sm" title="Simpan perubahan ke Database Supabase">
-          <i data-lucide="refresh-cw" class="w-4 h-4 text-emerald-600"></i>
-          <span class="hidden sm:inline">Simpan ke DB</span>
-        </button>
-
-        <!-- Test Print button -->
-        <button onclick="testPrint()" class="px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg shadow-sm transition flex items-center space-x-1.5" title="Cetak garis bantu di kertas HVS untuk uji coba kecocokan ukuran">
-          <i data-lucide="file-check" class="w-4 h-4 text-slate-500"></i>
-          <span class="hidden sm:inline">Uji Garis</span>
-        </button>
-
-        <!-- Main Print Button -->
-        <button onclick="doPrint()" class="px-5 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-md shadow-emerald-200 transition flex items-center space-x-2">
-          <i data-lucide="printer" class="w-4 h-4"></i>
-          <span>Cetak Sekarang</span>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- MAIN APP CONTAINER -->
-  <main class="no-print flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-    
-    <!-- LEFT COLUMN: INPUT DATA, ACARA & DATABASE TAMU LIST (5 Cols) -->
-    <div class="lg:col-span-5 space-y-5">
-
-      <!-- CARD 1: INPUT DATA TAMU & KATEGORI ACARA -->
-      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div class="flex items-center space-x-2">
-            <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><i data-lucide="user-plus" class="w-4 h-4"></i></span>
-            <h2 class="font-bold text-slate-800 text-sm sm:text-base">Input Tamu ke Database</h2>
-          </div>
-          <div class="flex items-center space-x-1.5">
-            <button onclick="openBulkModal()" class="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-md transition flex items-center space-x-1">
-              <i data-lucide="sheet" class="w-3.5 h-3.5"></i>
-              <span>Paste Excel</span>
-            </button>
-            <button onclick="generateSampleData()" class="text-xs font-medium text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-md transition" title="Isi dengan data contoh">
-              Contoh
-            </button>
-          </div>
-        </div>
-
-        <form id="addGuestForm" onsubmit="handleAddGuest(event)" class="space-y-3">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div class="sm:col-span-2">
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Tamu & Gelar <span class="text-rose-500">*</span></label>
-              <input type="text" id="inputNama" required placeholder="Contoh: DR. H. ANDI SYAHRUL, S.E., M.Si." 
-                class="w-full px-3 py-2 text-sm bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition font-medium" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori / Acara</label>
-              <select id="inputKategori" class="w-full px-2.5 py-2 text-xs bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-emerald-800">
-                <!-- Populated dynamically -->
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Jabatan / Keterangan</label>
-              <input type="text" id="inputJabatan" placeholder="Contoh: Kepala Dinas / Sekeluarga" 
-                class="w-full px-3 py-2 text-sm bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Tempat / Alamat</label>
-              <input type="text" id="inputAlamat" placeholder="Contoh: Tempat / Makassar / Polewali" value="Tempat"
-                class="w-full px-3 py-2 text-sm bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" />
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between pt-1">
-            <span class="text-[11px] text-slate-400">Tekan <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-slate-600 font-mono text-[10px]">Enter</kbd> untuk simpan</span>
-            <button type="submit" id="btnSubmitGuest" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1.5">
-              <i data-lucide="plus" class="w-4 h-4"></i>
-              <span id="btnSubmitGuestText">Tambah ke Database</span>
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <!-- CARD 2: TABEL DATABASE TAMU & PILIH TANDAI -->
-      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-3.5">
-        
-        <!-- Filter Acara & Actions Header -->
-        <div class="space-y-2.5 pb-2 border-b border-slate-100">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
             <div class="flex items-center space-x-2">
-              <span class="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><i data-lucide="database" class="w-4 h-4"></i></span>
-              <h3 class="font-bold text-slate-800 text-sm sm:text-base">Data Tamu Tersimpan</h3>
-              <span id="badgeTotal" class="px-2 py-0.5 text-xs font-bold bg-slate-100 text-slate-600 rounded-full">0</span>
+              <h1 class="text-lg font-bold text-slate-900 leading-tight">Cetak Stiker Label Undangan</h1>
+              <span id="dbStatusBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                ⭐ Kertas Terkalibrasi (153 × 193 mm)
+              </span>
             </div>
-
-            <!-- Quick Category/Event Filter -->
-            <div class="flex items-center space-x-1.5">
-              <select id="filterAcaraSelect" onchange="handleFilterAcaraChange(this.value)" class="text-xs font-bold bg-blue-50 border border-blue-200 text-blue-900 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer">
-                <option value="ALL">📁 Semua Kategori</option>
-              </select>
-              <button onclick="promptAddNewAcara()" class="p-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition" title="Tambah Nama Kategori/Acara Baru">
-                <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Selection Quick Actions -->
-          <div class="flex items-center justify-between text-xs bg-slate-50 p-2 rounded-xl border border-slate-100">
-            <div class="flex items-center space-x-1.5">
-              <span class="text-slate-500 font-medium">Tandai:</span>
-              <button onclick="selectFiltered(true)" class="px-2 py-0.5 font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded transition">Pilih Yang Tampil</button>
-              <button onclick="selectAll(true)" class="px-2 py-0.5 font-semibold text-slate-600 hover:bg-slate-200 rounded transition">Semua</button>
-              <button onclick="selectAll(false)" class="px-2 py-0.5 font-semibold text-slate-600 hover:bg-slate-200 rounded transition">Lepas</button>
-            </div>
-            <button onclick="clearAllGuests()" class="px-2 py-0.5 text-rose-600 hover:bg-rose-50 rounded transition font-medium">Hapus Semua</button>
+            <p class="text-xs text-slate-500 font-medium flex items-center gap-1.5">
+              <span>Manual Sesuai Ketikan</span>
+              <span>•</span>
+              <span id="supaStatusBadge" class="text-emerald-700 font-bold flex items-center gap-1">
+                <i data-lucide="database" class="w-3 h-3"></i> Supabase Cloud DB
+              </span>
+            </p>
           </div>
         </div>
 
-        <!-- Search bar & Import/Export -->
-        <div class="flex items-center gap-2">
-          <div class="relative flex-1">
-            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
-            <input type="text" id="searchGuest" oninput="renderGuestList()" placeholder="Cari nama, jabatan, alamat, kategori..." 
-              class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:bg-white outline-none" />
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <!-- User Auth Badge & Action -->
+          <div id="authContainer" class="flex items-center space-x-1.5">
+            <!-- Rendered dynamically -->
           </div>
-          <button onclick="exportToExcel()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition flex items-center space-x-1" title="Export ke Excel">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i>
-            <span class="hidden sm:inline">Export</span>
+
+          <!-- Sync / Save to Database -->
+          <button onclick="saveToDatabaseServer()" id="btnSyncDB" class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 rounded-lg transition flex items-center space-x-1.5 shadow-sm" title="Simpan perubahan ke Database Supabase">
+            <i data-lucide="refresh-cw" class="w-4 h-4 text-emerald-600"></i>
+            <span class="hidden sm:inline">Simpan ke DB</span>
           </button>
-        </div>
 
-        <!-- Table Container -->
-        <div class="max-h-[360px] overflow-y-auto border border-slate-100 rounded-xl bg-slate-50/50">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-100 text-slate-500 font-semibold sticky top-0 z-10">
-              <tr>
-                <th class="py-2 px-3 w-8 text-center" title="Pilih semua yang tampil">
-                  <input type="checkbox" id="checkMaster" onchange="toggleMasterCheck(this)" class="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
-                </th>
-                <th class="py-2 px-2 w-8 text-center">No</th>
-                <th class="py-2 px-3">Nama Tamu & Keterangan</th>
-                <th class="py-2 px-2 w-20 text-center">Kategori</th>
-                <th class="py-2 px-2 w-14 text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="guestTableBody" class="divide-y divide-slate-100 text-slate-700 bg-white">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
-          <div id="emptyGuestState" class="hidden py-8 text-center text-slate-400 text-xs">
-            <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-1 text-slate-300"></i>
-            Belum ada data tamu di database. Tambahkan data di atas atau paste dari Excel.
-          </div>
-        </div>
+          <!-- Test Print button -->
+          <button onclick="testPrint()" class="px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg shadow-sm transition flex items-center space-x-1.5" title="Cetak garis bantu di kertas HVS untuk uji coba kecocokan ukuran">
+            <i data-lucide="file-check" class="w-4 h-4 text-slate-500"></i>
+            <span class="hidden sm:inline">Uji Garis</span>
+          </button>
 
-        <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
-          <div>Status: <strong id="countSelected" class="text-emerald-600 font-bold">0</strong> tamu ditandai (dari total <span id="countTotal">0</span> di DB)</div>
-          <div class="text-[11px] text-emerald-700 font-medium flex items-center space-x-1" id="lastSavedInfo">
-            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
-            <span>Tersimpan di Cloud Database Supabase</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- RIGHT COLUMN: PENGATURAN FORMAT LABEL & LIVE PREVIEW (7 Cols) -->
-    <div class="lg:col-span-7 space-y-5">
-
-      <!-- CARD 3: PENGATURAN FORMAT HURUF & KALIBRASI KERTAS -->
-      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div class="flex items-center space-x-2">
-            <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><i data-lucide="type" class="w-4 h-4"></i></span>
-            <h2 class="font-bold text-slate-800 text-sm sm:text-base">Pengaturan Format Teks & Huruf</h2>
-          </div>
-
-          <!-- Quick Preset Selector -->
-          <div class="flex items-center space-x-2">
-            <select id="presetSelect" onchange="applyPreset(this.value)" class="text-xs font-bold bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-amber-500 outline-none cursor-pointer">
-              <option value="kertas_saya" selected>⭐ Kertas Saya (153 × 193 mm — 10 Stiker)</option>
-              <option value="121">Label No. 121 (165 × 206 mm — 10 Stiker 2x5)</option>
-              <option value="103">Label No. 103 (200 × 137 mm — 12 Stiker 3x4)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- PENGATURAN HURUF (MANUAL / SESUAI KETIKAN) -->
-        <div class="p-4 bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-purple-200/80 rounded-2xl space-y-3">
-          <div class="flex items-center justify-between border-b border-purple-200/60 pb-2">
-            <div class="flex items-center space-x-2">
-              <i data-lucide="case-sensitive" class="w-4 h-4 text-purple-700"></i>
-              <span class="text-xs font-bold text-purple-950">Gaya Penulisan Teks & Huruf:</span>
-            </div>
-            <span class="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">⭐ Manual (Sesuai Ketikan Asli)</span>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <!-- Format Nama -->
-            <div class="bg-white p-3 rounded-xl border border-purple-200 shadow-xs space-y-1.5">
-              <label class="font-bold text-slate-800 block text-[11px]">Format Penulisan Nama:</label>
-              <select id="cfgNameCasing" onchange="updateConfig()" class="w-full px-2 py-1.5 bg-emerald-50 border border-emerald-300 rounded-lg font-bold text-emerald-950 focus:ring-2 focus:ring-emerald-500 outline-none text-xs">
-                <option value="as_is" selected>⭐ Sesuai Hasil Ketikan Anda (Manual)</option>
-                <option value="name_caps_title_clean">Nama Huruf Besar + Title Rapi</option>
-                <option value="uppercase">SEMUA HURUF BESAR (KAPITAL)</option>
-                <option value="titlecase">Huruf Besar Awal Kata (Title Case)</option>
-              </select>
-              <span class="text-[10px] text-emerald-700 font-semibold block leading-tight pt-0.5">
-                Mencetak persis apa adanya sesuai huruf yang Anda ketik.
-              </span>
-            </div>
-
-            <!-- Format Jabatan -->
-            <div class="bg-white p-3 rounded-xl border border-purple-200 shadow-xs space-y-1.5">
-              <label class="font-bold text-slate-800 block text-[11px]">Format Penulisan Jabatan:</label>
-              <select id="cfgJabatanCasing" onchange="updateConfig()" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-purple-950 focus:ring-1 focus:ring-purple-500 outline-none text-xs">
-                <option value="as_is" selected>Sesuai Hasil Ketikan (Manual)</option>
-                <option value="titlecase">Huruf Besar Tiap Awal Kata</option>
-                <option value="uppercase">HURUF BESAR SEMUA</option>
-              </select>
-              <span class="text-[10px] text-slate-400 block leading-tight">Mengikuti ketikan jabatan Anda</span>
-            </div>
-
-            <!-- Format Alamat -->
-            <div class="bg-white p-3 rounded-xl border border-purple-200 shadow-xs space-y-1.5">
-              <label class="font-bold text-slate-800 block text-[11px]">Format Penulisan Alamat:</label>
-              <select id="cfgAlamatCasing" onchange="updateConfig()" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-purple-950 focus:ring-1 focus:ring-purple-500 outline-none text-xs">
-                <option value="as_is" selected>Sesuai Hasil Ketikan (Manual)</option>
-                <option value="titlecase">Huruf Besar Tiap Awal Kata</option>
-                <option value="uppercase">HURUF BESAR SEMUA</option>
-              </select>
-              <span class="text-[10px] text-slate-400 block leading-tight">Mengikuti ketikan tempat/alamat Anda</span>
-            </div>
-          </div>
-
-          <!-- Styling Toggles (Bold / Italic) -->
-          <div class="flex flex-wrap items-center gap-4 text-xs pt-1 text-slate-700">
-            <label class="flex items-center space-x-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-purple-200">
-              <input type="checkbox" id="cfgBoldName" onchange="updateConfig()" checked class="rounded text-purple-600 focus:ring-purple-500">
-              <span class="font-bold text-slate-800">Nama Tebal (BOLD)</span>
-            </label>
-            <label class="flex items-center space-x-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-purple-200">
-              <input type="checkbox" id="cfgItalicAlamat" onchange="updateConfig()" checked class="rounded text-purple-600 focus:ring-purple-500">
-              <span class="italic text-slate-800">Alamat Miring (Italic)</span>
-            </label>
-            <label class="flex items-center space-x-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-purple-200">
-              <input type="checkbox" id="cfgPrefixDi" onchange="updateConfig()" checked class="rounded text-purple-600 focus:ring-purple-500">
-              <span class="font-medium text-slate-800">Otomatis "di - " sebelum Alamat</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- POSISI KERTAS DI TRAY PRINTER & MARGIN ATAS/KIRI LANGSUNG -->
-        <div class="p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl space-y-2.5">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 pb-2">
-            <div>
-              <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                <i data-lucide="printer" class="w-4 h-4 text-emerald-600"></i>
-                Posisi Kertas Tray & Kalibrasi Margin:
-              </span>
-            </div>
-
-            <!-- Paper Feed Presets -->
-            <div class="flex items-center gap-1.5">
-              <button type="button" onclick="setFeedPreset('left')" id="btnFeedLeft" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 transition">
-                Rata Kiri
-              </button>
-              <button type="button" onclick="setFeedPreset('center')" id="btnFeedCenter" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-500 bg-emerald-600 text-white shadow-xs transition">
-                Tengah (Epson/Canon)
-              </button>
-              <button type="button" onclick="setFeedPreset('zero')" id="btnFeedZero" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 transition">
-                Mepet Atas (0 mm)
-              </button>
-            </div>
-          </div>
-
-          <!-- Quick Millimeter Adjusters -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-            
-            <!-- Margin Atas Adjuster -->
-            <div class="bg-white p-2.5 rounded-xl border border-emerald-200 space-y-1 shadow-xs">
-              <div class="flex items-center justify-between">
-                <label class="font-bold text-slate-800 text-[11px]">⬆️ Jarak Tepi Atas:</label>
-                <div class="flex items-center space-x-1 font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300 text-xs">
-                  <span id="dispMarginTop">2.0</span> mm
-                </div>
-              </div>
-              <div class="flex items-center space-x-1 pt-0.5">
-                <button type="button" onclick="adjustOffset('top', -2)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">-2 mm</button>
-                <button type="button" onclick="adjustOffset('top', -0.5)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">-0.5</button>
-                <button type="button" onclick="adjustOffset('top', 0.5)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">+0.5</button>
-                <button type="button" onclick="adjustOffset('top', 2)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">+2 mm</button>
-              </div>
-            </div>
-
-            <!-- Margin Kiri Adjuster -->
-            <div class="bg-white p-2.5 rounded-xl border border-emerald-200 space-y-1 shadow-xs">
-              <div class="flex items-center justify-between">
-                <label class="font-bold text-slate-800 text-[11px]">⬅️ Jarak Tepi Kiri:</label>
-                <div class="flex items-center space-x-1 font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300 text-xs">
-                  <span id="dispMarginLeft">30.0</span> mm
-                </div>
-              </div>
-              <div class="flex items-center space-x-1 pt-0.5">
-                <button type="button" onclick="adjustOffset('left', -2)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">-2 mm</button>
-                <button type="button" onclick="adjustOffset('left', -0.5)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">-0.5</button>
-                <button type="button" onclick="adjustOffset('left', 0.5)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">+0.5</button>
-                <button type="button" onclick="adjustOffset('left', 2)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">+2 mm</button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- Custom Dimensions Form (Detail Ukuran Kotak Stiker) -->
-        <div id="customDimensionPanel" class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
-          <div class="flex items-center justify-between font-semibold text-slate-700">
-            <span>Ukuran Kotak Stiker (mm):</span>
-            <button onclick="resetDimensionsToPreset()" class="text-emerald-600 hover:underline text-[11px] font-bold">Kembalikan Standar (153x193 mm)</button>
-          </div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <div>
-              <label class="text-[11px] text-slate-500 block mb-0.5">Lebar Label (mm)</label>
-              <input type="number" step="0.5" id="cfgLabelWidth" value="74" onchange="updateConfig()" class="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-bold text-center text-slate-800" />
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-500 block mb-0.5">Tinggi Label (mm)</label>
-              <input type="number" step="0.5" id="cfgLabelHeight" value="37" onchange="updateConfig()" class="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-bold text-center text-slate-800" />
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-500 block mb-0.5">Spasi Kolom (Gap X mm)</label>
-              <input type="number" step="0.5" id="cfgGapX" value="3" onchange="updateConfig()" class="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-semibold text-center text-slate-800" />
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-500 block mb-0.5">Spasi Baris (Gap Y mm)</label>
-              <input type="number" step="0.5" id="cfgGapY" value="2" onchange="updateConfig()" class="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-semibold text-center text-slate-800" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Desain & Tipografi Options -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Teks Pembuka:</label>
-            <select id="cfgHeaderGreeting" onchange="updateConfig()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-medium">
-              <option value="Kepada Yth. Bapak/Ibu/Sdr/i:" selected>Kepada Yth. Bapak/Ibu/Sdr/i:</option>
-              <option value="Kepada Yth.">Kepada Yth.</option>
-              <option value="Yth. Bapak/Ibu:">Yth. Bapak/Ibu:</option>
-              <option value="">(Tanpa Kata Pembuka)</option>
-              <option value="custom">Kustom Kata Pembuka...</option>
-            </select>
-            <input type="text" id="cfgHeaderCustom" oninput="updateConfig()" placeholder="Tulis pembuka..." class="hidden mt-1.5 w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs" />
-          </div>
-
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Jenis Huruf (Font):</label>
-            <select id="cfgFontFamily" onchange="updateConfig()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-medium">
-              <option value="'Plus Jakarta Sans', sans-serif" selected>Plus Jakarta Sans (Modern)</option>
-              <option value="'Playfair Display', serif">Playfair Display (Mewah)</option>
-              <option value="'Cinzel', serif">Cinzel (Formal Klasik)</option>
-              <option value="'Great Vibes', cursive">Great Vibes (Kaligrafi Latin)</option>
-              <option value="'Alex Brush', cursive">Alex Brush (Elegan Cursive)</option>
-              <option value="'Times New Roman', serif">Times New Roman (Resmi)</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Gaya Bingkai Label:</label>
-            <select id="cfgBorderStyle" onchange="updateConfig()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-medium">
-              <option value="border-none" selected>Polos (Tanpa Bingkai)</option>
-              <option value="border-solid">Kotak Tipis Halus</option>
-              <option value="border-double">Double Line Elegan</option>
-              <option value="border-ornament">Sudut Ornamen Cantik</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Secondary controls: Font Sizes & Offset -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs pt-1 border-t border-slate-100">
-          <div>
-            <label class="text-[11px] text-slate-500 block mb-0.5">Ukuran Nama (pt)</label>
-            <input type="number" step="0.5" id="cfgNameFontSize" value="10.5" min="7" max="24" onchange="updateConfig()" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-bold text-slate-800" />
-          </div>
-          <div>
-            <label class="text-[11px] text-slate-500 block mb-0.5">Ukuran Ket / Jabatan (pt)</label>
-            <input type="number" step="0.5" id="cfgJabatanFontSize" value="8" min="6" max="18" onchange="updateConfig()" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-semibold text-slate-800" />
-          </div>
-          <div>
-            <label class="text-[11px] text-slate-500 block mb-0.5">Ukuran Alamat (pt)</label>
-            <input type="number" step="0.5" id="cfgAlamatFontSize" value="8.5" min="6" max="18" onchange="updateConfig()" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-semibold text-slate-800" />
-          </div>
-          <div>
-            <label class="text-[11px] text-emerald-700 font-semibold block mb-0.5" title="Jika kertas stiker lembar pertama sudah terpakai sebagian">Mulai Label Ke-</label>
-            <input type="number" id="cfgStartSlot" value="1" min="1" onchange="updateConfig()" class="w-full px-2 py-1 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded text-center font-bold" />
-          </div>
-        </div>
-
-        <!-- Optional Guidelines for Print -->
-        <div class="flex items-center gap-4 text-xs pt-0.5 text-slate-600">
-          <label class="flex items-center space-x-1.5 cursor-pointer" title="Tampilkan garis bantu saat cetak di kertas HVS biasa">
-            <input type="checkbox" id="cfgShowPrintGuide" onchange="updateConfig()" class="rounded text-emerald-600 focus:ring-emerald-500">
-            <span class="text-amber-700 font-medium">Cetak Garis Bantu (Untuk Kertas Biasa)</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- CARD 4: LIVE SHEET PREVIEW (PRATINJAU LEMBAR CETAK) -->
-      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div class="flex items-center space-x-2">
-            <span class="p-1.5 bg-purple-50 text-purple-600 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></span>
-            <h3 class="font-bold text-slate-800 text-sm sm:text-base">Pratinjau Kertas Stiker (Live Preview)</h3>
-          </div>
-
-          <!-- Pagination preview if multiple sheets -->
-          <div class="flex items-center space-x-2 text-xs">
-            <button onclick="prevSheet()" id="btnPrevSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
-              <i data-lucide="chevron-left" class="w-4 h-4"></i>
-            </button>
-            <span id="previewSheetIndicator" class="font-semibold text-slate-700">Lembar 1 dari 1</span>
-            <button onclick="nextSheet()" id="btnNextSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
-              <i data-lucide="chevron-right" class="w-4 h-4"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="text-[11px] text-slate-500 flex items-center justify-between">
-          <span>Kertas: <strong>153 × 193 mm</strong> (2×5 = 10 Label). Hanya nama yang dicentang yang akan tercetak.</span>
-          <span class="font-medium text-emerald-600" id="previewStats">10 label / lembar</span>
-        </div>
-
-        <!-- Preview Interactive Canvas Container -->
-        <div class="overflow-x-auto p-4 bg-slate-200/60 rounded-2xl flex justify-center items-center min-h-[440px]">
-          <div id="screenPreviewContainer" class="transition-all duration-200">
-            <!-- Rendered by JS -->
-          </div>
-        </div>
-
-        <!-- Footer preview info & Direct Print Banner -->
-        <div class="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-              <i data-lucide="printer" class="w-5 h-5"></i>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-emerald-950">Siap untuk dicetak ke Kertas 153 × 193 mm?</div>
-              <div class="text-[11px] text-emerald-700">Set Margin printer ke "None" (Tanpa Margin) dan Skala 100%.</div>
-            </div>
-          </div>
-          <button onclick="doPrint()" class="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-200 transition flex items-center justify-center space-x-2">
+          <!-- Main Print Button -->
+          <button onclick="doPrint()" class="px-5 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-md shadow-emerald-200 transition flex items-center space-x-2">
             <i data-lucide="printer" class="w-4 h-4"></i>
-            <span>Cetak <span id="btnCountPrint">0</span> Label Terpilih</span>
+            <span>Cetak Sekarang</span>
           </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN APP CONTAINER -->
+    <main class="no-print flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- LEFT COLUMN: INPUT DATA, ACARA & DATABASE TAMU LIST (5 Cols) -->
+      <div class="lg:col-span-5 space-y-5">
+
+        <!-- CARD 1: INPUT DATA TAMU & KATEGORI ACARA -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center space-x-2">
+              <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><i data-lucide="user-plus" class="w-4 h-4"></i></span>
+              <h2 class="font-bold text-slate-800 text-sm sm:text-base">Input Tamu ke Database</h2>
+            </div>
+            <div class="flex items-center space-x-1.5">
+              <button onclick="openBulkModal()" class="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-md transition flex items-center space-x-1">
+                <i data-lucide="sheet" class="w-3.5 h-3.5"></i>
+                <span>Paste Excel</span>
+              </button>
+              <button onclick="generateSampleData()" class="text-xs font-medium text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-md transition" title="Isi dengan data contoh">
+                Contoh
+              </button>
+            </div>
+          </div>
+
+          <form id="addGuestForm" onsubmit="handleAddGuest(event)" class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Tamu & Gelar <span class="text-rose-500">*</span></label>
+                <input type="text" id="inputNama" required placeholder="Contoh: DR. H. ANDI SYAHRUL, S.E., M.Si." 
+                  class="w-full px-3 py-2 text-sm bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition font-medium" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori / Acara</label>
+                <select id="inputKategori" class="w-full px-2.5 py-2 text-xs bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-emerald-800">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Jabatan / Keterangan</label>
+                <input type="text" id="inputJabatan" placeholder="Contoh: Kepala Dinas / Sekeluarga" 
+                  class="w-full px-3 py-2 text-sm bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Tempat / Alamat</label>
+                <input type="text" id="inputAlamat" placeholder="Contoh: Tempat / Makassar / Polewali" value="Tempat"
+                  class="w-full px-3 py-2 text-sm bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" />
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-[11px] text-slate-400">Tekan <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-slate-600 font-mono text-[10px]">Enter</kbd> untuk simpan</span>
+              <button type="submit" id="btnSubmitGuest" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1.5">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span id="btnSubmitGuestText">Tambah ke Database</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- CARD 2: TABEL DATABASE TAMU & PILIH TANDAI -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-3.5">
+          
+          <!-- Filter Acara & Actions Header -->
+          <div class="space-y-2.5 pb-2 border-b border-slate-100">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex items-center space-x-2">
+                <span class="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><i data-lucide="database" class="w-4 h-4"></i></span>
+                <h3 class="font-bold text-slate-800 text-sm sm:text-base">Data Tamu Tersimpan</h3>
+                <span id="badgeTotal" class="px-2 py-0.5 text-xs font-bold bg-slate-100 text-slate-600 rounded-full">0</span>
+              </div>
+
+              <!-- Quick Category/Event Filter -->
+              <div class="flex items-center space-x-1.5">
+                <select id="filterAcaraSelect" onchange="handleFilterAcaraChange(this.value)" class="text-xs font-bold bg-blue-50 border border-blue-200 text-blue-900 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer">
+                  <option value="ALL">📁 Semua Kategori</option>
+                </select>
+                <button onclick="promptAddNewAcara()" class="p-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition" title="Tambah Nama Kategori/Acara Baru">
+                  <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Selection Quick Actions -->
+            <div class="flex items-center justify-between text-xs bg-slate-50 p-2 rounded-xl border border-slate-100">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-slate-500 font-medium">Tandai:</span>
+                <button onclick="selectFiltered(true)" class="px-2 py-0.5 font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded transition">Pilih Yang Tampil</button>
+                <button onclick="selectAll(true)" class="px-2 py-0.5 font-semibold text-slate-600 hover:bg-slate-200 rounded transition">Semua</button>
+                <button onclick="selectAll(false)" class="px-2 py-0.5 font-semibold text-slate-600 hover:bg-slate-200 rounded transition">Lepas</button>
+              </div>
+              <button onclick="clearAllGuests()" class="px-2 py-0.5 text-rose-600 hover:bg-rose-50 rounded transition font-medium">Hapus Semua</button>
+            </div>
+          </div>
+
+          <!-- Search bar & Import/Export -->
+          <div class="flex items-center gap-2">
+            <div class="relative flex-1">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+              <input type="text" id="searchGuest" oninput="renderGuestList()" placeholder="Cari nama, jabatan, alamat, kategori..." 
+                class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:bg-white outline-none" />
+            </div>
+            <button onclick="exportToExcel()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition flex items-center space-x-1" title="Export ke Excel">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span class="hidden sm:inline">Export</span>
+            </button>
+          </div>
+
+          <!-- Table Container -->
+          <div class="max-h-[360px] overflow-y-auto border border-slate-100 rounded-xl bg-slate-50/50">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-500 font-semibold sticky top-0 z-10">
+                <tr>
+                  <th class="py-2 px-3 w-8 text-center" title="Pilih semua yang tampil">
+                    <input type="checkbox" id="checkMaster" onchange="toggleMasterCheck(this)" class="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                  </th>
+                  <th class="py-2 px-2 w-8 text-center">No</th>
+                  <th class="py-2 px-3">Nama Tamu & Keterangan</th>
+                  <th class="py-2 px-2 w-20 text-center">Kategori</th>
+                  <th class="py-2 px-2 w-14 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="guestTableBody" class="divide-y divide-slate-100 text-slate-700 bg-white">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+            <div id="emptyGuestState" class="hidden py-8 text-center text-slate-400 text-xs">
+              <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-1 text-slate-300"></i>
+              Belum ada data tamu di database. Tambahkan data di atas atau paste dari Excel.
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+            <div>Status: <strong id="countSelected" class="text-emerald-600 font-bold">0</strong> tamu ditandai (dari total <span id="countTotal">0</span> di DB)</div>
+            <div class="text-[11px] text-emerald-700 font-medium flex items-center space-x-1" id="lastSavedInfo">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+              <span>Tersimpan di Cloud Database Supabase</span>
+            </div>
+          </div>
         </div>
 
       </div>
 
-    </div>
+      <!-- RIGHT COLUMN: PENGATURAN FORMAT LABEL & LIVE PREVIEW (7 Cols) -->
+      <div class="lg:col-span-7 space-y-5">
 
-  </main>
+        <!-- CARD 3: PENGATURAN FORMAT HURUF & KALIBRASI KERTAS -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center space-x-2">
+              <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><i data-lucide="type" class="w-4 h-4"></i></span>
+              <h2 class="font-bold text-slate-800 text-sm sm:text-base">Pengaturan Format Teks & Huruf</h2>
+            </div>
+
+            <!-- Quick Preset Selector -->
+            <div class="flex items-center space-x-2">
+              <select id="presetSelect" onchange="applyPreset(this.value)" class="text-xs font-bold bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-amber-500 outline-none cursor-pointer">
+                <option value="kertas_saya" selected>⭐ Kertas Saya (153 × 193 mm — 10 Stiker)</option>
+                <option value="121">Label No. 121 (165 × 206 mm — 10 Stiker 2x5)</option>
+                <option value="103">Label No. 103 (200 × 137 mm — 12 Stiker 3x4)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- PENGATURAN HURUF (MANUAL / SESUAI KETIKAN) -->
+          <div class="p-4 bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-purple-200/80 rounded-2xl space-y-3">
+            <div class="flex items-center justify-between border-b border-purple-200/60 pb-2">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="case-sensitive" class="w-4 h-4 text-purple-700"></i>
+                <span class="text-xs font-bold text-purple-950">Gaya Penulisan Teks & Huruf:</span>
+              </div>
+              <span class="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">⭐ Manual (Sesuai Ketikan Asli)</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <!-- Format Nama -->
+              <div class="bg-white p-3 rounded-xl border border-purple-200 shadow-xs space-y-1.5">
+                <label class="font-bold text-slate-800 block text-[11px]">Format Penulisan Nama:</label>
+                <select id="cfgNameCasing" onchange="updateConfig()" class="w-full px-2 py-1.5 bg-emerald-50 border border-emerald-300 rounded-lg font-bold text-emerald-950 focus:ring-2 focus:ring-emerald-500 outline-none text-xs">
+                  <option value="as_is" selected>⭐ Sesuai Hasil Ketikan Anda (Manual)</option>
+                  <option value="name_caps_title_clean">Nama Huruf Besar + Title Rapi</option>
+                  <option value="uppercase">SEMUA HURUF BESAR (KAPITAL)</option>
+                  <option value="titlecase">Huruf Besar Awal Kata (Title Case)</option>
+                </select>
+                <span class="text-[10px] text-emerald-700 font-semibold block leading-tight pt-0.5">
+                  Mencetak persis apa adanya sesuai huruf yang Anda ketik.
+                </span>
+              </div>
+
+              <!-- Format Jabatan -->
+              <div class="bg-white p-3 rounded-xl border border-purple-200 shadow-xs space-y-1.5">
+                <label class="font-bold text-slate-800 block text-[11px]">Format Penulisan Jabatan:</label>
+                <select id="cfgJabatanCasing" onchange="updateConfig()" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-purple-950 focus:ring-1 focus:ring-purple-500 outline-none text-xs">
+                  <option value="as_is" selected>Sesuai Hasil Ketikan (Manual)</option>
+                  <option value="titlecase">Huruf Besar Tiap Awal Kata</option>
+                  <option value="uppercase">HURUF BESAR SEMUA</option>
+                </select>
+                <span class="text-[10px] text-slate-400 block leading-tight">Mengikuti ketikan jabatan Anda</span>
+              </div>
+
+              <!-- Format Alamat -->
+              <div class="bg-white p-3 rounded-xl border border-purple-200 shadow-xs space-y-1.5">
+                <label class="font-bold text-slate-800 block text-[11px]">Format Penulisan Alamat:</label>
+                <select id="cfgAlamatCasing" onchange="updateConfig()" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-purple-950 focus:ring-1 focus:ring-purple-500 outline-none text-xs">
+                  <option value="as_is" selected>Sesuai Hasil Ketikan (Manual)</option>
+                  <option value="titlecase">Huruf Besar Tiap Awal Kata</option>
+                  <option value="uppercase">HURUF BESAR SEMUA</option>
+                </select>
+                <span class="text-[10px] text-slate-400 block leading-tight">Mengikuti ketikan tempat/alamat Anda</span>
+              </div>
+            </div>
+
+            <!-- Styling Toggles (Bold / Italic) -->
+            <div class="flex flex-wrap items-center gap-4 text-xs pt-1 text-slate-700">
+              <label class="flex items-center space-x-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-purple-200">
+                <input type="checkbox" id="cfgBoldName" onchange="updateConfig()" checked class="rounded text-purple-600 focus:ring-purple-500">
+                <span class="font-bold text-slate-800">Nama Tebal (BOLD)</span>
+              </label>
+              <label class="flex items-center space-x-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-purple-200">
+                <input type="checkbox" id="cfgItalicAlamat" onchange="updateConfig()" checked class="rounded text-purple-600 focus:ring-purple-500">
+                <span class="italic text-slate-800">Alamat Miring (Italic)</span>
+              </label>
+              <label class="flex items-center space-x-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-purple-200">
+                <input type="checkbox" id="cfgPrefixDi" onchange="updateConfig()" checked class="rounded text-purple-600 focus:ring-purple-500">
+                <span class="font-medium text-slate-800">Otomatis "di - " sebelum Alamat</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- POSISI KERTAS DI TRAY PRINTER & MARGIN ATAS/KIRI LANGSUNG -->
+          <div class="p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl space-y-2.5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 pb-2">
+              <div>
+                <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                  <i data-lucide="printer" class="w-4 h-4 text-emerald-600"></i>
+                  Posisi Kertas Tray & Kalibrasi Margin:
+                </span>
+              </div>
+
+              <!-- Paper Feed Presets -->
+              <div class="flex items-center gap-1.5">
+                <button type="button" onclick="setFeedPreset('left')" id="btnFeedLeft" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 transition">
+                  Rata Kiri
+                </button>
+                <button type="button" onclick="setFeedPreset('center')" id="btnFeedCenter" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-500 bg-emerald-600 text-white shadow-xs transition">
+                  Tengah (Epson/Canon)
+                </button>
+                <button type="button" onclick="setFeedPreset('zero')" id="btnFeedZero" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 transition">
+                  Mepet Atas (0 mm)
+                </button>
+              </div>
+            </div>
+
+            <!-- Quick Millimeter Adjusters -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+              
+              <!-- Margin Atas Adjuster -->
+              <div class="bg-white p-2.5 rounded-xl border border-emerald-200 space-y-1 shadow-xs">
+                <div class="flex items-center justify-between">
+                  <label class="font-bold text-slate-800 text-[11px]">⬆️ Jarak Tepi Atas:</label>
+                  <div class="flex items-center space-x-1 font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300 text-xs">
+                    <span id="dispMarginTop">2.0</span> mm
+                  </div>
+                </div>
+                <div class="flex items-center space-x-1 pt-0.5">
+                  <button type="button" onclick="adjustOffset('top', -2)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">-2 mm</button>
+                  <button type="button" onclick="adjustOffset('top', -0.5)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">-0.5</button>
+                  <button type="button" onclick="adjustOffset('top', 0.5)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">+0.5</button>
+                  <button type="button" onclick="adjustOffset('top', 2)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">+2 mm</button>
+                </div>
+              </div>
+
+              <!-- Margin Kiri Adjuster -->
+              <div class="bg-white p-2.5 rounded-xl border border-emerald-200 space-y-1 shadow-xs">
+                <div class="flex items-center justify-between">
+                  <label class="font-bold text-slate-800 text-[11px]">⬅️ Jarak Tepi Kiri:</label>
+                  <div class="flex items-center space-x-1 font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300 text-xs">
+                    <span id="dispMarginLeft">30.0</span> mm
+                  </div>
+                </div>
+                <div class="flex items-center space-x-1 pt-0.5">
+                  <button type="button" onclick="adjustOffset('left', -2)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">-2 mm</button>
+                  <button type="button" onclick="adjustOffset('left', -0.5)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">-0.5</button>
+                  <button type="button" onclick="adjustOffset('left', 0.5)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">+0.5</button>
+                  <button type="button" onclick="adjustOffset('left', 2)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">+2 mm</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Custom Dimensions Form (Detail Ukuran Kotak Stiker) -->
+          <div id="customDimensionPanel" class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+            <div class="flex items-center justify-between font-semibold text-slate-700">
+              <span>Ukuran Kotak Stiker (mm):</span>
+              <button onclick="resetDimensionsToPreset()" class="text-emerald-600 hover:underline text-[11px] font-bold">Kembalikan Standar (153x193 mm)</button>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div>
+                <label class="text-[11px] text-slate-500 block mb-0.5">Lebar Label (mm)</label>
+                <input type="number" step="0.5" id="cfgLabelWidth" value="74" onchange="updateConfig()" class="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-bold text-center text-slate-800" />
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-500 block mb-0.5">Tinggi Label (mm)</label>
+                <input type="number" step="0.5" id="cfgLabelHeight" value="37" onchange="updateConfig()" class="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-bold text-center text-slate-800" />
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-500 block mb-0.5">Spasi Kolom (Gap X mm)</label>
+                <input type="number" step="0.5" id="cfgGapX" value="3" onchange="updateConfig()" class="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-semibold text-center text-slate-800" />
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-500 block mb-0.5">Spasi Baris (Gap Y mm)</label>
+                <input type="number" step="0.5" id="cfgGapY" value="2" onchange="updateConfig()" class="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-semibold text-center text-slate-800" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Desain & Tipografi Options -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Teks Pembuka:</label>
+              <select id="cfgHeaderGreeting" onchange="updateConfig()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+                <option value="Kepada Yth. Bapak/Ibu/Sdr/i:" selected>Kepada Yth. Bapak/Ibu/Sdr/i:</option>
+                <option value="Kepada Yth.">Kepada Yth.</option>
+                <option value="Yth. Bapak/Ibu:">Yth. Bapak/Ibu:</option>
+                <option value="">(Tanpa Kata Pembuka)</option>
+                <option value="custom">Kustom Kata Pembuka...</option>
+              </select>
+              <input type="text" id="cfgHeaderCustom" oninput="updateConfig()" placeholder="Tulis pembuka..." class="hidden mt-1.5 w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs" />
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Jenis Huruf (Font):</label>
+              <select id="cfgFontFamily" onchange="updateConfig()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+                <option value="'Plus Jakarta Sans', sans-serif" selected>Plus Jakarta Sans (Modern)</option>
+                <option value="'Playfair Display', serif">Playfair Display (Mewah)</option>
+                <option value="'Cinzel', serif">Cinzel (Formal Klasik)</option>
+                <option value="'Great Vibes', cursive">Great Vibes (Kaligrafi Latin)</option>
+                <option value="'Alex Brush', cursive">Alex Brush (Elegan Cursive)</option>
+                <option value="'Times New Roman', serif">Times New Roman (Resmi)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Gaya Bingkai Label:</label>
+              <select id="cfgBorderStyle" onchange="updateConfig()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+                <option value="border-none" selected>Polos (Tanpa Bingkai)</option>
+                <option value="border-solid">Kotak Tipis Halus</option>
+                <option value="border-double">Double Line Elegan</option>
+                <option value="border-ornament">Sudut Ornamen Cantik</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Secondary controls: Font Sizes & Offset -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs pt-1 border-t border-slate-100">
+            <div>
+              <label class="text-[11px] text-slate-500 block mb-0.5">Ukuran Nama (pt)</label>
+              <input type="number" step="0.5" id="cfgNameFontSize" value="10.5" min="7" max="24" onchange="updateConfig()" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-bold text-slate-800" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500 block mb-0.5">Ukuran Ket / Jabatan (pt)</label>
+              <input type="number" step="0.5" id="cfgJabatanFontSize" value="8" min="6" max="18" onchange="updateConfig()" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-semibold text-slate-800" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500 block mb-0.5">Ukuran Alamat (pt)</label>
+              <input type="number" step="0.5" id="cfgAlamatFontSize" value="8.5" min="6" max="18" onchange="updateConfig()" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-semibold text-slate-800" />
+            </div>
+            <div>
+              <label class="text-[11px] text-emerald-700 font-semibold block mb-0.5" title="Jika kertas stiker lembar pertama sudah terpakai sebagian">Mulai Label Ke-</label>
+              <input type="number" id="cfgStartSlot" value="1" min="1" onchange="updateConfig()" class="w-full px-2 py-1 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded text-center font-bold" />
+            </div>
+          </div>
+
+          <!-- Optional Guidelines for Print -->
+          <div class="flex items-center gap-4 text-xs pt-0.5 text-slate-600">
+            <label class="flex items-center space-x-1.5 cursor-pointer" title="Tampilkan garis bantu saat cetak di kertas HVS biasa">
+              <input type="checkbox" id="cfgShowPrintGuide" onchange="updateConfig()" class="rounded text-emerald-600 focus:ring-emerald-500">
+              <span class="text-amber-700 font-medium">Cetak Garis Bantu (Untuk Kertas Biasa)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- CARD 4: LIVE SHEET PREVIEW (PRATINJAU LEMBAR CETAK) -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center space-x-2">
+              <span class="p-1.5 bg-purple-50 text-purple-600 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></span>
+              <h3 class="font-bold text-slate-800 text-sm sm:text-base">Pratinjau Kertas Stiker (Live Preview)</h3>
+            </div>
+
+            <!-- Pagination preview if multiple sheets -->
+            <div class="flex items-center space-x-2 text-xs">
+              <button onclick="prevSheet()" id="btnPrevSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              </button>
+              <span id="previewSheetIndicator" class="font-semibold text-slate-700">Lembar 1 dari 1</span>
+              <button onclick="nextSheet()" id="btnNextSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="text-[11px] text-slate-500 flex items-center justify-between">
+            <span>Kertas: <strong>153 × 193 mm</strong> (2×5 = 10 Label). Hanya nama yang dicentang yang akan tercetak.</span>
+            <span class="font-medium text-emerald-600" id="previewStats">10 label / lembar</span>
+          </div>
+
+          <!-- Preview Interactive Canvas Container -->
+          <div class="overflow-x-auto p-4 bg-slate-200/60 rounded-2xl flex justify-center items-center min-h-[440px]">
+            <div id="screenPreviewContainer" class="transition-all duration-200">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <!-- Footer preview info & Direct Print Banner -->
+          <div class="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                <i data-lucide="printer" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="text-xs font-bold text-emerald-950">Siap untuk dicetak ke Kertas 153 × 193 mm?</div>
+                <div class="text-[11px] text-emerald-700">Set Margin printer ke "None" (Tanpa Margin) dan Skala 100%.</div>
+              </div>
+            </div>
+            <button onclick="doPrint()" class="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-200 transition flex items-center justify-center space-x-2">
+              <i data-lucide="printer" class="w-4 h-4"></i>
+              <span>Cetak <span id="btnCountPrint">0</span> Label Terpilih</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
 
   <!-- BULK IMPORT MODAL -->
   <div id="bulkModal" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
@@ -815,7 +828,6 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
     document.addEventListener('DOMContentLoaded', async () => {
       checkAuthStatus();
       loadSavedData();
-      await fetchFromDatabaseServer();
       applyConfigToUI();
       renderAcaraDropdowns();
       renderGuestList();
@@ -823,22 +835,28 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
       if (window.lucide) window.lucide.createIcons();
     });
 
-    // Authentication Management (Full Gate)
+    // Authentication Management (Strict Lock Screen Gate)
     function checkAuthStatus() {
       const gate = document.getElementById('loginGateScreen');
+      const app = document.getElementById('mainAppWrapper');
+
       try {
         const savedUser = localStorage.getItem(AUTH_USER_KEY);
         const token = localStorage.getItem(AUTH_TOKEN_KEY);
         if (savedUser && token) {
           currentUser = JSON.parse(savedUser);
-          if (gate) gate.classList.add('hidden');
+          gate.style.display = 'none';
+          app.classList.remove('hidden');
+          fetchFromDatabaseServer();
         } else {
           currentUser = null;
-          if (gate) gate.classList.remove('hidden');
+          gate.style.display = 'flex';
+          app.classList.add('hidden');
         }
       } catch (e) {
         currentUser = null;
-        if (gate) gate.classList.remove('hidden');
+        gate.style.display = 'flex';
+        app.classList.add('hidden');
       }
       renderAuthWidget();
     }
@@ -871,7 +889,9 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
 
     function openLoginGate() {
       const gate = document.getElementById('loginGateScreen');
-      if (gate) gate.classList.remove('hidden');
+      const app = document.getElementById('mainAppWrapper');
+      gate.style.display = 'flex';
+      app.classList.add('hidden');
       document.getElementById('gateUsername').focus();
     }
 
@@ -892,6 +912,7 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
       const alertText = document.getElementById('loginGateAlertText');
       const btnText = document.getElementById('btnGateText');
       const gate = document.getElementById('loginGateScreen');
+      const app = document.getElementById('mainAppWrapper');
 
       if (!u || !p) return;
 
@@ -908,7 +929,8 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
           currentUser = json.user;
           localStorage.setItem(AUTH_TOKEN_KEY, json.token);
           localStorage.setItem(AUTH_USER_KEY, JSON.stringify(json.user));
-          if (gate) gate.classList.add('hidden');
+          gate.style.display = 'none';
+          app.classList.remove('hidden');
           renderAuthWidget();
           await fetchFromDatabaseServer();
         } else {
@@ -916,30 +938,35 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
           alertText.textContent = json.error || 'Username atau password salah.';
         }
       } catch (err) {
-        // Fallback local verification
+        // Fallback standard verification
         if ((u.toLowerCase() === 'admin' && (p === 'admin123' || p === 'admin')) || (u.toLowerCase() === 'petugas' && (p === 'user123' || p === 'petugas'))) {
           currentUser = { username: u, name: u.toLowerCase() === 'admin' ? 'Administrator' : 'Petugas Undangan', role: u.toLowerCase() === 'admin' ? 'admin' : 'user' };
           localStorage.setItem(AUTH_TOKEN_KEY, 'local-session-token');
           localStorage.setItem(AUTH_USER_KEY, JSON.stringify(currentUser));
-          if (gate) gate.classList.add('hidden');
+          gate.style.display = 'none';
+          app.classList.remove('hidden');
           renderAuthWidget();
+          await fetchFromDatabaseServer();
         } else {
           alertBox.classList.remove('hidden');
           alertText.textContent = 'Kredensial tidak cocok. Gunakan username: admin, password: admin123';
         }
       } finally {
-        btnText.textContent = 'Masuk Sekarang';
+        btnText.textContent = 'Masuk ke Aplikasi';
       }
     }
 
     function handleLogout() {
-      if (confirm('Yakin ingin keluar dari akun?')) {
+      if (confirm('Yakin ingin keluar dan mengunci sistem?')) {
         currentUser = null;
         localStorage.removeItem(AUTH_TOKEN_KEY);
         localStorage.removeItem(AUTH_USER_KEY);
         renderAuthWidget();
         const gate = document.getElementById('loginGateScreen');
-        if (gate) gate.classList.remove('hidden');
+        const app = document.getElementById('mainAppWrapper');
+        gate.style.display = 'flex';
+        app.classList.add('hidden');
+        document.getElementById('gatePassword').value = '';
       }
     }
 
@@ -1161,7 +1188,7 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
       document.getElementById('cfgHeaderGreeting').value = config.headerGreeting;
       if (config.headerGreeting === 'custom') {
         document.getElementById('cfgHeaderCustom').classList.remove('hidden');
-        document.getElementById('cfgHeaderCustom').value = config.headerCustom || '';
+        config.headerCustom = document.getElementById('cfgHeaderCustom').value;
       } else {
         document.getElementById('cfgHeaderCustom').classList.add('hidden');
       }
