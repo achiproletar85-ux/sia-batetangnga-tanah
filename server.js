@@ -2986,46 +2986,123 @@ function saveLocalTamuData(data) {
   }
 }
 
-// GET /api/tamu & /api/tamu-undangan -> Ambil semua data tamu & daftar acara dari database
+// GET /api/tamu & /api/tamu-undangan -> Ambil semua data tamu & daftar acara langsung dari Supabase
 app.get(['/api/tamu', '/api/tamu-undangan'], async (req, res) => {
   try {
     let guests = [];
     let acaraList = ['Pernikahan', 'Acara Kantor / Dinas', 'Keluarga Besar', 'Tamu VVIP / Tokoh', 'Sahabat & Rekan'];
 
-    // 1. Coba ambil dari Supabase jika tersedia
     if (supabase) {
       const [guestsRes, catRes] = await Promise.all([
         supabase.from('tamu_undangan').select('*').order('created_at', { ascending: false }),
         supabase.from('tamu_undangan_kategori').select('nama_kategori').order('id', { ascending: true })
       ]);
 
-      if (!guestsRes.error && Array.isArray(guestsRes.data) && guestsRes.data.length > 0) {
+      if (!guestsRes.error && Array.isArray(guestsRes.data)) {
         guests = guestsRes.data;
-      }
-      if (!catRes.error && Array.isArray(catRes.data) && catRes.data.length > 0) {
-        acaraList = catRes.data.map(c => c.nama_kategori);
-      }
-
-      if (guests.length > 0) {
+        if (!catRes.error && Array.isArray(catRes.data) && catRes.data.length > 0) {
+          acaraList = catRes.data.map(c => c.nama_kategori);
+        }
         return res.json({ success: true, source: 'supabase', data: guests, acaraList });
       }
     }
 
-    // 2. Fallback ke local json database
+    // Fallback lokal jika supabase offline
     const local = getLocalTamuData();
     return res.json({
       success: true,
       source: 'local_file',
-      data: (local && local.guests && local.guests.length > 0) ? local.guests : guests,
-      acaraList: (local && local.acaraList && local.acaraList.length > 0) ? local.acaraList : acaraList
+      data: (local && Array.isArray(local.guests)) ? local.guests : [],
+      acaraList: (local && Array.isArray(local.acaraList)) ? local.acaraList : acaraList
     });
   } catch (err) {
     const local = getLocalTamuData();
-    return res.json({ success: true, source: 'local_file', data: local.guests || [], acaraList: local.acaraList || [] });
+    return res.json({ success: true, source: 'local_file', data: (local && local.guests) || [], acaraList: (local && local.acaraList) || [] });
   }
 });
 
-// POST /api/tamu/sync & /api/tamu-undangan/sync -> Simpan / Sinkronisasi seluruh daftar tamu ke database
+// POST /api/tamu/guest & /api/tamu-undangan/guest -> Tambah / Update 1 Tamu ke Supabase
+app.post(['/api/tamu/guest', '/api/tamu-undangan/guest'], async (req, res) => {
+  try {
+    const { id, name, jabatan, alamat, kategori, selected } = req.body;
+    if (!name) return res.status(400).json({ success: false, error: 'Nama tamu wajib diisi.' });
+
+    const guestRow = {
+      id: String(id || Date.now()),
+      name: String(name).trim(),
+      jabatan: String(jabatan || '').trim(),
+      alamat: String(alamat || 'Tempat').trim(),
+      kategori: String(kategori || 'Pernikahan').trim(),
+      selected: selected !== false,
+      updated_at: new Date().toISOString()
+    };
+
+    if (supabase) {
+      const { error } = await supabase.from('tamu_undangan').upsert([guestRow], { onConflict: 'id' });
+      if (error) console.warn('Supabase upsert error:', error.message);
+    }
+
+    // Update local cache
+    const local = getLocalTamuData();
+    const existingIdx = (local.guests || []).findIndex(g => String(g.id) === String(guestRow.id));
+    if (existingIdx >= 0) {
+      local.guests[existingIdx] = guestRow;
+    } else {
+      local.guests = [guestRow, ...(local.guests || [])];
+    }
+    saveLocalTamuData(local);
+
+    return res.json({ success: true, message: 'Data tamu berhasil disimpan ke Supabase!', data: guestRow });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE /api/tamu/:id & /api/tamu-undangan/:id -> Hapus 1 Tamu dari Supabase
+app.delete(['/api/tamu/:id', '/api/tamu-undangan/:id'], async (req, res) => {
+  try {
+    const targetId = String(req.params.id);
+    if (!targetId) return res.status(400).json({ success: false, error: 'ID tamu wajib disertakan.' });
+
+    // 1. Hapus dari Supabase
+    if (supabase) {
+      const { error } = await supabase.from('tamu_undangan').delete().eq('id', targetId);
+      if (error) {
+        console.error('Supabase delete error:', error.message);
+      }
+    }
+
+    // 2. Hapus dari local file
+    const local = getLocalTamuData();
+    if (local && Array.isArray(local.guests)) {
+      local.guests = local.guests.filter(g => String(g.id) !== targetId);
+      saveLocalTamuData(local);
+    }
+
+    return res.json({ success: true, message: `Tamu dengan ID ${targetId} berhasil dihapus dari Supabase!` });
+  } catch (err) {
+    console.error('Delete error:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE /api/tamu & /api/tamu-undangan & POST /api/tamu-undangan/clear -> Hapus SEMUA Tamu dari Supabase
+app.delete(['/api/tamu', '/api/tamu-undangan'], async (req, res) => {
+  try {
+    if (supabase) {
+      await supabase.from('tamu_undangan').delete().neq('id', '___non_existent___');
+    }
+    const local = getLocalTamuData();
+    local.guests = [];
+    saveLocalTamuData(local);
+
+    return res.json({ success: true, message: 'Seluruh data tamu berhasil dihapus dari Supabase!' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/tamu/sync & /api/tamu-undangan/sync -> Sinkronisasi total (Upsert + Hapus yang tidak ada di list)
 app.post(['/api/tamu/sync', '/api/tamu-undangan/sync'], async (req, res) => {
   try {
     const { guests, acaraList } = req.body;
@@ -3041,7 +3118,6 @@ app.post(['/api/tamu/sync', '/api/tamu-undangan/sync'], async (req, res) => {
 
     saveLocalTamuData(payload);
 
-    // Coba simpan ke Supabase jika terhubung
     if (supabase) {
       try {
         // 1. Simpan Kategori
@@ -3056,7 +3132,7 @@ app.post(['/api/tamu/sync', '/api/tamu-undangan/sync'], async (req, res) => {
             id: String(g.id || Date.now() + Math.random()),
             name: g.name,
             jabatan: g.jabatan || '',
-            alamat: g.alamat || '',
+            alamat: g.alamat || 'Tempat',
             kategori: g.kategori || 'Pernikahan',
             selected: g.selected !== false,
             updated_at: new Date().toISOString()
@@ -3068,7 +3144,7 @@ app.post(['/api/tamu/sync', '/api/tamu-undangan/sync'], async (req, res) => {
       }
     }
 
-    return res.json({ success: true, message: 'Data tamu berhasil disimpan ke database!', total: guests.length });
+    return res.json({ success: true, message: 'Data tamu berhasil disinkronisasi ke Supabase Cloud DB!', total: guests.length });
   } catch (err) {
     console.error('Error syncing tamu data:', err);
     return res.status(500).json({ success: false, error: err.message });

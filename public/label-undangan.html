@@ -1013,7 +1013,7 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
       }
     }
 
-    // Load from LocalStorage
+    // Load from LocalStorage (Cache Only)
     function loadSavedData() {
       try {
         const savedAcara = localStorage.getItem(ACARA_KEY);
@@ -1025,20 +1025,7 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
         if (savedGuests) {
           guests = JSON.parse(savedGuests);
         } else {
-          guests = [
-            { id: "1787569549915", name: "AMIRULLAH S, Sos", jabatan: "Sekretaris Desa Paku", alamat: "Tempat", kategori: "Pernikahan", selected: true },
-            { id: "1787569500373", name: "Drs SYAMSUDDIN", jabatan: "Kepala Desa Paku", alamat: "Tempat", kategori: "Pernikahan", selected: true },
-            { id: "1787569439937", name: "HERMAN SH", jabatan: "Kepala Desa Kaleok", alamat: "Tempat", kategori: "Pernikahan", selected: true },
-            { id: "1787569393704", name: "MUH ALWI", jabatan: "Sekretaris Desa Mammi", alamat: "Tempat", kategori: "Pernikahan", selected: true },
-            { id: "1787569354984", name: "ABDUL NAING S.Pd. I", jabatan: "Kepala Desa Mammi", alamat: "Tempat", kategori: "Pernikahan", selected: true },
-            { id: "1787569282672", name: "HERNAWATI", jabatan: "Sekretaris Desa Amola", alamat: "Tempat", kategori: "Pernikahan", selected: true },
-            { id: "1787569212704", name: "SYAMSUDDIN S.Ip", jabatan: "Kepala Desa Mirring", alamat: "Tempat", kategori: "Pernikahan", selected: true },
-            { id: "1787569143367", name: "RAKHMAT ADITIA WARDHANA", jabatan: "Sekretaris Desa Rea", alamat: "Tempat", kategori: "Pernikahan", selected: true },
-            { id: "1787569059376", name: "ZAIFULLAH", jabatan: "Kepala Desa Rea", alamat: "Tempat", kategori: "Pernikahan", selected: true },
-            { id: "1787569025331", name: "ISMAIL", jabatan: "Sekretaris Desa Mirring", alamat: "Tempat", kategori: "Pernikahan", selected: true },
-            { id: "1", name: "SARIANTO A.Md", jabatan: "Kepala Desa Mirring", alamat: "Tempat", kategori: "Pernikahan", selected: true }
-          ];
-          saveGuests();
+          guests = [];
         }
 
         const savedConfig = localStorage.getItem(CONFIG_KEY);
@@ -1050,7 +1037,7 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
       }
     }
 
-    // Database Server Sync API (Supabase / Backend)
+    // Database Server Sync API (Supabase as Single Source of Truth)
     async function fetchFromDatabaseServer() {
       try {
         const token = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -1059,7 +1046,7 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
         });
         if (res.ok) {
           const json = await res.json();
-          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          if (json.success && Array.isArray(json.data)) {
             guests = json.data;
             if (Array.isArray(json.acaraList) && json.acaraList.length > 0) {
               acaraList = [...new Set([...acaraList, ...json.acaraList])];
@@ -1069,14 +1056,19 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
             renderGuestList();
             renderPreview();
             
-            if (json.source === 'supabase') {
-              const b = document.getElementById('supaStatusBadge');
-              if (b) b.innerHTML = '<i data-lucide="cloud-check" class="w-3 h-3 text-emerald-600"></i> Supabase Cloud DB';
+            const b = document.getElementById('supaStatusBadge');
+            if (b) {
+              if (json.source === 'supabase') {
+                b.innerHTML = '<i data-lucide="cloud-check" class="w-3 h-3 text-emerald-600"></i> Supabase Cloud DB (Terhubung)';
+              } else {
+                b.innerHTML = '<i data-lucide="database" class="w-3 h-3 text-slate-500"></i> Database Terhubung';
+              }
             }
+            if (window.lucide) window.lucide.createIcons();
           }
         }
       } catch (e) {
-        console.log('Using LocalStorage database.');
+        console.log('Failed to fetch from server database:', e);
       }
     }
 
@@ -1307,7 +1299,7 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
     }
 
     // Guest Management
-    function handleAddGuest(e) {
+    async function handleAddGuest(e) {
       e.preventDefault();
       const nama = document.getElementById('inputNama').value.trim();
       const jabatan = document.getElementById('inputJabatan').value.trim();
@@ -1316,25 +1308,28 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
 
       if (!nama) return;
 
+      let guestObj = null;
       if (editingId) {
-        const idx = guests.findIndex(g => g.id === editingId);
+        const idx = guests.findIndex(g => String(g.id) === String(editingId));
         if (idx !== -1) {
           guests[idx].name = nama;
           guests[idx].jabatan = jabatan;
           guests[idx].alamat = alamat;
           guests[idx].kategori = kategori;
+          guestObj = guests[idx];
         }
         editingId = null;
         document.getElementById('btnSubmitGuestText').textContent = 'Tambah ke Database';
       } else {
-        guests.unshift({
+        guestObj = {
           id: Date.now().toString(),
           name: nama,
           jabatan: jabatan,
           alamat: alamat,
           kategori: kategori,
           selected: true
-        });
+        };
+        guests.unshift(guestObj);
       }
 
       document.getElementById('inputNama').value = '';
@@ -1345,11 +1340,27 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
       saveGuests();
       renderGuestList();
       renderPreview();
-      saveToDatabaseServer(false);
+
+      // Langsung simpan tamu ini ke Supabase Cloud DB
+      if (guestObj) {
+        try {
+          const token = localStorage.getItem(AUTH_TOKEN_KEY);
+          await fetch('/api/tamu-undangan/guest', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify(guestObj)
+          });
+        } catch (e) {
+          console.warn('Failed to insert single guest to Supabase:', e);
+        }
+      }
     }
 
     function editGuest(id) {
-      const g = guests.find(item => item.id === id);
+      const g = guests.find(item => String(item.id) === String(id));
       if (!g) return;
       editingId = id;
       document.getElementById('inputNama').value = g.name;
@@ -1360,8 +1371,10 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
       document.getElementById('inputNama').focus();
     }
 
-    function deleteGuest(id) {
-      guests = guests.filter(g => g.id !== id);
+    async function deleteGuest(id) {
+      if (!confirm('Yakin ingin menghapus data tamu ini dari Database Supabase?')) return;
+      
+      guests = guests.filter(g => String(g.id) !== String(id));
       if (editingId === id) {
         editingId = null;
         document.getElementById('btnSubmitGuestText').textContent = 'Tambah ke Database';
@@ -1372,17 +1385,39 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
       saveGuests();
       renderGuestList();
       renderPreview();
-      saveToDatabaseServer(false);
+
+      // Langsung kirim perintah DELETE ke Supabase Cloud DB
+      try {
+        const token = localStorage.getItem(AUTH_TOKEN_KEY);
+        const res = await fetch(`/api/tamu-undangan/${id}`, {
+          method: 'DELETE',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        const json = await res.json();
+        console.log('Supabase Delete Response:', json);
+      } catch (e) {
+        console.error('Delete request failed:', e);
+      }
     }
 
-    function clearAllGuests() {
+    async function clearAllGuests() {
       if (guests.length === 0) return;
-      if (confirm('Yakin ingin menghapus semua data tamu dari database?')) {
+      if (confirm('Yakin ingin MENGHAPUS SEMUA data tamu dari Database Supabase?')) {
         guests = [];
         saveGuests();
         renderGuestList();
         renderPreview();
-        saveToDatabaseServer(false);
+
+        // Langsung kirim perintah CLEAR ke Supabase Cloud DB
+        try {
+          const token = localStorage.getItem(AUTH_TOKEN_KEY);
+          await fetch('/api/tamu-undangan', {
+            method: 'DELETE',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          });
+        } catch (e) {
+          console.error('Clear all failed:', e);
+        }
       }
     }
 
