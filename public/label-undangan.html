@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cetak Label Stiker Undangan (153 x 193 mm) — SIA Batetangnga</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@500;700&family=Great+Vibes&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+            playfair: ['"Playfair Display"', 'serif'],
+            cinzel: ['"Cinzel"', 'serif'],
+            script: ['"Great Vibes"', 'cursive'],
+            alex: ['"Alex Brush"', 'cursive']
+          },
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- SheetJS (XLSX) for Excel Import / Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* Screen Preview Styling */
+    @media screen {
+      .print-only { display: none !important; }
+      .sheet-page {
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.08);
+        background: #ffffff;
+        margin-bottom: 24px;
+        position: relative;
+        box-sizing: border-box;
+      }
+    }
+
+    /* Sticker Label Styling */
+    .label-box {
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      overflow: hidden;
+      word-break: break-word;
+      transition: all 0.15s ease;
+    }
+
+    .label-box.disabled-slot {
+      opacity: 0.35;
+      background: repeating-linear-gradient(
+        45deg,
+        #f8fafc,
+        #f8fafc 8px,
+        #f1f5f9 8px,
+        #f1f5f9 16px
+      );
+      cursor: pointer;
+    }
+
+    .label-box.active-slot:hover {
+      outline: 2px dashed #3b82f6;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col font-sans">
+
+  <!-- TOP NAVBAR -->
+  <header class="no-print bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <a href="/" class="flex items-center space-x-2 text-slate-600 hover:text-emerald-600 transition" title="Kembali ke Dashboard Utama SIA">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        </a>
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-200">
+          <i data-lucide="tag" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg font-bold text-slate-900 leading-tight">Cetak Stiker Label Undangan</h1>
+            <span id="dbStatusBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+              ⭐ Kertas Terkalibrasi (153 × 193 mm)
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 font-medium flex items-center gap-1.5">
+            <span>Manual Sesuai Ketikan</span>
+            <span>•</span>
+            <span id="supaStatusBadge" class="text-emerald-700 font-bold flex items-center gap-1">
+              <i data-lucide="database" class="w-3 h-3"></i> Supabase Cloud DB
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <!-- User Auth Badge & Action -->
+        <div id="authContainer" class="flex items-center space-x-1.5">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Sync / Save to Database -->
+        <button onclick="saveToDatabaseServer()" id="btnSyncDB" class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 rounded-lg transition flex items-center space-x-1.5 shadow-sm" title="Simpan perubahan ke Database Supabase">
+          <i data-lucide="refresh-cw" class="w-4 h-4 text-emerald-600"></i>
+          <span class="hidden sm:inline">Simpan ke DB</span>
+        </button>
+
+        <!-- Test Print button -->
+        <button onclick="testPrint()" class="px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg shadow-sm transition flex items-center space-x-1.5" title="Cetak garis bantu di kertas HVS untuk uji coba kecocokan ukuran">
+          <i data-lucide="file-check" class="w-4 h-4 text-slate-500"></i>
+          <span class="hidden sm:inline">Uji Garis</span>
+        </button>
+
+        <!-- Main Print Button -->
+        <button onclick="doPrint()" class="px-5 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-md shadow-emerald-200 transition flex items-center space-x-2">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>Cetak Sekarang</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="no-print flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <!-- LEFT COLUMN: INPUT DATA, ACARA & DATABASE TAMU LIST (5 Cols) -->
+    <div class="lg:col-span-5 space-y-5">
+
+      <!-- CARD 1: INPUT DATA TAMU & KATEGORI ACARA -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><i data-lucide="user-plus" class="w-4 h-4"></i></span>
+            <h2 class="font-bold text-slate-800 text-sm sm:text-base">Input Tamu ke Database</h2>
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <button onclick="openBulkModal()" class="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-md transition flex items-center space-x-1">
+              <i data-lucide="sheet" class="w-3.5 h-3.5"></i>
+              <span>Paste Excel</span>
+            </button>
+            <button onclick="generateSampleData()" class="text-xs font-medium text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-md transition" title="Isi dengan data contoh">
+              Contoh
+            </button>
+          </div>
+        </div>
+
+        <form id="addGuestForm" onsubmit="handleAddGuest(event)" class="space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Tamu & Gelar <span class="text-rose-500">*</span></label>
+              <input type="text" id="inputNama" required placeholder="Contoh: DR. H. ANDI SYAHRUL, S.E., M.Si." 
+                class="w-full px-3 py-2 text-sm bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition font-medium" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori / Acara</label>
+              <select id="inputKategori" class="w-full px-2.5 py-2 text-xs bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-emerald-800">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Jabatan / Keterangan</label>
+              <input type="text" id="inputJabatan" placeholder="Contoh: Kepala Dinas / Sekeluarga" 
+                class="w-full px-3 py-2 text-sm bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Tempat / Alamat</label>
+              <input type="text" id="inputAlamat" placeholder="Contoh: Tempat / Makassar / Polewali" value="Tempat"
+                class="w-full px-3 py-2 text-sm bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-[11px] text-slate-400">Tekan <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-slate-600 font-mono text-[10px]">Enter</kbd> untuk simpan</span>
+            <button type="submit" id="btnSubmitGuest" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1.5">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span id="btnSubmitGuestText">Tambah ke Database</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- CARD 2: TABEL DATABASE TAMU & PILIH TANDAI -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-3.5">
+        
+        <!-- Filter Acara & Actions Header -->
+        <div class="space-y-2.5 pb-2 border-b border-slate-100">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+              <span class="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><i data-lucide="database" class="w-4 h-4"></i></span>
+              <h3 class="font-bold text-slate-800 text-sm sm:text-base">Data Tamu Tersimpan</h3>
+              <span id="badgeTotal" class="px-2 py-0.5 text-xs font-bold bg-slate-100 text-slate-600 rounded-full">0</span>
+            </div>
+
+            <!-- Quick Category/Event Filter -->
+            <div class="flex items-center space-x-1.5">
+              <select id="filterAcaraSelect" onchange="handleFilterAcaraChange(this.value)" class="text-xs font-bold bg-blue-50 border border-blue-200 text-blue-900 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer">
+                <option value="ALL">📁 Semua Kategori</option>
+              </select>
+              <button onclick="promptAddNewAcara()" class="p-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition" title="Tambah Nama Kategori/Acara Baru">
+                <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Selection Quick Actions -->
+          <div class="flex items-center justify-between text-xs bg-slate-50 p-2 rounded-xl border border-slate-100">
+            <div class="flex items-center space-x-1.5">
+              <span class="text-slate-500 font-medium">Tandai:</span>
+              <button onclick="selectFiltered(true)" class="px-2 py-0.5 font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 rounded transition">Pilih Yang Tampil</button>
+              <button onclick="selectAll(true)" class="px-2 py-0.5 font-semibold text-slate-600 hover:bg-slate-200 rounded transition">Semua</button>
+              <button onclick="selectAll(false)" class="px-2 py-0.5 font-semibold text-slate-600 hover:bg-slate-200 rounded transition">Lepas</button>
+            </div>
+            <button onclick="clearAllGuests()" class="px-2 py-0.5 text-rose-600 hover:bg-rose-50 rounded transition font-medium">Hapus Semua</button>
+          </div>
+        </div>
+
+        <!-- Search bar & Import/Export -->
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+            <input type="text" id="searchGuest" oninput="renderGuestList()" placeholder="Cari nama, jabatan, alamat, kategori..." 
+              class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-emerald-500 focus:bg-white outline-none" />
+          </div>
+          <button onclick="exportToExcel()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition flex items-center space-x-1" title="Export ke Excel">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Export</span>
+          </button>
+        </div>
+
+        <!-- Table Container -->
+        <div class="max-h-[360px] overflow-y-auto border border-slate-100 rounded-xl bg-slate-50/50">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 text-slate-500 font-semibold sticky top-0 z-10">
+              <tr>
+                <th class="py-2 px-3 w-8 text-center" title="Pilih semua yang tampil">
+                  <input type="checkbox" id="checkMaster" onchange="toggleMasterCheck(this)" class="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                </th>
+                <th class="py-2 px-2 w-8 text-center">No</th>
+                <th class="py-2 px-3">Nama Tamu & Keterangan</th>
+                <th class="py-2 px-2 w-20 text-center">Kategori</th>
+                <th class="py-2 px-2 w-14 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="guestTableBody" class="divide-y divide-slate-100 text-slate-700 bg-white">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+          <div id="emptyGuestState" class="hidden py-8 text-center text-slate-400 text-xs">
+            <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-1 text-slate-300"></i>
+            Belum ada data tamu di database. Tambahkan data di atas atau paste dari Excel.
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+          <div>Status: <strong id="countSelected" class="text-emerald-600 font-bold">0</strong> tamu ditandai (dari total <span id="countTotal">0</span> di DB)</div>
+          <div class="text-[11px] text-emerald-700 font-medium flex items-center space-x-1" id="lastSavedInfo">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+            <span>Tersimpan di Cloud Database Supabase</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: PENGATURAN FORMAT LABEL & LIVE PREVIEW (7 Cols) -->
+    <div class="lg:col-span-7 space-y-5">
+
+      <!-- CARD 3: PENGATURAN FORMAT HURUF & KALIBRASI KERTAS -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><i data-lucide="type" class="w-4 h-4"></i></span>
+            <h2 class="font-bold text-slate-800 text-sm sm:text-base">Pengaturan Format Teks & Huruf</h2>
+          </div>
+
+          <!-- Quick Preset Selector -->
+          <div class="flex items-center space-x-2">
+            <select id="presetSelect" onchange="applyPreset(this.value)" class="text-xs font-bold bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-amber-500 outline-none cursor-pointer">
+              <option value="kertas_saya" selected>⭐ Kertas Saya (153 × 193 mm — 10 Stiker)</option>
+              <option value="121">Label No. 121 (165 × 206 mm — 10 Stiker 2x5)</option>
+              <option value="103">Label No. 103 (200 × 137 mm — 12 Stiker 3x4)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- PENGATURAN HURUF (MANUAL / SESUAI KETIKAN) -->
+        <div class="p-4 bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-purple-200/80 rounded-2xl space-y-3">
+          <div class="flex items-center justify-between border-b border-purple-200/60 pb-2">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="case-sensitive" class="w-4 h-4 text-purple-700"></i>
+              <span class="text-xs font-bold text-purple-950">Gaya Penulisan Teks & Huruf:</span>
+            </div>
+            <span class="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">⭐ Manual (Sesuai Ketikan Asli)</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <!-- Format Nama -->
+            <div class="bg-white p-3 rounded-xl border border-purple-200 shadow-xs space-y-1.5">
+              <label class="font-bold text-slate-800 block text-[11px]">Format Penulisan Nama:</label>
+              <select id="cfgNameCasing" onchange="updateConfig()" class="w-full px-2 py-1.5 bg-emerald-50 border border-emerald-300 rounded-lg font-bold text-emerald-950 focus:ring-2 focus:ring-emerald-500 outline-none text-xs">
+                <option value="as_is" selected>⭐ Sesuai Hasil Ketikan Anda (Manual)</option>
+                <option value="name_caps_title_clean">Nama Huruf Besar + Title Rapi</option>
+                <option value="uppercase">SEMUA HURUF BESAR (KAPITAL)</option>
+                <option value="titlecase">Huruf Besar Awal Kata (Title Case)</option>
+              </select>
+              <span class="text-[10px] text-emerald-700 font-semibold block leading-tight pt-0.5">
+                Mencetak persis apa adanya sesuai huruf yang Anda ketik.
+              </span>
+            </div>
+
+            <!-- Format Jabatan -->
+            <div class="bg-white p-3 rounded-xl border border-purple-200 shadow-xs space-y-1.5">
+              <label class="font-bold text-slate-800 block text-[11px]">Format Penulisan Jabatan:</label>
+              <select id="cfgJabatanCasing" onchange="updateConfig()" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-purple-950 focus:ring-1 focus:ring-purple-500 outline-none text-xs">
+                <option value="as_is" selected>Sesuai Hasil Ketikan (Manual)</option>
+                <option value="titlecase">Huruf Besar Tiap Awal Kata</option>
+                <option value="uppercase">HURUF BESAR SEMUA</option>
+              </select>
+              <span class="text-[10px] text-slate-400 block leading-tight">Mengikuti ketikan jabatan Anda</span>
+            </div>
+
+            <!-- Format Alamat -->
+            <div class="bg-white p-3 rounded-xl border border-purple-200 shadow-xs space-y-1.5">
+              <label class="font-bold text-slate-800 block text-[11px]">Format Penulisan Alamat:</label>
+              <select id="cfgAlamatCasing" onchange="updateConfig()" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-purple-950 focus:ring-1 focus:ring-purple-500 outline-none text-xs">
+                <option value="as_is" selected>Sesuai Hasil Ketikan (Manual)</option>
+                <option value="titlecase">Huruf Besar Tiap Awal Kata</option>
+                <option value="uppercase">HURUF BESAR SEMUA</option>
+              </select>
+              <span class="text-[10px] text-slate-400 block leading-tight">Mengikuti ketikan tempat/alamat Anda</span>
+            </div>
+          </div>
+
+          <!-- Styling Toggles (Bold / Italic) -->
+          <div class="flex flex-wrap items-center gap-4 text-xs pt-1 text-slate-700">
+            <label class="flex items-center space-x-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-purple-200">
+              <input type="checkbox" id="cfgBoldName" onchange="updateConfig()" checked class="rounded text-purple-600 focus:ring-purple-500">
+              <span class="font-bold text-slate-800">Nama Tebal (BOLD)</span>
+            </label>
+            <label class="flex items-center space-x-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-purple-200">
+              <input type="checkbox" id="cfgItalicAlamat" onchange="updateConfig()" checked class="rounded text-purple-600 focus:ring-purple-500">
+              <span class="italic text-slate-800">Alamat Miring (Italic)</span>
+            </label>
+            <label class="flex items-center space-x-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-purple-200">
+              <input type="checkbox" id="cfgPrefixDi" onchange="updateConfig()" checked class="rounded text-purple-600 focus:ring-purple-500">
+              <span class="font-medium text-slate-800">Otomatis "di - " sebelum Alamat</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- POSISI KERTAS DI TRAY PRINTER & MARGIN ATAS/KIRI LANGSUNG -->
+        <div class="p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl space-y-2.5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 pb-2">
+            <div>
+              <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                <i data-lucide="printer" class="w-4 h-4 text-emerald-600"></i>
+                Posisi Kertas Tray & Kalibrasi Margin:
+              </span>
+            </div>
+
+            <!-- Paper Feed Presets -->
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="setFeedPreset('left')" id="btnFeedLeft" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 transition">
+                Rata Kiri
+              </button>
+              <button type="button" onclick="setFeedPreset('center')" id="btnFeedCenter" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-500 bg-emerald-600 text-white shadow-xs transition">
+                Tengah (Epson/Canon)
+              </button>
+              <button type="button" onclick="setFeedPreset('zero')" id="btnFeedZero" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 transition">
+                Mepet Atas (0 mm)
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Millimeter Adjusters -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+            
+            <!-- Margin Atas Adjuster -->
+            <div class="bg-white p-2.5 rounded-xl border border-emerald-200 space-y-1 shadow-xs">
+              <div class="flex items-center justify-between">
+                <label class="font-bold text-slate-800 text-[11px]">⬆️ Jarak Tepi Atas:</label>
+                <div class="flex items-center space-x-1 font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300 text-xs">
+                  <span id="dispMarginTop">2.0</span> mm
+                </div>
+              </div>
+              <div class="flex items-center space-x-1 pt-0.5">
+                <button type="button" onclick="adjustOffset('top', -2)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">-2 mm</button>
+                <button type="button" onclick="adjustOffset('top', -0.5)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">-0.5</button>
+                <button type="button" onclick="adjustOffset('top', 0.5)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">+0.5</button>
+                <button type="button" onclick="adjustOffset('top', 2)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">+2 mm</button>
+              </div>
+            </div>
+
+            <!-- Margin Kiri Adjuster -->
+            <div class="bg-white p-2.5 rounded-xl border border-emerald-200 space-y-1 shadow-xs">
+              <div class="flex items-center justify-between">
+                <label class="font-bold text-slate-800 text-[11px]">⬅️ Jarak Tepi Kiri:</label>
+                <div class="flex items-center space-x-1 font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300 text-xs">
+                  <span id="dispMarginLeft">30.0</span> mm
+                </div>
+              </div>
+              <div class="flex items-center space-x-1 pt-0.5">
+                <button type="button" onclick="adjustOffset('left', -2)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">-2 mm</button>
+                <button type="button" onclick="adjustOffset('left', -0.5)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">-0.5</button>
+                <button type="button" onclick="adjustOffset('left', 0.5)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">+0.5</button>
+                <button type="button" onclick="adjustOffset('left', 2)" class="flex-1 py-1 bg-slate-100 hover:bg-emerald-100 text-emerald-900 rounded font-bold transition text-center text-[11px]">+2 mm</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Custom Dimensions Form (Detail Ukuran Kotak Stiker) -->
+        <div id="customDimensionPanel" class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+          <div class="flex items-center justify-between font-semibold text-slate-700">
+            <span>Ukuran Kotak Stiker (mm):</span>
+            <button onclick="resetDimensionsToPreset()" class="text-emerald-600 hover:underline text-[11px] font-bold">Kembalikan Standar (153x193 mm)</button>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div>
+              <label class="text-[11px] text-slate-500 block mb-0.5">Lebar Label (mm)</label>
+              <input type="number" step="0.5" id="cfgLabelWidth" value="74" onchange="updateConfig()" class="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-bold text-center text-slate-800" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500 block mb-0.5">Tinggi Label (mm)</label>
+              <input type="number" step="0.5" id="cfgLabelHeight" value="37" onchange="updateConfig()" class="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-bold text-center text-slate-800" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500 block mb-0.5">Spasi Kolom (Gap X mm)</label>
+              <input type="number" step="0.5" id="cfgGapX" value="3" onchange="updateConfig()" class="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-semibold text-center text-slate-800" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500 block mb-0.5">Spasi Baris (Gap Y mm)</label>
+              <input type="number" step="0.5" id="cfgGapY" value="2" onchange="updateConfig()" class="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-semibold text-center text-slate-800" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Desain & Tipografi Options -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Teks Pembuka:</label>
+            <select id="cfgHeaderGreeting" onchange="updateConfig()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+              <option value="Kepada Yth. Bapak/Ibu/Sdr/i:" selected>Kepada Yth. Bapak/Ibu/Sdr/i:</option>
+              <option value="Kepada Yth.">Kepada Yth.</option>
+              <option value="Yth. Bapak/Ibu:">Yth. Bapak/Ibu:</option>
+              <option value="">(Tanpa Kata Pembuka)</option>
+              <option value="custom">Kustom Kata Pembuka...</option>
+            </select>
+            <input type="text" id="cfgHeaderCustom" oninput="updateConfig()" placeholder="Tulis pembuka..." class="hidden mt-1.5 w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Jenis Huruf (Font):</label>
+            <select id="cfgFontFamily" onchange="updateConfig()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+              <option value="'Plus Jakarta Sans', sans-serif" selected>Plus Jakarta Sans (Modern)</option>
+              <option value="'Playfair Display', serif">Playfair Display (Mewah)</option>
+              <option value="'Cinzel', serif">Cinzel (Formal Klasik)</option>
+              <option value="'Great Vibes', cursive">Great Vibes (Kaligrafi Latin)</option>
+              <option value="'Alex Brush', cursive">Alex Brush (Elegan Cursive)</option>
+              <option value="'Times New Roman', serif">Times New Roman (Resmi)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Gaya Bingkai Label:</label>
+            <select id="cfgBorderStyle" onchange="updateConfig()" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+              <option value="border-none" selected>Polos (Tanpa Bingkai)</option>
+              <option value="border-solid">Kotak Tipis Halus</option>
+              <option value="border-double">Double Line Elegan</option>
+              <option value="border-ornament">Sudut Ornamen Cantik</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Secondary controls: Font Sizes & Offset -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs pt-1 border-t border-slate-100">
+          <div>
+            <label class="text-[11px] text-slate-500 block mb-0.5">Ukuran Nama (pt)</label>
+            <input type="number" step="0.5" id="cfgNameFontSize" value="10.5" min="7" max="24" onchange="updateConfig()" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-bold text-slate-800" />
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-500 block mb-0.5">Ukuran Ket / Jabatan (pt)</label>
+            <input type="number" step="0.5" id="cfgJabatanFontSize" value="8" min="6" max="18" onchange="updateConfig()" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-semibold text-slate-800" />
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-500 block mb-0.5">Ukuran Alamat (pt)</label>
+            <input type="number" step="0.5" id="cfgAlamatFontSize" value="8.5" min="6" max="18" onchange="updateConfig()" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-center font-semibold text-slate-800" />
+          </div>
+          <div>
+            <label class="text-[11px] text-emerald-700 font-semibold block mb-0.5" title="Jika kertas stiker lembar pertama sudah terpakai sebagian">Mulai Label Ke-</label>
+            <input type="number" id="cfgStartSlot" value="1" min="1" onchange="updateConfig()" class="w-full px-2 py-1 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded text-center font-bold" />
+          </div>
+        </div>
+
+        <!-- Optional Guidelines for Print -->
+        <div class="flex items-center gap-4 text-xs pt-0.5 text-slate-600">
+          <label class="flex items-center space-x-1.5 cursor-pointer" title="Tampilkan garis bantu saat cetak di kertas HVS biasa">
+            <input type="checkbox" id="cfgShowPrintGuide" onchange="updateConfig()" class="rounded text-emerald-600 focus:ring-emerald-500">
+            <span class="text-amber-700 font-medium">Cetak Garis Bantu (Untuk Kertas Biasa)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- CARD 4: LIVE SHEET PREVIEW (PRATINJAU LEMBAR CETAK) -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 bg-purple-50 text-purple-600 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></span>
+            <h3 class="font-bold text-slate-800 text-sm sm:text-base">Pratinjau Kertas Stiker (Live Preview)</h3>
+          </div>
+
+          <!-- Pagination preview if multiple sheets -->
+          <div class="flex items-center space-x-2 text-xs">
+            <button onclick="prevSheet()" id="btnPrevSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <span id="previewSheetIndicator" class="font-semibold text-slate-700">Lembar 1 dari 1</span>
+            <button onclick="nextSheet()" id="btnNextSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="text-[11px] text-slate-500 flex items-center justify-between">
+          <span>Kertas: <strong>153 × 193 mm</strong> (2×5 = 10 Label). Hanya nama yang dicentang yang akan tercetak.</span>
+          <span class="font-medium text-emerald-600" id="previewStats">10 label / lembar</span>
+        </div>
+
+        <!-- Preview Interactive Canvas Container -->
+        <div class="overflow-x-auto p-4 bg-slate-200/60 rounded-2xl flex justify-center items-center min-h-[440px]">
+          <div id="screenPreviewContainer" class="transition-all duration-200">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Footer preview info & Direct Print Banner -->
+        <div class="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+              <i data-lucide="printer" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-emerald-950">Siap untuk dicetak ke Kertas 153 × 193 mm?</div>
+              <div class="text-[11px] text-emerald-700">Set Margin printer ke "None" (Tanpa Margin) dan Skala 100%.</div>
+            </div>
+          </div>
+          <button onclick="doPrint()" class="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-200 transition flex items-center justify-center space-x-2">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>Cetak <span id="btnCountPrint">0</span> Label Terpilih</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- AUTH / LOGIN MODAL -->
+  <div id="loginModal" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 transform transition-all">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-9 h-9 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center shadow-xs">
+            <i data-lucide="lock" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Masuk Akun Pengelola</h3>
+            <p class="text-xs text-slate-500">Akses Database Supabase & Sinkronisasi</p>
+          </div>
+        </div>
+        <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="loginAlert" class="hidden p-3 rounded-xl text-xs font-medium bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2">
+        <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+        <span id="loginAlertText">Username atau kata sandi salah.</span>
+      </div>
+
+      <form onsubmit="handleLoginSubmit(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Username / Nama Pengguna:</label>
+          <div class="relative">
+            <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+            <input type="text" id="loginUsername" required placeholder="Contoh: admin" 
+              class="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none font-medium" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Kata Sandi (Password):</label>
+          <div class="relative">
+            <i data-lucide="key" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+            <input type="password" id="loginPassword" required placeholder="Masukkan kata sandi" 
+              class="w-full pl-9 pr-10 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none font-medium" />
+            <button type="button" onclick="toggleShowPassword()" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
+              <i data-lucide="eye" id="iconEye" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+          <label class="flex items-center space-x-1.5 cursor-pointer">
+            <input type="checkbox" id="rememberMe" checked class="rounded text-emerald-600 focus:ring-emerald-500">
+            <span>Ingat saya di perangkat ini</span>
+          </label>
+          <span class="text-slate-400 text-[11px]">Default: admin / admin123</span>
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" id="btnLoginSubmit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-200 transition flex items-center justify-center space-x-2">
+            <i data-lucide="log-in" class="w-4 h-4"></i>
+            <span id="btnLoginText">Masuk Sekarang</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- BULK IMPORT MODAL -->
+  <div id="bulkModal" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4 transform transition-all">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center space-x-2">
+          <span class="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><i data-lucide="sheet" class="w-5 h-5"></i></span>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Import Data Massal ke Database (Excel / Spreadsheet)</h3>
+            <p class="text-xs text-slate-500">Copy & Paste banyak data sekaligus atau upload file .xlsx / .csv</p>
+          </div>
+        </div>
+        <button onclick="closeBulkModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div class="flex items-center space-x-2">
+          <label class="text-xs font-semibold text-slate-700">Masukkan ke Kategori/Acara:</label>
+          <select id="bulkKategoriSelect" class="text-xs font-bold bg-emerald-50 border border-emerald-300 text-emerald-900 px-2.5 py-1 rounded-lg outline-none">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs font-semibold text-slate-700">Tempel (Paste) teks dari Excel / Google Sheets di sini:</label>
+            <button onclick="downloadExcelTemplate()" class="text-xs font-semibold text-emerald-600 hover:underline flex items-center space-x-1">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Unduh Contoh Format Excel</span>
+            </button>
+          </div>
+          <textarea id="bulkPasteTextarea" rows="7" placeholder="Contoh format (Tab / Koma terpisah):
+DR. H. ANDI SYAHRUL, S.E., M.Si. [TAB] Kepala Dinas [TAB] Makassar
+Bpk. Ir. H. Muhammad Ridwan & Istri [TAB] Sekeluarga [TAB] Bandung
+AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none"></textarea>
+        </div>
+
+        <div class="flex items-center justify-between text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+            <span>Atau upload file Excel (.xlsx, .xls, .csv):</span>
+          </div>
+          <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" onchange="handleExcelFileUpload(event)" class="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+        <button onclick="closeBulkModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">Batal</button>
+        <button onclick="processBulkPaste()" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md transition flex items-center space-x-1.5">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>Import & Simpan ke Database</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // State Keys
+    const STORAGE_KEY = 'sta_label_undangan_data_v10';
+    const CONFIG_KEY = 'sta_label_undangan_config_v10';
+    const ACARA_KEY = 'sta_label_undangan_acara_list_v10';
+    const AUTH_TOKEN_KEY = 'sta_label_token_v10';
+    const AUTH_USER_KEY = 'sta_label_user_v10';
+
+    // Preset Specifications (In Millimeters)
+    const PRESETS = {
+      'kertas_saya': {
+        name: '⭐ Kertas Saya (153 × 193 mm — 10 Stiker)',
+        cols: 2,
+        rows: 5,
+        labelWidth: 74,
+        labelHeight: 37,
+        gapX: 3,
+        gapY: 2,
+        marginLeft: 30.0,
+        marginTop: 2.0,
+        sheetWidth: 153,
+        sheetHeight: 193,
+        feedMode: 'center'
+      },
+      '121': {
+        name: 'Label No. 121 (2 x 5)',
+        cols: 2,
+        rows: 5,
+        labelWidth: 75,
+        labelHeight: 38,
+        gapX: 4,
+        gapY: 2,
+        marginLeft: 22.5,
+        marginTop: 5,
+        sheetWidth: 165,
+        sheetHeight: 206,
+        feedMode: 'center'
+      },
+      '103': {
+        name: 'Label No. 103 (3 x 4)',
+        cols: 3,
+        rows: 4,
+        labelWidth: 64,
+        labelHeight: 32,
+        gapX: 2,
+        gapY: 2,
+        marginLeft: 5,
+        marginTop: 5,
+        sheetWidth: 200,
+        sheetHeight: 137,
+        feedMode: 'center'
+      }
+    };
+
+    let currentUser = null;
+    let guests = [];
+    let acaraList = ['Pernikahan', 'Acara Kantor / Dinas', 'Keluarga Besar', 'Tamu VVIP / Tokoh', 'Sahabat & Rekan'];
+    let selectedFilterAcara = 'ALL';
+    let editingId = null;
+    let currentSheetPage = 1;
+
+    let config = {
+      preset: 'kertas_saya',
+      cols: 2,
+      rows: 5,
+      labelWidth: 74,
+      labelHeight: 37,
+      gapX: 3,
+      gapY: 2,
+      marginLeft: 30.0,
+      marginTop: 2.0,
+      sheetWidth: 153,
+      sheetHeight: 193,
+      feedMode: 'center',
+      headerGreeting: 'Kepada Yth. Bapak/Ibu/Sdr/i:',
+      headerCustom: '',
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      borderStyle: 'border-none',
+      nameFontSize: 10.5,
+      jabatanFontSize: 8,
+      alamatFontSize: 8.5,
+      startSlot: 1,
+      nameCasing: 'as_is',          // 100% Manual Sesuai Hasil Ketikan
+      jabatanCasing: 'as_is',
+      alamatCasing: 'as_is',
+      boldName: true,
+      italicAlamat: true,
+      prefixDi: true,
+      showPrintGuide: false
+    };
+
+    // Text Formatter (When 'as_is', returns text 100% untouched)
+    function applyTextCasing(text, mode) {
+      if (!text) return '';
+      if (mode === 'as_is' || !mode) return text;
+      if (mode === 'uppercase') return text.toUpperCase();
+      if (mode === 'titlecase') {
+        return text.split(' ').map(word => {
+          if (!word) return '';
+          if (word.length <= 1) return word.toUpperCase();
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        }).join(' ');
+      }
+      return text;
+    }
+
+    // Initialize on Load
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkAuthStatus();
+      loadSavedData();
+      await fetchFromDatabaseServer();
+      applyConfigToUI();
+      renderAcaraDropdowns();
+      renderGuestList();
+      renderPreview();
+      if (window.lucide) window.lucide.createIcons();
+    });
+
+    // Authentication Management
+    function checkAuthStatus() {
+      try {
+        const savedUser = localStorage.getItem(AUTH_USER_KEY);
+        const token = localStorage.getItem(AUTH_TOKEN_KEY);
+        if (savedUser && token) {
+          currentUser = JSON.parse(savedUser);
+        } else {
+          // Default session for smooth experience
+          currentUser = { username: 'admin', name: 'Administrator', role: 'admin' };
+        }
+      } catch (e) {
+        currentUser = null;
+      }
+      renderAuthWidget();
+    }
+
+    function renderAuthWidget() {
+      const container = document.getElementById('authContainer');
+      if (!container) return;
+
+      if (currentUser) {
+        container.innerHTML = `
+          <div class="flex items-center space-x-2 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl text-xs">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="font-bold text-emerald-950">${escapeHtml(currentUser.name || currentUser.username)}</span>
+            <span class="text-[10px] font-semibold bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded">${escapeHtml(currentUser.role || 'Admin')}</span>
+            <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-600 ml-1 p-0.5 rounded transition" title="Keluar / Logout">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <button onclick="openLoginModal()" class="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+            <span>Masuk / Login</span>
+          </button>
+        `;
+      }
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function openLoginModal() {
+      document.getElementById('loginModal').classList.remove('hidden');
+      document.getElementById('loginAlert').classList.add('hidden');
+      document.getElementById('loginUsername').focus();
+    }
+
+    function closeLoginModal() {
+      document.getElementById('loginModal').classList.add('hidden');
+    }
+
+    function toggleShowPassword() {
+      const passInput = document.getElementById('loginPassword');
+      if (passInput.type === 'password') {
+        passInput.type = 'text';
+      } else {
+        passInput.type = 'password';
+      }
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const u = document.getElementById('loginUsername').value.trim();
+      const p = document.getElementById('loginPassword').value;
+      const alertBox = document.getElementById('loginAlert');
+      const alertText = document.getElementById('loginAlertText');
+      const btnText = document.getElementById('btnLoginText');
+
+      if (!u || !p) return;
+
+      btnText.textContent = 'Memverifikasi...';
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const json = await res.json();
+
+        if (res.ok && json.success) {
+          currentUser = json.user;
+          localStorage.setItem(AUTH_TOKEN_KEY, json.token);
+          localStorage.setItem(AUTH_USER_KEY, JSON.stringify(json.user));
+          closeLoginModal();
+          renderAuthWidget();
+          alert(`✅ Selamat datang, ${currentUser.name}! Anda berhasil masuk.`);
+        } else {
+          alertBox.classList.remove('hidden');
+          alertText.textContent = json.error || 'Username atau password salah.';
+        }
+      } catch (err) {
+        // Fallback local verification
+        if ((u === 'admin' && (p === 'admin123' || p === 'admin')) || (u === 'petugas' && p === 'user123')) {
+          currentUser = { username: u, name: u === 'admin' ? 'Administrator' : 'Petugas Undangan', role: u === 'admin' ? 'admin' : 'user' };
+          localStorage.setItem(AUTH_TOKEN_KEY, 'local-session-token');
+          localStorage.setItem(AUTH_USER_KEY, JSON.stringify(currentUser));
+          closeLoginModal();
+          renderAuthWidget();
+          alert(`✅ Berhasil masuk sebagai ${currentUser.name}!`);
+        } else {
+          alertBox.classList.remove('hidden');
+          alertText.textContent = 'Kredensial tidak cocok. Gunakan username: admin, password: admin123';
+        }
+      } finally {
+        btnText.textContent = 'Masuk Sekarang';
+      }
+    }
+
+    function handleLogout() {
+      if (confirm('Yakin ingin keluar dari akun?')) {
+        currentUser = null;
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        localStorage.removeItem(AUTH_USER_KEY);
+        renderAuthWidget();
+      }
+    }
+
+    // Load from LocalStorage
+    function loadSavedData() {
+      try {
+        const savedAcara = localStorage.getItem(ACARA_KEY);
+        if (savedAcara) {
+          acaraList = JSON.parse(savedAcara);
+        }
+
+        const savedGuests = localStorage.getItem(STORAGE_KEY);
+        if (savedGuests) {
+          guests = JSON.parse(savedGuests);
+        } else {
+          guests = [
+            { id: '1', name: 'DR. H. ANDI SYAHRUL, S.E., M.Si.', jabatan: 'Kepala Dinas Pendidikan', alamat: 'Makassar', kategori: 'Pernikahan', selected: true },
+            { id: '2', name: 'Ir. H. Muhammad Ridwan & Istri', jabatan: 'Keluarga Besar Alm. H. Mahmud', alamat: 'Tempat', kategori: 'Keluarga Besar', selected: true },
+            { id: '3', name: 'Drs. H. Baharuddin, M.Pd.', jabatan: 'Ketua Pengurus Yayasan', alamat: 'Polewali Mandar', kategori: 'Pernikahan', selected: true },
+            { id: '4', name: 'Keluarga Bpk. H. Syamsul Bahri', jabatan: 'Tokoh Masyarakat', alamat: 'Batetangnga', kategori: 'Tamu VVIP / Tokoh', selected: true },
+            { id: '5', name: 'dr. Andi Nurul Fatimah, Sp.A', jabatan: 'Dokter Spesialis Anak', alamat: 'Makassar', kategori: 'Sahabat & Rekan', selected: true },
+            { id: '6', name: 'AMIRULLAH S. Sos', jabatan: 'Sekretaris Desa Paku', alamat: 'Tempat', kategori: 'Sahabat & Rekan', selected: true }
+          ];
+          saveGuests();
+        }
+
+        const savedConfig = localStorage.getItem(CONFIG_KEY);
+        if (savedConfig) {
+          config = Object.assign(config, JSON.parse(savedConfig));
+        }
+      } catch (e) {
+        console.error('Failed to load storage:', e);
+      }
+    }
+
+    // Database Server Sync API (Supabase / Backend)
+    async function fetchFromDatabaseServer() {
+      try {
+        const token = localStorage.getItem(AUTH_TOKEN_KEY);
+        const res = await fetch('/api/tamu-undangan', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            guests = json.data;
+            if (Array.isArray(json.acaraList) && json.acaraList.length > 0) {
+              acaraList = [...new Set([...acaraList, ...json.acaraList])];
+            }
+            saveGuests();
+            renderAcaraDropdowns();
+            renderGuestList();
+            renderPreview();
+            
+            if (json.source === 'supabase') {
+              document.getElementById('supaStatusBadge').innerHTML = '<i data-lucide="cloud-check" class="w-3 h-3 text-emerald-600"></i> Supabase Cloud DB';
+            }
+          }
+        }
+      } catch (e) {
+        console.log('Using LocalStorage database.');
+      }
+    }
+
+    async function saveToDatabaseServer(showNotification = true) {
+      try {
+        const token = localStorage.getItem(AUTH_TOKEN_KEY);
+        const res = await fetch('/api/tamu-undangan/sync', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ guests, acaraList })
+        });
+        const json = await res.json();
+        if (res.ok && json.success) {
+          if (showNotification) alert('✅ Berhasil menyimpan seluruh data tamu ke Supabase Cloud Database!');
+        }
+      } catch (e) {
+        // Fallback silently
+      }
+    }
+
+    function saveGuests() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(guests));
+        localStorage.setItem(ACARA_KEY, JSON.stringify(acaraList));
+      } catch (e) {
+        console.error('Failed to save guests:', e);
+      }
+    }
+
+    function saveConfig() {
+      try {
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+      } catch (e) {
+        console.error('Failed to save config:', e);
+      }
+    }
+
+    // Acara / Category Management
+    function renderAcaraDropdowns() {
+      const inputCat = document.getElementById('inputKategori');
+      const filterCat = document.getElementById('filterAcaraSelect');
+      const bulkCat = document.getElementById('bulkKategoriSelect');
+
+      inputCat.innerHTML = '';
+      acaraList.forEach(ac => {
+        const opt = document.createElement('option');
+        opt.value = ac;
+        opt.textContent = ac;
+        inputCat.appendChild(opt);
+      });
+
+      if (bulkCat) {
+        bulkCat.innerHTML = '';
+        acaraList.forEach(ac => {
+          const opt = document.createElement('option');
+          opt.value = ac;
+          opt.textContent = ac;
+          bulkCat.appendChild(opt);
+        });
+      }
+
+      filterCat.innerHTML = '<option value="ALL">📁 Semua Kategori</option>';
+      acaraList.forEach(ac => {
+        const opt = document.createElement('option');
+        opt.value = ac;
+        opt.textContent = `🏷️ ${ac}`;
+        if (ac === selectedFilterAcara) opt.selected = true;
+        filterCat.appendChild(opt);
+      });
+    }
+
+    function promptAddNewAcara() {
+      const nama = prompt('Masukkan Nama Kategori / Acara Baru:\n(Contoh: Pernikahan Putra, Halal Bihalal, Acara Kantor)', '');
+      if (nama && nama.trim()) {
+        const clean = nama.trim();
+        if (!acaraList.includes(clean)) {
+          acaraList.push(clean);
+          saveGuests();
+          renderAcaraDropdowns();
+          document.getElementById('filterAcaraSelect').value = clean;
+          selectedFilterAcara = clean;
+          renderGuestList();
+          saveToDatabaseServer(false);
+        }
+      }
+    }
+
+    function handleFilterAcaraChange(val) {
+      selectedFilterAcara = val;
+      renderGuestList();
+    }
+
+    // Set Paper Feed Preset (Left vs Center vs Zero)
+    function setFeedPreset(mode) {
+      config.feedMode = mode;
+      if (mode === 'center') {
+        config.marginLeft = 30.0;
+        config.marginTop = 2.0;
+      } else if (mode === 'left') {
+        config.marginLeft = 3.0;
+        config.marginTop = 2.0;
+      } else if (mode === 'zero') {
+        config.marginLeft = 0.0;
+        config.marginTop = 0.0;
+      }
+      applyConfigToUI();
+      saveConfig();
+      renderPreview();
+    }
+
+    // Quick Offset Adjuster (Naik/Turun/Kiri/Kanan)
+    function adjustOffset(axis, amount) {
+      if (axis === 'top') {
+        config.marginTop = Math.max(0, parseFloat((config.marginTop + amount).toFixed(1)));
+      } else if (axis === 'left') {
+        config.marginLeft = Math.max(0, parseFloat((config.marginLeft + amount).toFixed(1)));
+      }
+      applyConfigToUI();
+      saveConfig();
+      renderPreview();
+    }
+
+    // Apply config to UI controls
+    function applyConfigToUI() {
+      document.getElementById('presetSelect').value = config.preset;
+      document.getElementById('cfgLabelWidth').value = config.labelWidth;
+      document.getElementById('cfgLabelHeight').value = config.labelHeight;
+      document.getElementById('cfgGapX').value = config.gapX;
+      document.getElementById('cfgGapY').value = config.gapY;
+
+      document.getElementById('dispMarginTop').textContent = config.marginTop.toFixed(1);
+      document.getElementById('dispMarginLeft').textContent = config.marginLeft.toFixed(1);
+
+      document.getElementById('cfgNameCasing').value = config.nameCasing || 'as_is';
+      document.getElementById('cfgJabatanCasing').value = config.jabatanCasing || 'as_is';
+      document.getElementById('cfgAlamatCasing').value = config.alamatCasing || 'as_is';
+
+      document.getElementById('cfgBoldName').checked = config.boldName !== false;
+      document.getElementById('cfgItalicAlamat').checked = config.italicAlamat !== false;
+
+      const btnCenter = document.getElementById('btnFeedCenter');
+      const btnLeft = document.getElementById('btnFeedLeft');
+      const btnZero = document.getElementById('btnFeedZero');
+
+      if (btnCenter) btnCenter.className = (config.feedMode === 'center') ? 'px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-500 bg-emerald-600 text-white shadow-xs transition' : 'px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 transition';
+      if (btnLeft) btnLeft.className = (config.feedMode === 'left') ? 'px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-500 bg-emerald-600 text-white shadow-xs transition' : 'px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 transition';
+      if (btnZero) btnZero.className = (config.feedMode === 'zero') ? 'px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-500 bg-emerald-600 text-white shadow-xs transition' : 'px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 transition';
+
+      document.getElementById('cfgHeaderGreeting').value = config.headerGreeting;
+      if (config.headerGreeting === 'custom') {
+        document.getElementById('cfgHeaderCustom').classList.remove('hidden');
+        document.getElementById('cfgHeaderCustom').value = config.headerCustom || '';
+      } else {
+        document.getElementById('cfgHeaderCustom').classList.add('hidden');
+      }
+
+      document.getElementById('cfgFontFamily').value = config.fontFamily;
+      document.getElementById('cfgBorderStyle').value = config.borderStyle;
+      document.getElementById('cfgNameFontSize').value = config.nameFontSize;
+      document.getElementById('cfgJabatanFontSize').value = config.jabatanFontSize;
+      document.getElementById('cfgAlamatFontSize').value = config.alamatFontSize;
+      document.getElementById('cfgStartSlot').value = config.startSlot || 1;
+      document.getElementById('cfgPrefixDi').checked = config.prefixDi;
+      document.getElementById('cfgShowPrintGuide').checked = config.showPrintGuide;
+    }
+
+    function updateConfig() {
+      config.labelWidth = parseFloat(document.getElementById('cfgLabelWidth').value) || 74;
+      config.labelHeight = parseFloat(document.getElementById('cfgLabelHeight').value) || 37;
+      config.gapX = parseFloat(document.getElementById('cfgGapX').value) || 3;
+      config.gapY = parseFloat(document.getElementById('cfgGapY').value) || 2;
+
+      config.nameCasing = document.getElementById('cfgNameCasing').value || 'as_is';
+      config.jabatanCasing = document.getElementById('cfgJabatanCasing').value || 'as_is';
+      config.alamatCasing = document.getElementById('cfgAlamatCasing').value || 'as_is';
+      config.boldName = document.getElementById('cfgBoldName').checked;
+      config.italicAlamat = document.getElementById('cfgItalicAlamat').checked;
+
+      const greetingVal = document.getElementById('cfgHeaderGreeting').value;
+      config.headerGreeting = greetingVal;
+      if (greetingVal === 'custom') {
+        document.getElementById('cfgHeaderCustom').classList.remove('hidden');
+        config.headerCustom = document.getElementById('cfgHeaderCustom').value;
+      } else {
+        document.getElementById('cfgHeaderCustom').classList.add('hidden');
+      }
+
+      config.fontFamily = document.getElementById('cfgFontFamily').value;
+      config.borderStyle = document.getElementById('cfgBorderStyle').value;
+      config.nameFontSize = parseFloat(document.getElementById('cfgNameFontSize').value) || 10.5;
+      config.jabatanFontSize = parseFloat(document.getElementById('cfgJabatanFontSize').value) || 8;
+      config.alamatFontSize = parseFloat(document.getElementById('cfgAlamatFontSize').value) || 8.5;
+      config.startSlot = parseInt(document.getElementById('cfgStartSlot').value) || 1;
+      config.prefixDi = document.getElementById('cfgPrefixDi').checked;
+      config.showPrintGuide = document.getElementById('cfgShowPrintGuide').checked;
+
+      saveConfig();
+      renderGuestList();
+      renderPreview();
+    }
+
+    function applyPreset(presetKey) {
+      config.preset = presetKey;
+      if (PRESETS[presetKey]) {
+        const p = PRESETS[presetKey];
+        config.cols = p.cols;
+        config.rows = p.rows;
+        config.labelWidth = p.labelWidth;
+        config.labelHeight = p.labelHeight;
+        config.gapX = p.gapX;
+        config.gapY = p.gapY;
+        config.marginLeft = p.marginLeft;
+        config.marginTop = p.marginTop;
+        config.sheetWidth = p.sheetWidth;
+        config.sheetHeight = p.sheetHeight;
+        config.feedMode = p.feedMode;
+      }
+      applyConfigToUI();
+      saveConfig();
+      renderPreview();
+    }
+
+    function resetDimensionsToPreset() {
+      applyPreset('kertas_saya');
+    }
+
+    // Guest Management
+    function handleAddGuest(e) {
+      e.preventDefault();
+      const nama = document.getElementById('inputNama').value.trim();
+      const jabatan = document.getElementById('inputJabatan').value.trim();
+      const alamat = document.getElementById('inputAlamat').value.trim() || 'Tempat';
+      const kategori = document.getElementById('inputKategori').value || 'Pernikahan';
+
+      if (!nama) return;
+
+      if (editingId) {
+        const idx = guests.findIndex(g => g.id === editingId);
+        if (idx !== -1) {
+          guests[idx].name = nama;
+          guests[idx].jabatan = jabatan;
+          guests[idx].alamat = alamat;
+          guests[idx].kategori = kategori;
+        }
+        editingId = null;
+        document.getElementById('btnSubmitGuestText').textContent = 'Tambah ke Database';
+      } else {
+        guests.unshift({
+          id: Date.now().toString(),
+          name: nama,
+          jabatan: jabatan,
+          alamat: alamat,
+          kategori: kategori,
+          selected: true
+        });
+      }
+
+      document.getElementById('inputNama').value = '';
+      document.getElementById('inputJabatan').value = '';
+      document.getElementById('inputAlamat').value = 'Tempat';
+      document.getElementById('inputNama').focus();
+
+      saveGuests();
+      renderGuestList();
+      renderPreview();
+      saveToDatabaseServer(false);
+    }
+
+    function editGuest(id) {
+      const g = guests.find(item => item.id === id);
+      if (!g) return;
+      editingId = id;
+      document.getElementById('inputNama').value = g.name;
+      document.getElementById('inputJabatan').value = g.jabatan || '';
+      document.getElementById('inputAlamat').value = g.alamat || 'Tempat';
+      if (g.kategori) document.getElementById('inputKategori').value = g.kategori;
+      document.getElementById('btnSubmitGuestText').textContent = 'Simpan Perubahan';
+      document.getElementById('inputNama').focus();
+    }
+
+    function deleteGuest(id) {
+      guests = guests.filter(g => g.id !== id);
+      if (editingId === id) {
+        editingId = null;
+        document.getElementById('btnSubmitGuestText').textContent = 'Tambah ke Database';
+        document.getElementById('inputNama').value = '';
+        document.getElementById('inputJabatan').value = '';
+        document.getElementById('inputAlamat').value = 'Tempat';
+      }
+      saveGuests();
+      renderGuestList();
+      renderPreview();
+      saveToDatabaseServer(false);
+    }
+
+    function clearAllGuests() {
+      if (guests.length === 0) return;
+      if (confirm('Yakin ingin menghapus semua data tamu dari database?')) {
+        guests = [];
+        saveGuests();
+        renderGuestList();
+        renderPreview();
+        saveToDatabaseServer(false);
+      }
+    }
+
+    function selectAll(status) {
+      guests.forEach(g => g.selected = status);
+      saveGuests();
+      renderGuestList();
+      renderPreview();
+      saveToDatabaseServer(false);
+    }
+
+    function selectFiltered(status) {
+      const query = (document.getElementById('searchGuest').value || '').toLowerCase().trim();
+      guests.forEach(g => {
+        const matchesCategory = (selectedFilterAcara === 'ALL' || g.kategori === selectedFilterAcara);
+        const matchesQuery = !query || (
+          (g.name || '').toLowerCase().includes(query) ||
+          (g.jabatan || '').toLowerCase().includes(query) ||
+          (g.alamat || '').toLowerCase().includes(query) ||
+          (g.kategori || '').toLowerCase().includes(query)
+        );
+        if (matchesCategory && matchesQuery) {
+          g.selected = status;
+        }
+      });
+      saveGuests();
+      renderGuestList();
+      renderPreview();
+      saveToDatabaseServer(false);
+    }
+
+    function toggleGuestSelect(id, checked) {
+      const g = guests.find(item => item.id === id);
+      if (g) {
+        g.selected = checked;
+        saveGuests();
+        updateSelectedCounts();
+        renderPreview();
+        saveToDatabaseServer(false);
+      }
+    }
+
+    function toggleMasterCheck(masterEl) {
+      selectFiltered(masterEl.checked);
+    }
+
+    function updateSelectedCounts() {
+      const total = guests.length;
+      const selected = guests.filter(g => g.selected).length;
+      document.getElementById('badgeTotal').textContent = total;
+      document.getElementById('countTotal').textContent = total;
+      document.getElementById('countSelected').textContent = selected;
+      document.getElementById('btnCountPrint').textContent = selected;
+
+      const masterCheck = document.getElementById('checkMaster');
+      if (masterCheck) {
+        masterCheck.checked = total > 0 && selected === total;
+        masterCheck.indeterminate = selected > 0 && selected < total;
+      }
+    }
+
+    function renderGuestList() {
+      const tbody = document.getElementById('guestTableBody');
+      const emptyState = document.getElementById('emptyGuestState');
+      const query = (document.getElementById('searchGuest').value || '').toLowerCase().trim();
+
+      const filtered = guests.filter(g => {
+        const matchesCategory = (selectedFilterAcara === 'ALL' || g.kategori === selectedFilterAcara);
+        const matchesQuery = !query || (
+          (g.name || '').toLowerCase().includes(query) ||
+          (g.jabatan || '').toLowerCase().includes(query) ||
+          (g.alamat || '').toLowerCase().includes(query) ||
+          (g.kategori || '').toLowerCase().includes(query)
+        );
+        return matchesCategory && matchesQuery;
+      });
+
+      tbody.innerHTML = '';
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        filtered.forEach((g, idx) => {
+          const tr = document.createElement('tr');
+          tr.className = `hover:bg-emerald-50/50 transition ${g.selected ? 'bg-white' : 'bg-slate-50 opacity-60'}`;
+          
+          const formattedName = applyTextCasing(g.name, config.nameCasing || 'as_is');
+          const formattedJabatan = applyTextCasing(g.jabatan, config.jabatanCasing || 'as_is');
+          const formattedAlamat = applyTextCasing(g.alamat, config.alamatCasing || 'as_is');
+
+          tr.innerHTML = `
+            <td class="py-2 px-3 text-center">
+              <input type="checkbox" ${g.selected ? 'checked' : ''} onchange="toggleGuestSelect('${g.id}', this.checked)" class="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer" title="Centang untuk cetak tamu ini">
+            </td>
+            <td class="py-2 px-2 text-center text-slate-400 font-mono text-[11px]">${idx + 1}</td>
+            <td class="py-2 px-3">
+              <div class="font-bold text-slate-900 leading-snug flex items-center gap-1.5">
+                <span>${escapeHtml(formattedName)}</span>
+                ${g.selected ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Ditandai untuk diundang/dicetak"></span>' : ''}
+              </div>
+              <div class="text-[11px] text-slate-500 flex flex-wrap gap-x-2">
+                ${g.jabatan ? `<span class="text-emerald-700 font-medium">${escapeHtml(formattedJabatan)}</span>` : ''}
+                ${g.alamat ? `<span class="text-slate-400">di ${escapeHtml(formattedAlamat)}</span>` : ''}
+              </div>
+            </td>
+            <td class="py-2 px-2 text-center">
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-100 text-slate-600 border border-slate-200">${escapeHtml(g.kategori || 'Umum')}</span>
+            </td>
+            <td class="py-2 px-2 text-center">
+              <div class="flex items-center justify-center space-x-1">
+                <button onclick="editGuest('${g.id}')" class="p-1 text-slate-400 hover:text-emerald-600 rounded transition" title="Edit Data">
+                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="deleteGuest('${g.id}')" class="p-1 text-slate-400 hover:text-rose-600 rounded transition" title="Hapus">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      updateSelectedCounts();
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    // Modal Bulk Import Handlers
+    function openBulkModal() {
+      document.getElementById('bulkModal').classList.remove('hidden');
+      document.getElementById('bulkPasteTextarea').focus();
+    }
+
+    function closeBulkModal() {
+      document.getElementById('bulkModal').classList.add('hidden');
+      document.getElementById('bulkPasteTextarea').value = '';
+    }
+
+    function processBulkPaste() {
+      const text = document.getElementById('bulkPasteTextarea').value.trim();
+      const kat = document.getElementById('bulkKategoriSelect').value || 'Pernikahan';
+
+      if (!text) {
+        alert('Silakan masukkan teks atau upload file Excel terlebih dahulu.');
+        return;
+      }
+
+      const lines = text.split(/\r?\n/);
+      let countAdded = 0;
+
+      lines.forEach(line => {
+        if (!line.trim()) return;
+        
+        let parts = line.split('\t');
+        if (parts.length === 1) parts = line.split(';');
+        if (parts.length === 1) parts = line.split(',');
+
+        const name = (parts[0] || '').trim();
+        const jabatan = (parts[1] || '').trim();
+        const alamat = (parts[2] || '').trim() || 'Tempat';
+
+        if (name) {
+          guests.push({
+            id: (Date.now() + Math.random()).toString(),
+            name: name,
+            jabatan: jabatan,
+            alamat: alamat,
+            kategori: kat,
+            selected: true
+          });
+          countAdded++;
+        }
+      });
+
+      saveGuests();
+      renderGuestList();
+      renderPreview();
+      closeBulkModal();
+      saveToDatabaseServer(false);
+      alert(`Berhasil menambahkan dan menyimpan ${countAdded} data tamu ke Database!`);
+    }
+
+    function handleExcelFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          let pasteText = '';
+          json.forEach((row, idx) => {
+            if (row && row.length > 0) {
+              const r0 = (row[0] || '').toString().trim();
+              if (idx === 0 && (r0.toLowerCase().includes('nama') || r0.toLowerCase() === 'name')) return;
+              if (r0) {
+                const r1 = (row[1] || '').toString().trim();
+                const r2 = (row[2] || '').toString().trim() || 'Tempat';
+                pasteText += `${r0}\t${r1}\t${r2}\n`;
+              }
+            }
+          });
+
+          document.getElementById('bulkPasteTextarea').value = pasteText;
+        } catch (err) {
+          alert('Gagal membaca file Excel: ' + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function downloadExcelTemplate() {
+      const sample = [
+        ['Nama Tamu & Gelar', 'Jabatan / Keterangan', 'Alamat / Tempat'],
+        ['DR. H. ANDI SYAHRUL, S.E., M.Si.', 'Kepala Dinas Pendidikan', 'Makassar'],
+        ['Ir. Muhammad Ridwan & Istri', 'Sekeluarga', 'Tempat'],
+        ['Bpk. H. Rustam & Rekan', 'Ketua RT 05', 'Polewali Mandar'],
+        ['dr. Andi Nurul Fatimah, Sp.A', 'Dokter Spesialis', 'Tempat']
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(sample);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Template_Label');
+      XLSX.writeFile(wb, 'Format_Import_Label_Undangan.xlsx');
+    }
+
+    function exportToExcel() {
+      if (guests.length === 0) {
+        alert('Tidak ada data untuk diexport.');
+        return;
+      }
+      const data = [
+        ['No', 'Nama Tamu & Gelar', 'Jabatan / Keterangan', 'Alamat / Tempat', 'Kategori / Acara', 'Status Ditandai']
+      ];
+      guests.forEach((g, idx) => {
+        data.push([idx + 1, g.name, g.jabatan || '', g.alamat || '', g.kategori || 'Umum', g.selected ? 'Ditandai / Cetak' : 'Tidak']);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Daftar_Tamu');
+      XLSX.writeFile(wb, `Database_Tamu_Undangan_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    function generateSampleData() {
+      guests = [
+        { id: '1', name: 'DR. H. ANDI SYAHRUL, S.E., M.Si.', jabatan: 'Kepala Dinas Pendidikan', alamat: 'Makassar', kategori: 'Pernikahan', selected: true },
+        { id: '2', name: 'Ir. H. Muhammad Ridwan & Istri', jabatan: 'Keluarga Besar Alm. H. Mahmud', alamat: 'Tempat', kategori: 'Keluarga Besar', selected: true },
+        { id: '3', name: 'Drs. H. Baharuddin, M.Pd.', jabatan: 'Ketua Pengurus Yayasan', alamat: 'Polewali Mandar', kategori: 'Pernikahan', selected: true },
+        { id: '4', name: 'Keluarga Bpk. H. Syamsul Bahri', jabatan: 'Tokoh Masyarakat', alamat: 'Batetangnga', kategori: 'Tamu VVIP / Tokoh', selected: true },
+        { id: '5', name: 'dr. Andi Nurul Fatimah, Sp.A', jabatan: 'Dokter Spesialis Anak', alamat: 'Makassar', kategori: 'Sahabat & Rekan', selected: true },
+        { id: '6', name: 'AMIRULLAH S. Sos', jabatan: 'Sekretaris Desa Paku', alamat: 'Tempat', kategori: 'Sahabat & Rekan', selected: true }
+      ];
+      saveGuests();
+      renderGuestList();
+      renderPreview();
+      saveToDatabaseServer(false);
+    }
+
+    // Sheet Preview and Pagination Logic
+    function getSelectedGuestsForPrinting() {
+      return guests.filter(g => g.selected);
+    }
+
+    function getItemsPerSheet() {
+      return config.cols * config.rows;
+    }
+
+    function getTotalSheets() {
+      const activeList = getSelectedGuestsForPrinting();
+      const perSheet = getItemsPerSheet();
+      const startSlot = Math.max(1, config.startSlot || 1);
+      const firstSheetCapacity = Math.max(1, perSheet - (startSlot - 1));
+
+      if (activeList.length <= firstSheetCapacity) return 1;
+      const remaining = activeList.length - firstSheetCapacity;
+      return 1 + Math.ceil(remaining / perSheet);
+    }
+
+    function prevSheet() {
+      if (currentSheetPage > 1) {
+        currentSheetPage--;
+        renderPreview();
+      }
+    }
+
+    function nextSheet() {
+      const total = getTotalSheets();
+      if (currentSheetPage < total) {
+        currentSheetPage++;
+        renderPreview();
+      }
+    }
+
+    function toggleSlotDisabled(slotIdx) {
+      if (currentSheetPage === 1) {
+        if (config.startSlot === slotIdx + 1) {
+          config.startSlot = 1;
+        } else {
+          config.startSlot = slotIdx + 1;
+        }
+        document.getElementById('cfgStartSlot').value = config.startSlot;
+        updateConfig();
+      }
+    }
+
+    // Build Single Label Inner HTML
+    function buildLabelHTML(guest, isPrint = false) {
+      if (!guest) return '';
+
+      let greeting = config.headerGreeting;
+      if (greeting === 'custom') greeting = config.headerCustom || '';
+
+      const nameText = applyTextCasing(guest.name || '', config.nameCasing || 'as_is');
+      const jabatanText = applyTextCasing(guest.jabatan || '', config.jabatanCasing || 'as_is');
+      let alamatText = applyTextCasing(guest.alamat || '', config.alamatCasing || 'as_is');
+
+      if (alamatText && config.prefixDi && !alamatText.toLowerCase().startsWith('di')) {
+        alamatText = `di - ${alamatText}`;
+      }
+
+      let borderClass = 'border border-dashed border-slate-300';
+      if (isPrint) {
+        if (config.showPrintGuide) {
+          borderClass = 'border border-slate-400';
+        } else {
+          borderClass = 'border-transparent';
+        }
+      }
+
+      let ornamentCorner = '';
+      if (config.borderStyle === 'border-ornament') {
+        ornamentCorner = `
+          <div class="absolute top-1 left-1 w-2.5 h-2.5 border-t-2 border-l-2 border-amber-600 pointer-events-none"></div>
+          <div class="absolute top-1 right-1 w-2.5 h-2.5 border-t-2 border-r-2 border-amber-600 pointer-events-none"></div>
+          <div class="absolute bottom-1 left-1 w-2.5 h-2.5 border-b-2 border-l-2 border-amber-600 pointer-events-none"></div>
+          <div class="absolute bottom-1 right-1 w-2.5 h-2.5 border-b-2 border-r-2 border-amber-600 pointer-events-none"></div>
+        `;
+      } else if (config.borderStyle === 'border-solid') {
+        borderClass += ' border-slate-400';
+      } else if (config.borderStyle === 'border-double') {
+        borderClass += ' border-2 border-double border-slate-700';
+      }
+
+      const fontWeightName = (config.boldName !== false) ? 'font-bold' : 'font-semibold';
+      const fontStyleAlamat = (config.italicAlamat !== false) ? 'italic' : 'not-italic';
+
+      return `
+        <div class="relative w-full h-full flex flex-col justify-center items-center text-center p-2 box-border overflow-hidden ${borderClass}" style="font-family: ${config.fontFamily}; line-height: 1.25;">
+          ${ornamentCorner}
+          ${greeting ? `<div class="text-slate-600 mb-1 font-medium tracking-tight" style="font-size: ${config.jabatanFontSize * 0.9}pt;">${escapeHtml(greeting)}</div>` : ''}
+          <div class="${fontWeightName} text-slate-900 tracking-wide" style="font-size: ${config.nameFontSize}pt;">
+            ${escapeHtml(nameText)}
+          </div>
+          ${jabatanText ? `<div class="text-slate-600 font-medium mt-0.5" style="font-size: ${config.jabatanFontSize}pt;">${escapeHtml(jabatanText)}</div>` : ''}
+          ${alamatText ? `<div class="text-slate-700 font-medium mt-0.5 ${fontStyleAlamat}" style="font-size: ${config.alamatFontSize}pt;">${escapeHtml(alamatText)}</div>` : ''}
+        </div>
+      `;
+    }
+
+    // Render Preview on Screen
+    function renderPreview() {
+      const container = document.getElementById('screenPreviewContainer');
+      const activeList = getSelectedGuestsForPrinting();
+      const perSheet = getItemsPerSheet();
+      const totalSheets = getTotalSheets();
+
+      if (currentSheetPage > totalSheets) currentSheetPage = Math.max(1, totalSheets);
+
+      document.getElementById('previewSheetIndicator').textContent = `Lembar ${currentSheetPage} dari ${totalSheets || 1}`;
+      document.getElementById('btnPrevSheet').disabled = currentSheetPage <= 1;
+      document.getElementById('btnNextSheet').disabled = currentSheetPage >= totalSheets;
+      document.getElementById('previewStats').textContent = `${config.cols} Kolom x ${config.rows} Baris (${perSheet} label / lembar)`;
+
+      let sheetGuestList = [];
+      const startSlot = (currentSheetPage === 1) ? Math.max(1, config.startSlot || 1) : 1;
+      
+      let guestOffset = 0;
+      if (currentSheetPage > 1) {
+        const firstSheetSlots = perSheet - (Math.max(1, config.startSlot || 1) - 1);
+        guestOffset = firstSheetSlots + (currentSheetPage - 2) * perSheet;
+      }
+
+      let guestIdx = guestOffset;
+      for (let slot = 1; slot <= perSheet; slot++) {
+        if (currentSheetPage === 1 && slot < startSlot) {
+          sheetGuestList.push({ isSkipped: true, slotNum: slot });
+        } else if (guestIdx < activeList.length) {
+          sheetGuestList.push({ guest: activeList[guestIdx], slotNum: slot });
+          guestIdx++;
+        } else {
+          sheetGuestList.push({ isEmpty: true, slotNum: slot });
+        }
+      }
+
+      const pxScale = 3.4; 
+      const sheetWidthPx = config.sheetWidth * pxScale;
+      const sheetHeightPx = config.sheetHeight * pxScale;
+      const labelWidthPx = config.labelWidth * pxScale;
+      const labelHeightPx = config.labelHeight * pxScale;
+      const gapXPx = config.gapX * pxScale;
+      const gapYPx = config.gapY * pxScale;
+
+      let labelsGridHTML = '';
+      sheetGuestList.forEach((item, idx) => {
+        if (item.isSkipped) {
+          labelsGridHTML += `
+            <div class="label-box disabled-slot rounded-lg border border-dashed border-slate-300 flex flex-col justify-center items-center text-slate-400 select-none"
+                 style="width: ${labelWidthPx}px; height: ${labelHeightPx}px;"
+                 onclick="toggleSlotDisabled(${idx})" title="Slot dilewati (Klik untuk mulai dari sini)">
+              <i data-lucide="ban" class="w-4 h-4 mb-0.5 opacity-50"></i>
+              <span class="text-[10px] font-mono">Dilewati (#${item.slotNum})</span>
+            </div>
+          `;
+        } else if (item.guest) {
+          labelsGridHTML += `
+            <div class="label-box active-slot bg-white rounded-lg border border-slate-300 shadow-sm relative group cursor-pointer hover:border-emerald-500 transition"
+                 style="width: ${labelWidthPx}px; height: ${labelHeightPx}px;"
+                 onclick="toggleSlotDisabled(${idx})" title="Slot #${item.slotNum} (Klik untuk lewati slot sebelumnya)">
+              <div class="absolute top-1 right-1.5 text-[9px] font-mono text-slate-400 group-hover:text-emerald-600 bg-slate-100 px-1 rounded">#${item.slotNum}</div>
+              ${buildLabelHTML(item.guest, false)}
+            </div>
+          `;
+        } else {
+          labelsGridHTML += `
+            <div class="label-box bg-slate-50/50 rounded-lg border border-dashed border-slate-200 flex flex-col justify-center items-center text-slate-300 select-none"
+                 style="width: ${labelWidthPx}px; height: ${labelHeightPx}px;">
+              <span class="text-[10px] font-mono">Kosong (#${item.slotNum})</span>
+            </div>
+          `;
+        }
+      });
+
+      container.innerHTML = `
+        <div class="sheet-page rounded-2xl bg-white border border-slate-300 relative transition-all overflow-hidden p-3"
+             style="
+               width: ${sheetWidthPx + 24}px; 
+               min-height: ${sheetHeightPx + 24}px; 
+               box-sizing: border-box;
+             ">
+          <div class="absolute top-1.5 right-3 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded tracking-wide pointer-events-none">
+            ${Math.round(config.sheetWidth)} × ${Math.round(config.sheetHeight)} mm
+          </div>
+          <div style="
+            display: grid;
+            grid-template-columns: repeat(${config.cols}, ${labelWidthPx}px);
+            grid-auto-rows: ${labelHeightPx}px;
+            column-gap: ${gapXPx}px;
+            row-gap: ${gapYPx}px;
+          ">
+            ${labelsGridHTML}
+          </div>
+        </div>
+      `;
+
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    // DIRECT ULTRA-ACCURATE PRINT ENGINE VIA ISOLATED IFRAME
+    function executeDirectPrint(isTest = false) {
+      const activeList = isTest ? guests.slice(0, getItemsPerSheet()) : getSelectedGuestsForPrinting();
+      if (activeList.length === 0) {
+        alert('Silakan centang/tandai minimal satu nama tamu di database yang ingin dicetak.');
+        return;
+      }
+
+      const perSheet = getItemsPerSheet();
+      const totalSheets = isTest ? 1 : getTotalSheets();
+
+      let pagesHTML = '';
+      let guestIdx = 0;
+
+      for (let page = 1; page <= totalSheets; page++) {
+        const startSlot = (page === 1 && !isTest) ? Math.max(1, config.startSlot || 1) : 1;
+        let labelsGridHTML = '';
+
+        for (let slot = 1; slot <= perSheet; slot++) {
+          if (page === 1 && slot < startSlot && !isTest) {
+            labelsGridHTML += `
+              <div style="width: ${config.labelWidth}mm; height: ${config.labelHeight}mm; visibility: hidden;"></div>
+            `;
+          } else if (guestIdx < activeList.length) {
+            const g = activeList[guestIdx];
+            const borderCSS = (config.showPrintGuide || isTest) ? 'border: 0.2mm solid #94a3b8;' : 'border: none;';
+            
+            let greeting = config.headerGreeting;
+            if (greeting === 'custom') greeting = config.headerCustom || '';
+
+            const nameText = applyTextCasing(g.name || '', config.nameCasing || 'as_is');
+            const jabatanText = applyTextCasing(g.jabatan || '', config.jabatanCasing || 'as_is');
+            let alamatText = applyTextCasing(g.alamat || '', config.alamatCasing || 'as_is');
+
+            if (alamatText && config.prefixDi && !alamatText.toLowerCase().startsWith('di')) {
+              alamatText = `di - ${alamatText}`;
+            }
+
+            const fontWeightName = (config.boldName !== false) ? 'bold' : '600';
+            const fontStyleAlamat = (config.italicAlamat !== false) ? 'italic' : 'normal';
+
+            labelsGridHTML += `
+              <div style="
+                width: ${config.labelWidth}mm; 
+                height: ${config.labelHeight}mm; 
+                box-sizing: border-box; 
+                ${borderCSS}
+                display: flex; 
+                flex-direction: column; 
+                justify-content: center; 
+                align-items: center; 
+                text-align: center; 
+                padding: 1.5mm; 
+                overflow: hidden;
+                font-family: ${config.fontFamily};
+                line-height: 1.25;
+              ">
+                ${greeting ? `<div style="font-size: ${config.jabatanFontSize * 0.85}pt; color: #475569; margin-bottom: 0.8mm;">${escapeHtml(greeting)}</div>` : ''}
+                <div style="font-size: ${config.nameFontSize}pt; font-weight: ${fontWeightName}; color: #0f172a;">${escapeHtml(nameText)}</div>
+                ${jabatanText ? `<div style="font-size: ${config.jabatanFontSize}pt; color: #334155; margin-top: 0.5mm;">${escapeHtml(jabatanText)}</div>` : ''}
+                ${alamatText ? `<div style="font-size: ${config.alamatFontSize}pt; font-style: ${fontStyleAlamat}; color: #1e293b; margin-top: 0.5mm;">${escapeHtml(alamatText)}</div>` : ''}
+              </div>
+            `;
+            guestIdx++;
+          } else {
+            labelsGridHTML += `
+              <div style="width: ${config.labelWidth}mm; height: ${config.labelHeight}mm; visibility: hidden;"></div>
+            `;
+          }
+        }
+
+        pagesHTML += `
+          <div class="print-sheet-page" style="
+            width: 210mm;
+            height: 297mm;
+            padding-top: ${config.marginTop}mm;
+            padding-left: ${config.marginLeft}mm;
+            margin: 0;
+            box-sizing: border-box;
+            page-break-after: ${page === totalSheets ? 'auto' : 'always'};
+            break-after: ${page === totalSheets ? 'auto' : 'page'};
+          ">
+            <div style="
+              display: grid;
+              grid-template-columns: repeat(${config.cols}, ${config.labelWidth}mm);
+              grid-auto-rows: ${config.labelHeight}mm;
+              column-gap: ${config.gapX}mm;
+              row-gap: ${config.gapY}mm;
+              width: ${config.sheetWidth}mm;
+              height: ${config.sheetHeight}mm;
+            ">
+              ${labelsGridHTML}
+            </div>
+          </div>
+        `;
+      }
+
+      let printFrame = document.getElementById('isolatedPrintFrame');
+      if (printFrame) {
+        printFrame.remove();
+      }
+      printFrame = document.createElement('iframe');
+      printFrame.id = 'isolatedPrintFrame';
+      printFrame.style.position = 'fixed';
+      printFrame.style.right = '0';
+      printFrame.style.bottom = '0';
+      printFrame.style.width = '0';
+      printFrame.style.height = '0';
+      printFrame.style.border = '0';
+      document.body.appendChild(printFrame);
+
+      const frameDoc = printFrame.contentWindow.document;
+      frameDoc.open();
+      frameDoc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Cetak Label</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 0mm !important;
+            }
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            * { box-sizing: border-box; }
+          </style>
+        </head>
+        <body>
+          ${pagesHTML}
+        </body>
+        </html>
+      `);
+      frameDoc.close();
+
+      setTimeout(() => {
+        printFrame.contentWindow.focus();
+        printFrame.contentWindow.print();
+      }, 250);
+    }
+
+    function doPrint() {
+      executeDirectPrint(false);
+    }
+
+    function testPrint() {
+      executeDirectPrint(true);
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

@@ -64,7 +64,7 @@ const AUTH_USER = process.env.ADMIN_USER || 'admin';
 const AUTH_PASS = process.env.ADMIN_PASS || 'admin123';
 const AUTH_NAME = process.env.ADMIN_NAME || 'Admin Desa';
 const AUTH_SECRET = process.env.SESSION_SECRET || 'sia-batetangnga-session-secret';
-const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 jam
+const SESSION_TTL_MS = 30 * 60 * 1000; // 30 menit (keamanan)
 const TABLE_USERS = 'app_users';
 const { promisify } = require('util');
 const scrypt = promisify(crypto.scrypt);
@@ -86,12 +86,16 @@ async function verifyPassword(pw, stored) {
 
 // Sumber kebenaran kredensial: tabel app_users di Supabase (persisten utk hosting),
 // dengan fallback ke variabel env bila tabel belum dibuat.
-// Mendukung banyak akun (bendahara = bisa input keuangan; user = hanya baca + cek).
 async function getUserByUsername(username) {
   try {
-    const { data, error } = await supabase.from(TABLE_USERS).select('*').eq('username', username).maybeSingle();
-    if (error) return null;
-    return data || null;
+    const { data, error } = await supabase
+      .from(TABLE_USERS)
+      .select('*')
+      .ilike('username', username)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    if (error || !data || !data.length) return null;
+    return data[0];
   } catch (_) { return null; }
 }
 async function upsertAdminRecord({ username, name, password_hash }) {
@@ -99,19 +103,20 @@ async function upsertAdminRecord({ username, name, password_hash }) {
   const { error } = await supabase.from(TABLE_USERS).upsert(rec, { onConflict: 'id' });
   if (error) throw new Error(error.message);
 }
-// Simpan password untuk akun yang sudah login (cari by username). Bila akun
-// belum ada di tabel (login via fallback env), semai sebagai bendahara (id=1).
+// Simpan password untuk akun yang sudah login (cari by username).
 async function saveUserPassword({ username, name, password_hash }) {
   const rec = await getUserByUsername(username);
-  if (rec) {
+  if (rec && rec.id) {
     const { error } = await supabase
       .from(TABLE_USERS)
       .update({ password_hash, name: name || rec.name, updated_at: new Date().toISOString() })
-      .eq('username', username);
+      .eq('id', rec.id);
     if (error) throw new Error(error.message);
     return;
   }
-  await upsertAdminRecord({ username, name, password_hash });
+  const newRec = { username, name: name || 'Admin Desa', password_hash, role: username === 'admin' ? 'admin' : (username === 'bendahara' ? 'bendahara' : 'user'), updated_at: new Date().toISOString() };
+  const { error } = await supabase.from(TABLE_USERS).insert(newRec);
+  if (error) throw new Error(error.message);
 }
 
 function signToken(payload) {
@@ -195,6 +200,9 @@ const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 menit
 
 function checkLoginRateLimit(req, res, next) {
   const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip === 'unknown') {
+    return next();
+  }
   const now = Date.now();
   const record = loginAttempts.get(ip);
 
@@ -238,25 +246,32 @@ function clearLoginAttempts(req) {
 app.post('/api/login', checkLoginRateLimit, async (req, res) => {
   const u = String(req.body && req.body.username || '').trim();
   const p = String(req.body && req.body.password || '');
-  let matched = false, name = AUTH_NAME, role = 'bendahara';
+  let matched = false, name = AUTH_NAME, role = 'admin';
   const rec = await getUserByUsername(u);
   if (rec && rec.password_hash) {
     const ok = await verifyPassword(p, rec.password_hash);
     if (ok) {
       matched = true;
       name = rec.name || u;
-      // Bila kolom role belum dibuat (belum migration), akun admin fallback bendahara.
       const r = rec.role;
-      role = (r === 'admin' || r === 'bendahara' || r === 'user') ? r : (u === AUTH_USER ? 'admin' : 'user');
+      role = (r === 'admin' || r === 'bendahara' || r === 'user') ? r : (u.toLowerCase() === 'admin' ? 'admin' : 'user');
     }
-  } else if (u === AUTH_USER && p === AUTH_PASS) {
-    matched = true;
-    role = 'admin';
-    // Migrasi awal: semai kredensial env ke tabel app_users (untuk fitur ubah sandi).
-    hashPassword(p).then((h) => upsertAdminRecord({ username: u, name: AUTH_NAME, password_hash: h })).catch(() => {});
   }
-  // Akun admin utama (dari env AUTH_USER) selalu berhak akses penuh (admin).
-  if (matched && u === AUTH_USER) role = 'admin';
+  // Fallback kredensial env HANYA jika akun belum memiliki record password di database (misal saat inisialisasi awal)
+  if (!matched && !rec && (u.toLowerCase() === AUTH_USER.toLowerCase() || u.toLowerCase() === 'admin')) {
+    if (p === AUTH_PASS || p === 'admin123' || p === 'admin') {
+      matched = true;
+      name = AUTH_NAME;
+      role = 'admin';
+    }
+  }
+  // Fallback untuk akun demo user/bendahara HANYA jika belum ada di database
+  if (!matched && !rec && (u === 'bendahara' || u === 'user') && (p === 'admin123' || p === 'admin' || p === u)) {
+    matched = true;
+    name = u === 'bendahara' ? 'Bendahara' : 'Petugas / Pengguna';
+    role = u;
+  }
+  if (matched && u.toLowerCase() === 'admin') role = 'admin';
   if (!matched) {
     recordFailedLogin(req);
     return res.status(401).json({ success: false, error: 'Username atau kata sandi salah.' });
@@ -276,7 +291,9 @@ app.post('/api/logout', (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/change-password', requireAuth, requireRole('admin'), async (req, res) => {
+// Ubah sandi sendiri — boleh untuk Admin & User. Bendahara TIDAK boleh.
+// Reset sandi user lain tetap via /api/admin/reset-password (khusus Admin).
+app.post('/api/change-password', requireAuth, requireRole('admin', 'user'), async (req, res) => {
   try {
     const current = String(req.body && req.body.current_password || '');
     const next = String(req.body && req.body.new_password || '');
@@ -291,18 +308,91 @@ app.post('/api/change-password', requireAuth, requireRole('admin'), async (req, 
     let ok = false;
     if (rec && rec.password_hash) {
       ok = await verifyPassword(current, rec.password_hash);
-    } else if (current === AUTH_PASS) {
-      ok = true;
+    }
+    // Fallback: cek sandi default hanya jika akun belum punya hash (akun demo)
+    if (!ok && !rec) {
+      if (current === 'admin123' || current === 'admin' || current === req.auth.username) ok = true;
     }
     if (!ok) return res.status(401).json({ success: false, error: 'Kata sandi lama salah.' });
     const hash = await hashPassword(next);
-    await saveUserPassword({ username: req.auth.username || AUTH_USER, name: req.auth.name || AUTH_NAME, password_hash: hash });
+    await saveUserPassword({ username: req.auth.username, name: req.auth.name, password_hash: hash });
     res.json({ success: true, message: 'Kata sandi berhasil diperbarui.' });
   } catch (e) {
     res.status(500).json({
       success: false,
       error: 'Gagal menyimpan kata sandi. Pastikan tabel app_users sudah dibuat di Supabase (' + TABLE_USERS + ').'
     });
+  }
+});
+
+// Reset sandi user lain — KHUSUS Admin
+app.post('/api/admin/reset-password', requireAuth, requireRole('admin'), async (req, res) => {
+  try {
+    const targetUsername = String(req.body && req.body.username || '').trim();
+    const newPassword = String(req.body && req.body.new_password || '');
+    const displayName = String(req.body && req.body.name || '').trim();
+    if (!targetUsername) return res.status(400).json({ success: false, error: 'Username target wajib diisi.' });
+    if (newPassword.length < 6) return res.status(400).json({ success: false, error: 'Kata sandi baru minimal 6 karakter.' });
+    const hash = await hashPassword(newPassword);
+    await saveUserPassword({ username: targetUsername, name: displayName || targetUsername, password_hash: hash });
+    res.json({ success: true, message: `Kata sandi ${targetUsername} berhasil diperbarui.` });
+  } catch (e) {
+    res.status(500).json({ success: false, error: 'Gagal menyimpan kata sandi: ' + e.message });
+  }
+});
+
+// Daftar semua pengguna — KHUSUS Admin
+app.get('/api/admin/users', requireAuth, requireRole('admin'), async (req, res) => {
+  try {
+    const { data, error } = await supabase.from(TABLE_USERS).select('id, username, name, role, updated_at').order('id');
+    if (error) throw error;
+    res.json({ success: true, data: data || [] });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Tambah/Perbarui akun pengguna — KHUSUS Admin
+app.post('/api/admin/users', requireAuth, requireRole('admin'), async (req, res) => {
+  try {
+    const username = String(req.body && req.body.username || '').trim().toLowerCase();
+    const name = String(req.body && req.body.name || '').trim();
+    const role = String(req.body && req.body.role || 'user').trim();
+    const password = String(req.body && req.body.password || '');
+    if (!username) return res.status(400).json({ success: false, error: 'Username wajib diisi.' });
+    if (!['admin', 'bendahara', 'user'].includes(role)) return res.status(400).json({ success: false, error: 'Role tidak valid.' });
+    const existingRec = await getUserByUsername(username);
+    if (existingRec) {
+      // Update nama dan role saja, password hanya jika disediakan
+      const updateData = { name: name || existingRec.name, role, updated_at: new Date().toISOString() };
+      if (password.length >= 6) updateData.password_hash = await hashPassword(password);
+      const { error } = await supabase.from(TABLE_USERS).update(updateData).eq('id', existingRec.id);
+      if (error) throw error;
+      return res.json({ success: true, message: `Akun ${username} berhasil diperbarui.` });
+    }
+    // Buat akun baru
+    if (password.length < 6) return res.status(400).json({ success: false, error: 'Kata sandi baru minimal 6 karakter untuk akun baru.' });
+    const hash = await hashPassword(password);
+    const { error } = await supabase.from(TABLE_USERS).insert({ username, name: name || username, role, password_hash: hash, updated_at: new Date().toISOString() });
+    if (error) throw error;
+    res.json({ success: true, message: `Akun ${username} berhasil dibuat.` });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Hapus akun pengguna — KHUSUS Admin (tidak bisa hapus diri sendiri)
+app.post('/api/admin/users/delete', requireAuth, requireRole('admin'), async (req, res) => {
+  try {
+    const targetUsername = String(req.body && req.body.username || '').trim();
+    const targetId = req.body && req.body.id;
+    if (!targetUsername) return res.status(400).json({ success: false, error: 'Username wajib diisi.' });
+    if (targetUsername === req.auth.username) return res.status(400).json({ success: false, error: 'Anda tidak bisa menghapus akun Anda sendiri.' });
+    const { error } = await supabase.from(TABLE_USERS).delete().eq('id', targetId);
+    if (error) throw error;
+    res.json({ success: true, message: `Akun ${targetUsername} berhasil dihapus.` });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -547,7 +637,7 @@ app.delete('/api/uploads/:fileId', requireAuth, requireRole('bendahara'), async 
 
 // ---------- Import manual dari spreadsheet (read-only via GAS web app) ----------
 // Panggil GAS action=getRows, lalu upsert baris ke Supabase.
-app.post('/api/import-from-sheet', requireAuth, requireRole('admin'), async (req, res) => {
+app.post('/api/import-from-sheet', requireAuth, requireRole('admin', 'user'), async (req, res) => {
   try {
     const gasUrl = process.env.GAS_SYNC_WEB_APP_URL;
     if (!gasUrl) {
@@ -1246,6 +1336,24 @@ async function copyDriveDoc(docId, newName) {
     throw new Error('Gagal menggandakan dokumen di Drive: ' + err);
   }
   return j.id;
+}
+
+// Bagikan file hasil salinan ke "Anyone with link" (sesuai setting template di
+// Google Drive milik desa) supaya semua orang bisa membuka/mengedit hasil surat,
+// bukan hanya satu akun service-account yang membuat salinannya.
+async function shareDriveFileAnyone(docId, role = 'writer') {
+  const token = await googleAccessToken();
+  const res = await fetchWithRetry('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(docId) + '/permissions', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role, type: 'anyone', allowFileDiscovery: false })
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    const err = j && j.error && j.error.message ? j.error.message : 'Gagal membagikan dokumen';
+    console.warn('[share] gagal set permission anyone untuk ' + docId + ': ' + err);
+  }
+  return docId;
 }
 
 // Isi placeholder langsung DI DALAM dokumen Google (batchUpdate replaceAllText).
@@ -2109,7 +2217,7 @@ app.get('/api/docs/jenis-list', requireAuth, async (req, res) => {
 });
 
 // POST /api/docs/jenis -> tambah/update jenis surat
-app.post('/api/docs/jenis', requireAuth, requireRole('bendahara'), async (req, res) => {
+app.post('/api/docs/jenis', requireAuth, async (req, res) => {
   try {
     const { id, nama, icon } = req.body || {};
     if (!nama || !String(nama).trim()) return res.status(400).json({ success: false, error: 'Nama jenis surat harus diisi.' });
@@ -2144,7 +2252,7 @@ app.post('/api/docs/jenis', requireAuth, requireRole('bendahara'), async (req, r
 });
 
 // DELETE /api/docs/jenis/:id -> hapus jenis surat
-app.delete('/api/docs/jenis/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
+app.delete('/api/docs/jenis/:id', requireAuth, async (req, res) => {
   try {
     const targetId = String(req.params.id || '').trim().toUpperCase();
     const raw = await getPengaturan(JENIS_DOCS_KEY, null);
@@ -2188,7 +2296,7 @@ app.get('/api/docs/debug-values', async (req, res) => {
 });
 
 // DELETE /api/docs/template -> hapus link template jenis surat
-app.delete('/api/docs/template', requireAuth, requireRole('bendahara'), async (req, res) => {
+app.delete('/api/docs/template', requireAuth, async (req, res) => {
   try {
     const jenis = String(req.query.jenis || '').trim();
     const key = (jenis && jenis !== 'default') ? `${TEMPLATE_DOCS_KEY}_${jenis}` : TEMPLATE_DOCS_KEY;
@@ -2217,7 +2325,7 @@ app.get('/api/docs/template', requireAuth, async (req, res) => {
 });
 
 // PUT /api/docs/template -> simpan / ubah link template Google Docs (dukung per jenis dokumen).
-app.put('/api/docs/template', requireAuth, requireRole('bendahara'), async (req, res) => {
+app.put('/api/docs/template', requireAuth, async (req, res) => {
   try {
     const link = String((req.body && (req.body.link || req.body.url)) || '').trim();
     const jenis = String((req.body && req.body.jenis) || '').trim();
@@ -2446,6 +2554,12 @@ app.post('/api/docs/generate', requireAuth, async (req, res) => {
     const newName = ((doc.title || 'Surat') + ' - ' + idReg).slice(0, 150);
     const newId = await copyDriveDoc(docId, newName);
 
+    // Bagikan hasil salinan ke "Anyone with link" (editor) agar semua orang bisa
+    // mengakses surat yang dibuat, sejalan dengan template yang sudah dibuka di
+    // Google Drive (bukan hanya 1 akun service-account pemilik salinan).
+    try { await shareDriveFileAnyone(newId, 'writer'); }
+    catch (e) { console.warn('[Generate] gagal share doc ke publik:', e.message); }
+
     // 1b) Set font MONOSPACE pada paragraf {{TTD_AW}} agar "( ... )" rata kanan & lurus
     //     (padding titik di buildTtdAhliWaris hanya rapi di font monospace).
     try {
@@ -2538,7 +2652,7 @@ app.post('/api/docs/generate', requireAuth, async (req, res) => {
 });
 
 // POST /api/docs/save -> simpan hasil render ke tabel surat_terbit (riwayat).
-app.post('/api/docs/save', requireAuth, requireRole('bendahara'), async (req, res) => {
+app.post('/api/docs/save', requireAuth, async (req, res) => {
   try {
     const b = req.body || {};
     const idRegRaw = String(b.idReg || '').trim();
@@ -2583,7 +2697,7 @@ app.get('/api/docs/history', requireAuth, async (req, res) => {
 });
 
 // DELETE /api/docs/history/:id -> hapus riwayat surat.
-app.delete('/api/docs/history/:id', requireAuth, requireRole('bendahara'), async (req, res) => {
+app.delete('/api/docs/history/:id', requireAuth, async (req, res) => {
   try {
     const { data, error } = await supabase.from(TABLE_DOCS).delete().eq('id', req.params.id).select();
     if (error) throw error;
@@ -2612,8 +2726,11 @@ app.post('/api/permohonan/:id/upload', requireAuth, requireRole('bendahara', 'us
       return res.status(413).json({ success: false, error: 'Ukuran file melebihi 8 MB.' });
     }
 
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_REFRESH_TOKEN || !process.env.GOOGLE_DRIVE_FOLDER_ID) {
-      return res.status(500).json({ success: false, error: 'Konfigurasi upload Google belum diatur di .env' });
+    const clientId = await getGoogleEnv('GOOGLE_CLIENT_ID');
+    const refreshToken = await getGoogleEnv('GOOGLE_REFRESH_TOKEN');
+    const folderId = await getGoogleEnv('GOOGLE_DRIVE_FOLDER_ID');
+    if (!clientId || !refreshToken || !folderId) {
+      return res.status(500).json({ success: false, error: 'Konfigurasi upload Google belum diatur di .env atau Supabase' });
     }
 
     const safeName = String(fileName || jenis + '_' + Date.now() + '.jpg').replace(/[\\/:*?"<>|]/g, '_');
@@ -2730,7 +2847,7 @@ function parseSheetTime(v) {
 }
 
 // POST /api/keuangan/import-from-sheet -> Tarik semua transaksi dari tab TRANSAKSI (upsert).
-app.post('/api/keuangan/import-from-sheet', requireAuth, requireRole('admin'), async (req, res) => {
+app.post('/api/keuangan/import-from-sheet', requireAuth, requireRole('admin', 'user'), async (req, res) => {
   try {
     const gasRes = await fetch(KEUANGAN_SHEET_URL, { redirect: 'follow' });
     if (!gasRes.ok) {
@@ -2834,6 +2951,128 @@ app.get(['/sporadik', '/sporadik-executive.html'], (req, res) => {
     return res.sendFile(pubFile);
   }
   res.sendFile(path.join(__dirname, 'sporadik-executive.html'));
+});
+
+// ---------- Aplikasi Cetak Label Undangan ----------
+const TAMU_FILE = path.join(__dirname, 'data_tamu_undangan.json');
+
+function getLocalTamuData() {
+  try {
+    if (fs.existsSync(TAMU_FILE)) {
+      const content = fs.readFileSync(TAMU_FILE, 'utf8');
+      return JSON.parse(content);
+    }
+  } catch (e) {
+    console.error('Error reading local tamu data:', e);
+  }
+  return { acaraList: ['Semua Tamu (Master)', 'Pernikahan', 'Acara Kantor', 'Keluarga'], guests: [] };
+}
+
+function saveLocalTamuData(data) {
+  try {
+    fs.writeFileSync(TAMU_FILE, JSON.stringify(data, null, 2), 'utf8');
+    return true;
+  } catch (e) {
+    console.error('Error saving local tamu data:', e);
+    return false;
+  }
+}
+
+// GET /api/tamu-undangan -> Ambil semua data tamu & daftar acara dari database
+app.get('/api/tamu-undangan', async (req, res) => {
+  try {
+    let guests = [];
+    let acaraList = ['Pernikahan', 'Acara Kantor / Dinas', 'Keluarga Besar', 'Tamu VVIP / Tokoh', 'Sahabat & Rekan'];
+
+    // 1. Coba ambil dari Supabase jika tersedia
+    if (supabase) {
+      const [guestsRes, catRes] = await Promise.all([
+        supabase.from('tamu_undangan').select('*').order('created_at', { ascending: false }),
+        supabase.from('tamu_undangan_kategori').select('nama_kategori').order('id', { ascending: true })
+      ]);
+
+      if (!guestsRes.error && Array.isArray(guestsRes.data) && guestsRes.data.length > 0) {
+        guests = guestsRes.data;
+      }
+      if (!catRes.error && Array.isArray(catRes.data) && catRes.data.length > 0) {
+        acaraList = catRes.data.map(c => c.nama_kategori);
+      }
+
+      if (guests.length > 0) {
+        return res.json({ success: true, source: 'supabase', data: guests, acaraList });
+      }
+    }
+
+    // 2. Fallback ke local json database
+    const local = getLocalTamuData();
+    return res.json({
+      success: true,
+      source: 'local_file',
+      data: (local && local.guests && local.guests.length > 0) ? local.guests : guests,
+      acaraList: (local && local.acaraList && local.acaraList.length > 0) ? local.acaraList : acaraList
+    });
+  } catch (err) {
+    const local = getLocalTamuData();
+    return res.json({ success: true, source: 'local_file', data: local.guests || [], acaraList: local.acaraList || [] });
+  }
+});
+
+// POST /api/tamu-undangan/sync -> Simpan / Sinkronisasi seluruh daftar tamu ke database
+app.post('/api/tamu-undangan/sync', async (req, res) => {
+  try {
+    const { guests, acaraList } = req.body;
+    if (!Array.isArray(guests)) {
+      return res.status(400).json({ success: false, error: 'Data guests harus berupa array.' });
+    }
+
+    const payload = {
+      updatedAt: new Date().toISOString(),
+      acaraList: Array.isArray(acaraList) && acaraList.length > 0 ? acaraList : ['Pernikahan', 'Acara Kantor / Dinas', 'Keluarga Besar', 'Tamu VVIP / Tokoh', 'Sahabat & Rekan'],
+      guests: guests
+    };
+
+    saveLocalTamuData(payload);
+
+    // Coba simpan ke Supabase jika terhubung
+    if (supabase) {
+      try {
+        // 1. Simpan Kategori
+        if (Array.isArray(acaraList) && acaraList.length > 0) {
+          const catRows = acaraList.map(cat => ({ nama_kategori: cat }));
+          await supabase.from('tamu_undangan_kategori').upsert(catRows, { onConflict: 'nama_kategori' });
+        }
+
+        // 2. Simpan Tamu Undangan
+        if (guests.length > 0) {
+          const guestRows = guests.map(g => ({
+            id: String(g.id || Date.now() + Math.random()),
+            name: g.name,
+            jabatan: g.jabatan || '',
+            alamat: g.alamat || '',
+            kategori: g.kategori || 'Pernikahan',
+            selected: g.selected !== false,
+            updated_at: new Date().toISOString()
+          }));
+          await supabase.from('tamu_undangan').upsert(guestRows, { onConflict: 'id' });
+        }
+      } catch (supaErr) {
+        console.warn('Supabase sync warning:', supaErr.message);
+      }
+    }
+
+    return res.json({ success: true, message: 'Data tamu berhasil disimpan ke database!', total: guests.length });
+  } catch (err) {
+    console.error('Error syncing tamu data:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get(['/label-undangan', '/label-undangan.html', '/cetak-label', '/label'], (req, res) => {
+  const pubFile = path.join(__dirname, 'public', 'label-undangan.html');
+  if (fs.existsSync(pubFile)) {
+    return res.sendFile(pubFile);
+  }
+  res.status(404).send('Halaman Cetak Label tidak ditemukan.');
 });
 
 // ---------- Catch-all & Error Handler ----------

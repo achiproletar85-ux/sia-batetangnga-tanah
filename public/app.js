@@ -41,21 +41,19 @@
   }
 
   function initKeuangan() {
-    $('btnTambahTransaksi').addEventListener('click', () => openTrxModal(null));
-    $('btnCloseTrx').addEventListener('click', closeTrxModal);
-    $('trxForm').addEventListener('submit', handleTrxFormSubmit);
-    $('keuSearchInput').addEventListener('input', () => { if(pageState.keuangan) pageState.keuangan.p = 1; renderKeuanganTable(); });
-    $('btnCekTagihanBerkas').addEventListener('click', () => { openCekTbPanel(); });
-    $('btnCloseCekTb').addEventListener('click', () => { $('cekTbPanel').style.display = 'none'; });
-    $('btnCekTbCari').addEventListener('click', () => cekTagihanBerkas());
-    if ($('btnCetakKeuangan')) {
-      $('btnCetakKeuangan').addEventListener('click', cetakLaporanKeuangan);
-    }
-    $('cekTbId').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); cekTagihanBerkas(); } });
-    $('trxJenis').addEventListener('change', (e) => {
-      $('trxPemohonLabel').style.display = e.target.value === 'Pemasukan Cicilan' ? 'block' : 'none';
+    on('btnTambahTransaksi', 'click', () => openTrxModal(null));
+    on('btnCloseTrx', 'click', closeTrxModal);
+    on('trxForm', 'submit', handleTrxFormSubmit);
+    on('keuSearchInput', 'input', () => { if(pageState.keuangan) pageState.keuangan.p = 1; renderKeuanganTable(); });
+    on('btnCekTagihanBerkas', 'click', () => { openCekTbPanel(); });
+    on('btnCloseCekTb', 'click', closeCekTbPanel);
+    on('btnCekTbCari', 'click', () => cekTagihanBerkas());
+    on('btnCetakKeuangan', 'click', cetakLaporanKeuangan);
+    on('cekTbId', 'keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); cekTagihanBerkas(); } });
+    on('trxJenis', 'change', (e) => {
+      if ($('trxPemohonLabel')) $('trxPemohonLabel').style.display = e.target.value === 'Pemasukan Cicilan' ? 'block' : 'none';
     });
-    $('keuBody').addEventListener('click', (e) => {
+    on('keuBody', 'click', (e) => {
       const delBtn = e.target.closest('[data-del-trx]');
       if (delBtn) {
         deleteTrxRow(delBtn.dataset.delTrx);
@@ -160,13 +158,27 @@
       const tr = document.createElement('tr');
       const makerName = t.permohonan_surat_tanah ? t.permohonan_surat_tanah.nama : (t.id_permohonan || '-');
       tr.innerHTML = `
-        <td>${new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
-        <td><span class="tag ${t.jenis_transaksi.includes('Pemasukan') ? 'status-ok' : 'status-ko'}">${esc(t.jenis_transaksi)}</span></td>
-        <td>${esc(makerName)}</td>
-        <td class="num">${formatRp(t.nominal)}</td>
-        <td class="wrap">${esc(t.keterangan)}</td>
-        <td>${t.url_bukti && t.url_bukti !== '-' ? `<a class="flink" href="${esc(t.url_bukti)}" target="_blank" rel="noopener">🔗 Lihat</a>` : '—'}</td>
-        ${canInput ? `<td><button class="btn" onclick="cetakKwitansi('${esc(t.id)}')" style="background:#2E7D32; color:#ffffff; font-weight:700; border:none; margin-right:4px;" title="Cetak Kwitansi Pembayaran Resmi">🧾 Kwitansi</button> <button class="btn" data-id="${esc(t.id)}">✏️ Edit</button> <button class="btn danger" data-del-trx="${esc(t.id)}">🗑</button></td>` : `<td><button class="btn" onclick="cetakKwitansi('${esc(t.id)}')" style="background:#2E7D32; color:#ffffff; font-weight:700; border:none;" title="Cetak Kwitansi Pembayaran Resmi">🧾 Kwitansi</button></td>`}
+        <td data-label="Aksi" style="white-space:nowrap; text-align:center;">
+          <div class="row-action-group">
+            <button class="btn-row-action btn-row-print" onclick="cetakKwitansi('${esc(t.id)}'); event.stopPropagation();" title="Cetak Kwitansi Pembayaran Resmi">🧾 Kwitansi</button>
+            ${canInput ? `<button class="btn-row-action btn-row-edit" data-id="${esc(t.id)}" title="Edit Transaksi">✏️ Edit</button>
+            <button class="btn-row-action btn-row-del" data-del-trx="${esc(t.id)}" title="Hapus Transaksi">🗑️ Hapus</button>` : ''}
+          </div>
+        </td>
+        <td data-label="Tanggal" style="white-space:nowrap; color:var(--slate-700);">${new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
+        <td data-label="Tipe Transaksi">
+          <span class="tag ${t.jenis_transaksi.includes('Pemasukan') ? 'status-ok' : 'status-ko'}" style="font-weight:700;">${esc(t.jenis_transaksi)}</span>
+        </td>
+        <td data-label="Terkait Pemohon">
+          <strong style="color:var(--primary-900);">${esc(makerName)}</strong>
+        </td>
+        <td data-label="Nominal" style="text-align:right; font-family:'Space Grotesk',monospace; font-weight:700; color:${t.jenis_transaksi.includes('Pemasukan') ? '#15803d' : '#be123c'};">
+          ${formatRp(t.nominal)}
+        </td>
+        <td data-label="Keterangan" class="wrap" style="color:var(--slate-700);">${esc(t.keterangan || '-')}</td>
+        <td data-label="Bukti" style="text-align:center;">
+          ${t.url_bukti && t.url_bukti !== '-' ? `<a class="btn-row-action btn-row-view" href="${esc(t.url_bukti)}" target="_blank" rel="noopener">🔗 Bukti</a>` : '<span style="color:var(--slate-400); font-size:11px;">—</span>'}
+        </td>
       `;
       frag.appendChild(tr);
     });
@@ -308,19 +320,19 @@
     const totalPengeluaran = months.reduce((s, m) => s + m.keluar, 0);
     const saldoAkhir = totalPemasukan - totalPengeluaran;
 
-    $('keuTotalPemasukan').textContent = formatRp(totalPemasukan);
-    $('keuTotalPengeluaran').textContent = formatRp(totalPengeluaran);
-    $('keuSaldoAkhir').textContent = formatRp(saldoAkhir);
-    $('keuJumlahTransaksi').textContent = keuState.length;
+    if ($('keuTotalPemasukan')) $('keuTotalPemasukan').textContent = formatRp(totalPemasukan);
+    if ($('keuTotalPengeluaran')) $('keuTotalPengeluaran').textContent = formatRp(totalPengeluaran);
+    if ($('keuSaldoAkhir')) $('keuSaldoAkhir').textContent = formatRp(saldoAkhir);
+    if ($('keuJumlahTransaksi')) $('keuJumlahTransaksi').textContent = keuState.length;
 
     const now = new Date();
     const nowKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
     const cur = months.find((m) => m.key === nowKey) || { masuk: 0, keluar: 0 };
-    $('keuPemasukanBulanIni').textContent = formatRp(cur.masuk);
-    $('keuPengeluaranBulanIni').textContent = formatRp(cur.keluar);
+    if ($('keuPemasukanBulanIni')) $('keuPemasukanBulanIni').textContent = formatRp(cur.masuk);
+    if ($('keuPengeluaranBulanIni')) $('keuPengeluaranBulanIni').textContent = formatRp(cur.keluar);
 
-    $('keuChartBulan').innerHTML = keuBarBulanSVG(months);
-    $('keuChartSaldo').innerHTML = keuLineSaldoSVG(months);
+    if ($('keuChartBulan')) $('keuChartBulan').innerHTML = keuBarBulanSVG(months);
+    if ($('keuChartSaldo')) $('keuChartSaldo').innerHTML = keuLineSaldoSVG(months);
 
     // Pie: distribusi JUMLAH transaksi per jenis (bukan nilai).
     const countPerJenis = {};
@@ -328,10 +340,10 @@
       const j = String(t.jenis_transaksi || 'Lainnya').trim();
       countPerJenis[j] = (countPerJenis[j] || 0) + 1;
     });
-    $('keuChartJenis').innerHTML = pieChartSVG(countPerJenis);
+    if ($('keuChartJenis')) $('keuChartJenis').innerHTML = pieChartSVG(countPerJenis);
 
-    $('keuRekapJenis').innerHTML = keuRekapJenisTable();
-    $('keuRekapBulan').innerHTML = keuRekapBulanTable(months);
+    if ($('keuRekapJenis')) $('keuRekapJenis').innerHTML = keuRekapJenisTable();
+    if ($('keuRekapBulan')) $('keuRekapBulan').innerHTML = keuRekapBulanTable(months);
   }
 
   // ===== SURAT GOOGLE DOCS — placeholder {{...}} otomatis terdeteksi & diisi =====
@@ -629,7 +641,7 @@
     if (!tbody) return;
 
     if (!docsJenisListState.length) {
-      tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; text-align:center; color:#64748b;">Belum ada jenis surat yang terdaftar.</td></tr>`;
+      tbody.innerHTML = `<div class="docs-master-empty">Belum ada jenis surat yang terdaftar. Klik <b>➕ Tambah Surat</b> untuk menambah.</div>`;
       return;
     }
 
@@ -638,33 +650,25 @@
       const docId = docsExtractDocId(link);
       const hasLink = Boolean(link && docId);
       const statusBadge = hasLink
-        ? `<span class="docs-field-chip ok" style="font-size:11.5px; padding:4px 8px;">✅ Terpasang</span>`
-        : `<span class="docs-field-chip bad" style="font-size:11.5px; background:#fffbeb; color:#d97706; border-color:#fef3c7; padding:4px 8px;">⚠️ Belum Diset</span>`;
+        ? `<span class="docs-field-chip ok">✅ Terpasang</span>`
+        : `<span class="docs-field-chip bad">⚠️ Belum</span>`;
 
       return `
-        <tr style="border-bottom:1px solid #f1f5f9;">
-          <td style="padding:10px 16px; font-weight:700; color:#1e293b; white-space:nowrap; vertical-align:middle;">
-            <div style="font-size:13.5px;">${esc(item.icon || '📄')} ${esc(item.nama)}</div>
-            <small style="color:#64748b; font-weight:600; font-size:10.5px;">KEY: ${esc(item.id)}</small>
-          </td>
-          <td style="padding:8px 16px; vertical-align:middle;">
-            <div style="display:flex; gap:6px; align-items:center;">
-              <input type="text" id="inputMasterLink_${esc(item.id)}" class="docs-select-input" value="${esc(link)}" placeholder="Tempel link https://docs.google.com/document/d/... di sini" style="font-size:12px; padding:6px 10px; width:100%; border-radius:6px;" />
-              <button type="button" class="btn primary" onclick="docsQuickSaveLink('${esc(item.id)}')" style="padding:6px 12px; font-size:12px; white-space:nowrap; font-weight:700;">
-                💾 Simpan
-              </button>
-            </div>
-          </td>
-          <td style="padding:10px 16px; text-align:center; vertical-align:middle; white-space:nowrap;">
+        <div class="docs-master-row">
+          <div class="docs-master-row-head">
+            <div class="docs-master-name">${esc(item.icon || '📄')} ${esc(item.nama)}</div>
             ${statusBadge}
-          </td>
-          <td style="padding:10px 16px; text-align:center; vertical-align:middle; white-space:nowrap;">
-            <div style="display:flex; gap:6px; justify-content:center;">
-              ${hasLink ? `<a href="https://docs.google.com/document/d/${encodeURIComponent(docId)}/edit" target="_blank" rel="noopener" class="btn btn-action-secondary" style="padding:4px 8px; font-size:11.5px; text-decoration:none;" title="Buka di Google Docs">🔗 Buka</a>` : ''}
-              ${hasLink ? `<button type="button" class="btn btn-action-secondary" data-del-link-jenis="${esc(item.id)}" style="padding:4px 8px; font-size:11.5px; color:#dc2626; border-color:#fecaca;" title="Hapus link template">🗑️ Hapus</button>` : ''}
-            </div>
-          </td>
-        </tr>
+          </div>
+          <div class="docs-master-link">
+            <input type="text" id="inputMasterLink_${esc(item.id)}" class="docs-select-input" value="${esc(link)}" placeholder="Tempel link Google Docs di sini" />
+            <button type="button" class="btn primary" onclick="docsQuickSaveLink('${esc(item.id)}')" title="Simpan link">💾</button>
+          </div>
+          <div class="docs-master-actions">
+            <button type="button" class="btn btn-action-secondary" data-edit-link-jenis="${esc(item.id)}">✏️ Edit</button>
+            ${hasLink ? `<a href="https://docs.google.com/document/d/${encodeURIComponent(docId)}/edit" target="_blank" rel="noopener" class="btn btn-action-secondary">🔗 Buka</a>` : ''}
+            ${hasLink ? `<button type="button" class="btn btn-action-secondary" data-del-link-jenis="${esc(item.id)}" style="color:#dc2626; border-color:#fecaca;">🗑️ Hapus</button>` : ''}
+          </div>
+        </div>
       `;
     }).join('');
   }
@@ -674,7 +678,7 @@
     if ($('editLinkJenisId')) $('editLinkJenisId').value = item.id;
     if ($('editLinkJenisNamaDisplay')) $('editLinkJenisNamaDisplay').value = `${item.icon || '📄'} ${item.nama}`;
     if ($('editLinkInput')) $('editLinkInput').value = docsMasterLinksMap[item.id] || '';
-    if ($('modalEditLinkTemplate')) $('modalEditLinkTemplate').showModal();
+    if ($('modalEditLink')) $('modalEditLink').showModal();
   }
 
   async function docsSaveLinkTemplateFromModal(e) {
@@ -693,7 +697,7 @@
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal menyimpan link template.');
       docsMasterLinksMap[jenisId] = link;
-      if ($('modalEditLinkTemplate')) $('modalEditLinkTemplate').close();
+      if ($('modalEditLink')) $('modalEditLink').close();
       docsRenderMasterTable();
       docsRenderDropdownSelector();
       if (docsState.jenis === jenisId) {
@@ -725,8 +729,8 @@
 
   async function docsAddJenis(e) {
     if (e) e.preventDefault();
-    const namaInp = $('newJenisNama');
-    const iconInp = $('newJenisIcon');
+    const namaInp = $('inputNamaJenis');
+    const iconInp = $('inputIconJenis');
     if (!namaInp || !namaInp.value.trim()) return;
 
     const nama = namaInp.value.trim();
@@ -744,7 +748,7 @@
       if (json.item && json.item.id) docsState.jenis = json.item.id;
       docsFetchAllMasterLinks();
       namaInp.value = '';
-      if ($('modalManageJenis')) $('modalManageJenis').close();
+      if ($('docsManageModal')) $('docsManageModal').close();
       alert(`Jenis surat "${nama}" berhasil ditambahkan!`);
     } catch (err) {
       alert('Gagal menambah jenis surat: ' + err.message);
@@ -782,6 +786,16 @@
       </div>
     `).join('');
   }
+
+  // Buka modal Kelola Template (manajemen jenis & link template surat).
+  function openDocsManageModal() {
+    const m = $('docsManageModal');
+    if (!m) return;
+    if (typeof docsRenderManageList === 'function') docsRenderManageList();
+    if (typeof m.showModal === 'function') m.showModal();
+    else m.setAttribute('open', '');
+  }
+  window.openDocsManageModal = openDocsManageModal;
 
   function docsUseSavedLink() {
     const saved = $('docsLinkSavedVal') ? String($('docsLinkSavedVal').textContent || '').trim() : '';
@@ -1098,8 +1112,9 @@
     if (!input) { alert('Tempel link / ID Google Docs terlebih dahulu.'); return; }
     if (!idReg) { alert('Isi ID pendaftaran terlebih dahulu.'); return; }
 
-    const btn = $('btnDocsRender') || $('btnDocsGenerate');
-    busyBtn(btn, true, 'Membuat Dokumen Google…');
+    const renderBtns = ['btnDocsRender', 'btnDocsRenderManual', 'btnDocsGenerate']
+      .map((id) => $(id)).filter(Boolean);
+    renderBtns.forEach((b) => busyBtn(b, true, 'Membuat Dokumen Google…'));
 
     try {
       const res = await fetch('/api/docs/generate', {
@@ -1153,7 +1168,7 @@
         alert('⚠️ Gagal membuat dokumen Google Docs: ' + msg);
       }
     } finally {
-      busyBtn(btn, false);
+      renderBtns.forEach((b) => busyBtn(b, false));
     }
   }
 
@@ -1196,7 +1211,7 @@
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal memuat riwayat.');
       const rows = json.data || [];
-      $('docsHistoryEmpty').hidden = rows.length > 0;
+      if ($('docsHistoryEmpty')) $('docsHistoryEmpty').hidden = rows.length > 0;
       const canDel = isBendahara();
       rows.slice(0, 50).forEach((r) => {
         const tr = document.createElement('tr');
@@ -1220,8 +1235,10 @@
         body.appendChild(tr);
       });
     } catch (e) {
-      $('docsHistoryEmpty').hidden = false;
-      $('docsHistoryEmpty').textContent = 'Gagal memuat riwayat: ' + e.message;
+      if ($('docsHistoryEmpty')) {
+        $('docsHistoryEmpty').hidden = false;
+        $('docsHistoryEmpty').textContent = 'Gagal memuat riwayat: ' + e.message;
+      }
     }
   }
 
@@ -1368,12 +1385,13 @@
       });
     }
 
-    if ($('btnDocsAddJenisTable')) $('btnDocsAddJenisTable').addEventListener('click', () => { if ($('modalManageJenis')) $('modalManageJenis').showModal(); });
-    if ($('btnModalManageJenisClose')) $('btnModalManageJenisClose').addEventListener('click', () => { if ($('modalManageJenis')) $('modalManageJenis').close(); });
-    if ($('formAddJenis')) $('formAddJenis').addEventListener('submit', docsAddJenis);
+    if ($('btnDocsAddJenisTable')) $('btnDocsAddJenisTable').addEventListener('click', () => { if ($('docsManageModal')) $('docsManageModal').showModal(); });
+    if ($('btnModalManageJenisClose')) $('btnModalManageJenisClose').addEventListener('click', () => { if ($('docsManageModal')) $('docsManageModal').close(); });
+    if ($('formTambahJenis')) $('formTambahJenis').addEventListener('submit', docsAddJenis);
 
-    if ($('btnModalEditLinkClose')) $('btnModalEditLinkClose').addEventListener('click', () => { if ($('modalEditLinkTemplate')) $('modalEditLinkTemplate').close(); });
-    if ($('btnModalEditLinkCancel')) $('btnModalEditLinkCancel').addEventListener('click', () => { if ($('modalEditLinkTemplate')) $('modalEditLinkTemplate').close(); });
+    if ($('btnModalEditLinkClose')) $('btnModalEditLinkClose').addEventListener('click', () => { if ($('modalEditLink')) $('modalEditLink').close(); });
+    if ($('btnModalEditLinkCancel')) $('btnModalEditLinkCancel').addEventListener('click', () => { if ($('modalEditLink')) $('modalEditLink').close(); });
+    if ($('formModalEditLink')) $('formModalEditLink').addEventListener('submit', docsSaveLinkTemplateFromModal);
     if ($('formEditLinkTemplate')) $('formEditLinkTemplate').addEventListener('submit', docsSaveLinkTemplateFromModal);
 
     if ($('masterLinkTableBody')) {
@@ -1406,12 +1424,35 @@
       });
     }
 
-  function docsRenderSpecific(targetJenis) {
+    if ($('docsIdReg')) {
+      $('docsIdReg').addEventListener('input', docsOnRegIdChange);
+      $('docsIdReg').addEventListener('change', docsOnRegIdChange);
+      $('docsIdReg').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); docsRender(); } });
+    }
+
+    docsFetchAllMasterLinks().then(() => docsLoadTemplate(docsState.jenis));
+    const histBody = $('docsHistoryBody');
+    if (histBody) {
+      histBody.addEventListener('click', (e) => {
+        const o = e.target.closest('[data-docs-open]');
+        if (o) { docsOpenHistory(o.dataset.docsOpen); return; }
+        const v = e.target.closest('[data-docs-view]');
+        if (v) { docsLoadHistory(v.dataset.docsView); return; }
+        const p = e.target.closest('[data-docs-print]');
+        if (p) { docsPrintHistory(p.dataset.docsPrint); return; }
+        const d = e.target.closest('[data-docs-del]');
+        if (d) { docsDeleteHistory(d.dataset.docsDel); }
+      });
+    }
+  }
+
+  async function docsRenderSpecific(targetJenis) {
     if (targetJenis) {
       docsState.jenis = targetJenis;
-      docsLoadTemplate(targetJenis);
+      if ($('docsSelectJenisDropdown')) $('docsSelectJenisDropdown').value = targetJenis;
+      await docsLoadTemplate(targetJenis);
     }
-    docsRender();
+    await docsRender();
   }
   window.docsRenderSpecific = docsRenderSpecific;
 
@@ -1750,28 +1791,6 @@
     }
   }
 
-  if ($('docsIdReg')) {
-    $('docsIdReg').addEventListener('input', docsOnRegIdChange);
-    $('docsIdReg').addEventListener('change', docsOnRegIdChange);
-    $('docsIdReg').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); docsRender(); } });
-  }
-
-  docsFetchAllMasterLinks().then(() => docsLoadTemplate(docsState.jenis));
-  const body = $('docsHistoryBody');
-  if (body) {
-    body.addEventListener('click', (e) => {
-      const o = e.target.closest('[data-docs-open]');
-      if (o) { docsOpenHistory(o.dataset.docsOpen); return; }
-      const v = e.target.closest('[data-docs-view]');
-      if (v) { docsLoadHistory(v.dataset.docsView); return; }
-      const p = e.target.closest('[data-docs-print]');
-      if (p) { docsPrintHistory(p.dataset.docsPrint); return; }
-      const d = e.target.closest('[data-docs-del]');
-      if (d) { docsDeleteHistory(d.dataset.docsDel); }
-    });
-  }
-}
-
   async function openDocsForId(id, jenis) {
     if (!id) return;
     const targetId = String(id).trim();
@@ -1863,11 +1882,17 @@ window.openDocsForId = openDocsForId;
   function openCekTbPanel() {
     fetchPemohonList();
     $('cekTbPanel').style.display = 'block';
+    if ($('keuMainTableSection')) $('keuMainTableSection').style.display = 'none';
     $('cekTbResult').innerHTML = '';
     const inp = $('cekTbId');
     inp.value = '';
     setTimeout(() => inp.focus(), 50);
     inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function closeCekTbPanel() {
+    $('cekTbPanel').style.display = 'none';
+    if ($('keuMainTableSection')) $('keuMainTableSection').style.display = 'block';
   }
 
   function statusLunasBadge(lunas) {
@@ -2764,12 +2789,12 @@ window.openDocsForId = openDocsForId;
     table.kw-table { width: 100%; border-collapse: collapse; font-size: 12pt; line-height: 1.8; margin-bottom: 16px; }
     table.kw-table td { padding: 4px 6px; vertical-align: top; }
     
-    .box-rupiah { border: 2px solid #2E7D32; background: #e8f5e9; color: #1b5e20; padding: 8px 18px; font-size: 14pt; font-weight: 800; border-radius: 6px; display: inline-block; }
+    .box-rupiah { border: 2px solid #2E7D32; background: #e8f5e9; color: #1b5e20; padding: 8px 18px; font-size: 14pt; font-weight: 800; border-radius: 6px; display: inline-block; font-family: 'Space Grotesk', Arial, monospace; }
     
-    .sig-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 14px; }
-    .sig-box { text-align: center; width: 220px; }
-    .sig-date { font-size: 11pt; margin-bottom: 45px; }
-    .sig-name { font-weight: 800; text-decoration: underline; font-size: 12pt; }
+    .sig-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 18px; }
+    .sig-box { text-align: center; min-width: 260px; }
+    .sig-date { font-size: 11pt; margin-bottom: 52px; line-height: 1.45; }
+    .sig-name { font-weight: 700; font-size: 11.5pt; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -2789,7 +2814,7 @@ window.openDocsForId = openDocsForId;
 
     <table class="kw-table">
       <tr>
-        <td style="width:140px; font-weight:bold;">No. Kwitansi</td>
+        <td style="width:150px; font-weight:bold;">No. Kwitansi</td>
         <td style="width:10px;">:</td>
         <td style="font-weight:bold; color:#E53935;">KW-${escFill(t.id || '001')} / ${escFill(idReg)}</td>
       </tr>
@@ -2814,11 +2839,11 @@ window.openDocsForId = openDocsForId;
 
     <div class="sig-row">
       <div class="box-rupiah">
-        Rp ${formatRp(nom)}
+        ${formatRp(nom)}
       </div>
       <div class="sig-box">
         <div class="sig-date">Batetangnga, ${tglCetak}<br>Bendahara / Pengelola Keuangan,</div>
-        <div class="sig-name">( ............................................ )</div>
+        <div class="sig-name">( ........................................ )</div>
       </div>
     </div>
   </div>
@@ -2892,72 +2917,128 @@ window.openDocsForId = openDocsForId;
     const berkas = data.berkas || [];
 
     const pct = tg.biaya_total > 0 ? Math.min(100, Math.round((tg.total_terbayar / tg.biaya_total) * 100)) : 0;
-
     const detailRows = buildDetailRows(pm);
+
     const infoHtml = detailRows.length
-      ? `<div class="detail-grid">
-           ${detailRows.map((r) => `<div class="k">${esc(r.k)}</div><div><strong>${esc(r.v)}</strong></div>`).join('')}
+      ? `<div class="cektb-info-grid">
+           ${detailRows.map((r) => `
+             <div class="cektb-info-item">
+               <span class="cektb-info-key">${esc(r.k)}</span>
+               <span class="cektb-info-val">${esc(r.v)}</span>
+             </div>`).join('')}
          </div>`
-      : '<p class="empty">Data permohonan tidak ditemukan.</p>';
+      : '<p class="docs-live-empty" style="padding:14px;">Data permohonan tidak ditemukan.</p>';
 
     const riwayatHtml = riwayat.length
-      ? `<table class="mini-table">
-           <thead><tr><th>Tanggal</th><th>Jenis</th><th>Nominal</th><th>Keterangan</th><th>Bukti</th></tr></thead>
-           <tbody>
-             ${riwayat.map((t) => `
-               <tr>
-                 <td>${new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
-                 <td><span class="tag ${t.jenis_transaksi.includes('Pemasukan') ? 'status-ok' : 'status-ko'}">${esc(t.jenis_transaksi)}</span></td>
-                 <td class="num">${formatRp(t.nominal)}</td>
-                 <td class="wrap">${esc(t.keterangan)}</td>
-                 <td>${t.url_bukti && t.url_bukti !== '-' ? `<a class="flink" href="${esc(t.url_bukti)}" target="_blank" rel="noopener">🔗 Lihat</a>` : '—'}</td>
-               </tr>`).join('')}
-           </tbody>
-         </table>`
-      : '<p class="empty">Belum ada riwayat transaksi.</p>';
+      ? `<div class="table-wrap" style="margin-top:6px;">
+          <table class="cektb-table">
+            <thead>
+              <tr>
+                <th style="width:100px;">Tanggal</th>
+                <th style="width:140px;">Jenis Transaksi</th>
+                <th style="width:130px; text-align:right;">Nominal (Rp)</th>
+                <th>Keterangan</th>
+                <th style="width:80px; text-align:center;">Bukti</th>
+                <th style="width:100px; text-align:center;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${riwayat.map((t) => `
+                <tr>
+                  <td>${new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
+                  <td><span class="tag ${t.jenis_transaksi.includes('Pemasukan') ? 'status-ok' : 'status-ko'}" style="font-weight:700;">${esc(t.jenis_transaksi)}</span></td>
+                  <td style="text-align:right; font-family:'Space Grotesk',monospace; font-weight:700; color:#166534;">${formatRp(t.nominal)}</td>
+                  <td class="wrap">${esc(t.keterangan || '-')}</td>
+                  <td style="text-align:center;">${t.url_bukti && t.url_bukti !== '-' ? `<a class="btn-row-action btn-row-view" href="${esc(t.url_bukti)}" target="_blank" rel="noopener">🔗 Bukti</a>` : '<span style="color:var(--slate-400); font-size:11px;">—</span>'}</td>
+                  <td style="text-align:center;"><button class="btn-row-action btn-row-print" onclick="cetakKwitansi('${esc(t.id)}')" title="Cetak Kwitansi Pembayaran">🧾 Kwitansi</button></td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`
+      : '<p class="docs-live-empty" style="padding:14px;">Belum ada riwayat transaksi pembayaran.</p>';
 
     const berkasHtml = berkas.length
-      ? `<table class="mini-table">
-           <thead><tr><th>Jenis Berkas</th><th>Nama File</th><th>Waktu</th><th>Aksi</th></tr></thead>
-           <tbody>
-             ${berkas.map((b) => `
-               <tr>
-                 <td><span class="tag status-s">${esc(b.jenis_upload)}</span></td>
-                 <td class="wrap">${esc(b.file_name)}</td>
-                 <td>${esc(b.timestamp)}</td>
-                 <td>${b.file_url ? `<a class="flink" href="${esc(b.file_url)}" target="_blank" rel="noopener">🔗 Buka</a>` : '—'}</td>
-               </tr>`).join('')}
-           </tbody>
-         </table>`
-      : '<p class="empty">Belum ada berkas.</p>';
+      ? `<div class="table-wrap" style="margin-top:6px;">
+          <table class="cektb-table">
+            <thead>
+              <tr>
+                <th style="width:140px;">Jenis Berkas</th>
+                <th>Nama File</th>
+                <th style="width:140px;">Waktu Upload</th>
+                <th style="width:90px; text-align:center;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${berkas.map((b) => `
+                <tr>
+                  <td><span class="tag status-s" style="font-weight:700;">${esc(b.jenis_upload)}</span></td>
+                  <td class="wrap"><strong>${esc(b.file_name)}</strong></td>
+                  <td style="color:var(--slate-500); font-size:11px;">${esc(b.timestamp ? fmtTgl(b.timestamp) : '-')}</td>
+                  <td style="text-align:center;">${b.file_url ? `<a class="btn-row-action btn-row-view" href="${esc(b.file_url)}" target="_blank" rel="noopener">👁️ Buka</a>` : '—'}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`
+      : '<p class="docs-live-empty" style="padding:14px;">Belum ada berkas terlampir.</p>';
 
     $('cekTbResult').innerHTML = `
-      ${tg.status_lunas ? `<div style="margin-bottom:14px;"><button id="btnCetakNota" class="btn primary" style="display:inline-flex; align-items:center; gap:6px;"><i data-lucide="printer" style="width:16px;height:16px;"></i> Cetak Nota Lunas</button></div>` : ''}
-      <div class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom:16px;">
-        <div class="dash-card total">
-          <div class="dash-ic" style="background-color:#e0f2fe;">💰</div>
-          <div><div class="dash-val">${formatRp(tg.biaya_total)}</div><div class="dash-lb">Biaya Total</div></div>
+      <div class="cektb-container">
+        <!-- 4 KPI Tagihan Cards -->
+        <div class="cektb-kpi-grid">
+          <div class="cektb-kpi-card card-total">
+            <div class="cektb-kpi-label">BIAYA TOTAL BIAYA</div>
+            <div class="cektb-kpi-val">${formatRp(tg.biaya_total)}</div>
+          </div>
+          <div class="cektb-kpi-card card-terbayar">
+            <div class="cektb-kpi-label">TOTAL TERBAYAR</div>
+            <div class="cektb-kpi-val">${formatRp(tg.total_terbayar)}</div>
+          </div>
+          <div class="cektb-kpi-card card-sisa">
+            <div class="cektb-kpi-label">SISA TAGIHAN</div>
+            <div class="cektb-kpi-val">${formatRp(tg.sisa_tagihan)}</div>
+          </div>
+          <div class="cektb-kpi-card card-status">
+            <div class="cektb-kpi-label">STATUS KEUANGAN</div>
+            <div style="margin-top:2px;">${statusLunasBadge(tg.status_lunas)}</div>
+          </div>
         </div>
-        <div class="dash-card ok">
-          <div class="dash-ic" style="background-color:#ecfdf5;">✅</div>
-          <div><div class="dash-val">${formatRp(tg.total_terbayar)}</div><div class="dash-lb">Total Terbayar</div></div>
+
+        <!-- Progress Bar Pelunasan -->
+        <div class="cektb-progress-wrap">
+          <div style="display:flex; justify-content:space-between; font-size:11.5px; font-weight:700; margin-bottom:6px; color:var(--slate-700);">
+            <span>Progres Pelunasan Tagihan</span>
+            <span style="color:${pct === 100 ? '#16a34a' : '#0284c7'}; font-family:'Space Grotesk',monospace; font-size:12.5px;">${pct}% Terbayar</span>
+          </div>
+          <div class="cektb-progress-bar">
+            <div class="cektb-progress-fill" style="width:${pct}%; background:${pct === 100 ? '#16a34a' : '#0284c7'};"></div>
+          </div>
         </div>
-        <div class="dash-card ko">
-          <div class="dash-ic" style="background-color:#fee2e2;">📌</div>
-          <div><div class="dash-val">${formatRp(tg.sisa_tagihan)}</div><div class="dash-lb">Sisa Tagihan</div></div>
+
+        ${tg.status_lunas ? `
+          <div style="margin: 4px 0;">
+            <button id="btnCetakNota" class="btn primary" style="padding:7px 14px; font-size:12px; font-weight:700;">
+              🖨️ Cetak Nota Pelunasan Resmi
+            </button>
+          </div>` : ''}
+
+        <!-- Section: Data Pemohon -->
+        <div class="cektb-section">
+          <div class="cektb-section-title">
+            <i data-lucide="user" style="width:14px;height:14px;color:var(--primary-700);"></i>
+            <span>Data Pemohon &amp; Objek Bidang Tanah</span>
+          </div>
+          ${infoHtml}
         </div>
-        <div class="dash-card">
-          <div class="dash-ic" style="background-color:#fef3c7;">📋</div>
-          <div><div class="dash-val">${statusLunasBadge(tg.status_lunas)}</div><div class="dash-lb">Status</div></div>
+
+        <!-- Section: Berkas Terlampir -->
+        <div class="cektb-section">
+          <div class="cektb-section-title">
+            <i data-lucide="paperclip" style="width:14px;height:14px;color:var(--primary-700);"></i>
+            <span>Berkas Dokumen Terlampir (${berkas.length} File)</span>
+          </div>
+          ${berkasHtml}
         </div>
-      </div>
-      <div class="progress" style="margin-bottom:16px;"><div class="progress-bar" style="width:${pct}%"></div></div>
-      <h3 style="margin:0 0 8px; font-size:14px;">Data Pemohon</h3>
-      ${infoHtml}
-      <h3 style="margin:18px 0 8px; font-size:14px;">Riwayat Pembayaran (${riwayat.length})</h3>
-      ${riwayatHtml}
-      <h3 style="margin:18px 0 8px; font-size:14px;">Berkas (${berkas.length})</h3>
-      ${berkasHtml}`;
+      </div>`;
 
     const btnNota = $('btnCetakNota');
     if (btnNota) btnNota.addEventListener('click', () => cetakNotaLunas(data));
@@ -3117,6 +3198,7 @@ window.openDocsForId = openDocsForId;
   }
 
   function openTrxModal(trx) {
+    if (!isBendahara()) return; // User tidak boleh membuka form transaksi keuangan
     const m = $('trxModal');
     $('trxForm').reset();
     $('trxId').value = '';
@@ -3143,7 +3225,7 @@ window.openDocsForId = openDocsForId;
 
     $('trxPemohonLabel').style.display = $('trxJenis').value === 'Pemasukan Cicilan' ? 'block' : 'none';
     fetchPemohonList();
-    if (typeof m.showModal === 'function') m.showModal(); else m.setAttribute('open', '');
+    openModalCentered(m);
   }
 
   function closeTrxModal() {
@@ -3235,8 +3317,10 @@ window.openDocsForId = openDocsForId;
     try { localStorage.removeItem(AUTH_KEY); } catch (_) {}
   }
 
-  // Role user: 'admin' & 'bendahara' bisa meng-input data keuangan & berkas;
-  // 'user' hanya baca + cek tagihan/berkas (tanpa input).
+  // Hak akses per role (aturan desa):
+  // - User      : Studio Docs penuh, cek tagihan, ubah sandi, tarik data. Keuangan HANYA cek tagihan.
+  // - Bendahara : semua fitur KECUALI ubah sandi & tarik data.
+  // - Admin     : akses penuh.
   function currentRole() {
     const s = getSession();
     const role = (s && s.user && s.user.role) || 'user';
@@ -3254,16 +3338,26 @@ window.openDocsForId = openDocsForId;
   }
   function updateKeuPermissions() {
     const canInput = isBendahara();
-    // Hanya Bendahara (atau Admin) yang boleh melihat seluruh dashboard keuangan
-    // (ringkasan, grafik, rekap, tabel, cetak, & input transaksi).
-    const dash = document.getElementById('keuDashboard');
-    if (dash) dash.hidden = !canInput;
+    // Hanya Bendahara (atau Admin) yang boleh melihat/menggunakan seluruh fitur keuangan
+    // (dashboard, grafik, rekap, tabel transaksi, cetak laporan, & input transaksi).
+    // User (Petugas) TIDAK boleh melihat/menginput transaksi — hanya "Cek Tagihan Berkas".
+    const hideIfNoInput = (id) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = canInput ? '' : 'none';
+    };
 
-    // Tombol "Tarik dari Sheet" di dashboard keuangan hanya untuk Admin.
+    hideIfNoInput('keuDashboard');
+    hideIfNoInput('btnTambahTransaksi');
+    hideIfNoInput('btnHeroTambahTrx');
+    hideIfNoInput('btnCetakKeuangan');
+    hideIfNoInput('btnHeroCetakKeu');
+    hideIfNoInput('keuMainTableSection');
+
+    // Tombol "Tarik dari Sheet" (keuangan): Admin & User boleh; Bendahara TIDAK boleh.
     const impK = document.getElementById('btnImportKeuangan');
-    if (impK) impK.style.display = isAdmin() ? '' : 'none';
+    if (impK) impK.style.display = (isAdmin() || isUserOnly()) ? '' : 'none';
 
-    // Cek Tagihan & Berkas tetap tersedia untuk semua user.
+    // Cek Tagihan & Berkas tetap tersedia untuk semua role.
     const cekBtn = document.getElementById('btnCekTagihanBerkas');
     if (cekBtn) cekBtn.style.display = '';
 
@@ -3306,31 +3400,40 @@ window.openDocsForId = openDocsForId;
     if ($('authGuestNotice')) $('authGuestNotice').style.display = 'none';
     if ($('appWorkspace')) $('appWorkspace').style.display = '';
     document.body.classList.remove('guest-mode');
-    // Tombol khusus Admin (Ubah Sandi & Tarik dari Sheet) hanya untuk role admin.
-    if ($('btnChangePw')) $('btnChangePw').style.display = role === 'admin' ? 'flex' : 'none';
-    if ($('btnImportSheet')) $('btnImportSheet').style.display = role === 'admin' ? 'flex' : 'none';
+    // Tombol Sandi: Admin & User boleh ubah sandi sendiri; Bendahara TIDAK boleh.
+    if ($('btnChangePw')) $('btnChangePw').style.display = (role === 'admin' || role === 'user') ? 'inline-flex' : 'none';
+    // Tombol Akun (Kelola Pengguna): hanya Admin
+    if ($('btnManageUsers')) $('btnManageUsers').style.display = role === 'admin' ? 'inline-flex' : 'none';
+    // Tombol Tarik Data (Sheet): Admin & User boleh; Bendahara TIDAK boleh.
+    if ($('btnImportSheet')) $('btnImportSheet').style.display = (role === 'admin' || role === 'user') ? 'flex' : 'none';
     // Tombol input data: Tambah Data untuk semua role (admin/bendahara/user),
     // sedangkan Edit & Simpan Surat tetap untuk admin & bendahara.
     if ($('btnTambahData')) $('btnTambahData').style.display = '';
     if ($('btnSaveSuratEdit')) $('btnSaveSuratEdit').style.display = (role === 'admin' || role === 'bendahara') ? '' : 'none';
     updateKeuPermissions();
+    startSessionMonitor();
   }
 
   function setGuestUI() {
     isAuthed = false;
+    stopSessionMonitor();
     if ($('userProfileNav')) $('userProfileNav').style.display = 'none';
-    if ($('btnOpenLogin')) $('btnOpenLogin').style.display = 'inline-flex';
-    if ($('btnOpenLoginNotice')) $('btnOpenLoginNotice').style.display = 'inline-flex';
-    if ($('authGuestNotice')) $('authGuestNotice').style.display = 'block';
+    if ($('btnOpenLogin')) $('btnOpenLogin').style.display = 'none';
+    if ($('authGuestNotice')) $('authGuestNotice').style.display = 'flex';
     if ($('appWorkspace')) $('appWorkspace').style.display = 'none';
     document.body.classList.add('guest-mode');
+    initShowcaseCarousel();
+    setTimeout(() => {
+      const f = $('loginGuestEmail');
+      if (f) f.focus();
+    }, 100);
   }
 
   function openLogin() {
     hideLoginError();
     const m = $('loginModal');
     if (!m) return;
-    if (typeof m.showModal === 'function') m.showModal(); else m.setAttribute('open', '');
+    openModalCentered(m);
     setTimeout(() => { const f = $('loginEmail'); if (f) f.focus(); }, 60);
   }
   function closeLogin() {
@@ -3412,23 +3515,119 @@ window.openDocsForId = openDocsForId;
       window.lucide.createIcons();
     }
   }
+  window.openLogin = openLogin;
+  window.closeLogin = closeLogin;
+  window.togglePassword = togglePassword;
+  window.handleLogin = handleLogin;
+
+  // ---------- Guest Portal Login & Showcase Carousel ----------
+  let currentCarouselSlide = 0;
+  let carouselInterval = null;
+
+  function setCarouselSlide(idx) {
+    const slides = document.querySelectorAll('.auth-showcase-slide');
+    const dots = document.querySelectorAll('.carousel-dot');
+    if (!slides.length) return;
+    currentCarouselSlide = (idx + slides.length) % slides.length;
+    slides.forEach((s, i) => {
+      s.classList.toggle('active', i === currentCarouselSlide);
+    });
+    dots.forEach((d, i) => {
+      d.classList.toggle('active', i === currentCarouselSlide);
+    });
+    const counter = $('authSlideCounter');
+    if (counter) {
+      counter.textContent = `0${currentCarouselSlide + 1} / 0${slides.length}`;
+    }
+  }
+  window.setCarouselSlide = setCarouselSlide;
+
+  function initShowcaseCarousel() {
+    if (carouselInterval) clearInterval(carouselInterval);
+    setCarouselSlide(0);
+    carouselInterval = setInterval(() => {
+      const notice = $('authGuestNotice');
+      const isGuest = document.body.classList.contains('guest-mode') || (typeof isAuthed !== 'undefined' && !isAuthed) || (notice && notice.style.display !== 'none');
+      if (isGuest) {
+        setCarouselSlide(currentCarouselSlide + 1);
+      }
+    }, 3800);
+  }
+  window.initShowcaseCarousel = initShowcaseCarousel;
+
+  function toggleGuestPassword() {
+    const inp = $('loginGuestPassword');
+    if (!inp) return;
+    const isPass = inp.type === 'password';
+    inp.type = isPass ? 'text' : 'password';
+    const btn = $('toggleGuestPassword');
+    if (btn && window.lucide) {
+      btn.innerHTML = `<i data-lucide="${isPass ? 'eye-off' : 'eye'}" style="width:16px;height:16px;"></i>`;
+      window.lucide.createIcons();
+    }
+  }
+  window.toggleGuestPassword = toggleGuestPassword;
+
+  async function handleGuestLogin(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const username = ($('loginGuestEmail') ? $('loginGuestEmail').value : '').trim();
+    const password = $('loginGuestPassword') ? $('loginGuestPassword').value : '';
+    const errEl = $('guestLoginError');
+    const spinner = $('guestLoginSpinner');
+    const btn = $('btnGuestLoginSubmit');
+    const label = $('guestLoginSubmitLabel');
+
+    if (!username || !password) {
+      if (errEl) { errEl.textContent = 'Username dan kata sandi wajib diisi.'; errEl.style.display = 'block'; }
+      return;
+    }
+
+    if (errEl) errEl.style.display = 'none';
+    if (btn) btn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    if (label) label.textContent = 'Memproses Masuk...';
+
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const j = await res.json();
+      if (!res.ok || !j.success) throw new Error((j && j.error) || 'Username atau kata sandi salah.');
+      setSession({ token: j.token, user: j.user });
+      setAuthedUI(j.user);
+      loadData();
+    } catch (err) {
+      if (errEl) {
+        errEl.textContent = (err && err.message) || 'Username atau kata sandi salah.';
+        errEl.style.display = 'block';
+      }
+    } finally {
+      if (btn) btn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+      if (label) label.textContent = 'Masuk ke Sistem';
+    }
+  }
+  window._staHandleGuestLogin = handleGuestLogin;
+  window.handleGuestLogin = handleGuestLogin;
 
   // ---------- Ubah Kata Sandi ----------
   function openChangePw() {
-    const m = $('changePwModal');
+    const m = $('changePwModal') || $('modalChangePw');
     if (!m) return;
     hideChangePwMsg();
-    if (typeof m.showModal === 'function') m.showModal(); else m.setAttribute('open', '');
-    setTimeout(() => { const f = $('cpCurrent'); if (f) f.focus(); }, 60);
+    openModalCentered(m);
+    setTimeout(() => { const f = $('cpCurrent') || $('currentPassword'); if (f) f.focus(); }, 60);
   }
   function closeChangePw() {
-    const m = $('changePwModal');
+    const m = $('modalChangePw') || $('changePwModal');
     if (m && typeof m.close === 'function') m.close();
   }
   function setChangePwLoading(on) {
     if ($('btnChangePwSubmit')) $('btnChangePwSubmit').disabled = on;
     if ($('changePwSpinner')) $('changePwSpinner').style.display = on ? 'inline-block' : 'none';
-    if ($('changePwSubmitLabel')) $('changePwSubmitLabel').textContent = on ? 'Menyimpan…' : 'Simpan Kata Sandi';
+    if ($('changePwSubmitLabel')) $('changePwSubmitLabel').textContent = on ? 'Menyimpan…' : '💾 Simpan Sandi Baru';
   }
   function showChangePwMsg(kind, msg) {
     const err = $('changePwError');
@@ -3445,6 +3644,18 @@ window.openDocsForId = openDocsForId;
     if ($('changePwError')) $('changePwError').style.display = 'none';
     if ($('changePwOk')) $('changePwOk').style.display = 'none';
   }
+  function toggleFieldPassword(inputId, btn) {
+    const inp = $(inputId);
+    if (!inp) return;
+    const isPass = inp.type === 'password';
+    inp.type = isPass ? 'text' : 'password';
+    if (btn && window.lucide) {
+      btn.innerHTML = `<i data-lucide="${isPass ? 'eye-off' : 'eye'}" style="width:16px;height:16px;"></i>`;
+      window.lucide.createIcons();
+    }
+  }
+  window.toggleFieldPassword = toggleFieldPassword;
+
   async function handleChangePw(e) {
     if (e && e.preventDefault) e.preventDefault();
     const current = $('cpCurrent') ? $('cpCurrent').value : '';
@@ -3455,7 +3666,7 @@ window.openDocsForId = openDocsForId;
     if (next !== confirm) { showChangePwMsg('err', 'Konfirmasi kata sandi tidak cocok.'); return; }
     if (next === current) { showChangePwMsg('err', 'Kata sandi baru tidak boleh sama dengan kata sandi lama.'); return; }
     setChangePwLoading(true);
-hideChangePwMsg();
+    hideChangePwMsg();
     try {
       const res = await fetch('/api/change-password', {
         method: 'POST',
@@ -3476,8 +3687,145 @@ hideChangePwMsg();
     }
   }
   window.openChangePw = openChangePw;
+  window.closeChangePw = closeChangePw;
+  window.handleChangePw = handleChangePw;
 
-  // ---------- Import manual dari spreadsheet (via GAS read-only) ----------
+  // ==================== KELOLA AKUN PENGGUNA (Admin) ====================
+  async function openManageUsers() {
+    const dlg = $('modalManageUsers');
+    if (!dlg) return;
+    resetManageUsersForm();
+    dlg.showModal();
+    await loadUsersList();
+  }
+
+  function closeManageUsers() {
+    const dlg = $('modalManageUsers');
+    if (dlg) dlg.close();
+  }
+
+  function resetManageUsersForm() {
+    const $ = id => document.getElementById(id);
+    $('muUsername') && ($('muUsername').value = '');
+    $('muUsername') && ($('muUsername').readOnly = false);
+    $('muName') && ($('muName').value = '');
+    $('muRole') && ($('muRole').value = 'bendahara');
+    $('muPassword') && ($('muPassword').value = '');
+    $('muMode') && ($('muMode').value = 'add');
+    $('muPwHint') && ($('muPwHint').textContent = '(Min. 6 kar.)');
+    $('manageUsersFormTitle') && ($('manageUsersFormTitle').textContent = 'TAMBAH / EDIT AKUN');
+    $('muSubmitLabel') && ($('muSubmitLabel').textContent = '💾 Simpan Akun');
+    showManageMsg('', '');
+  }
+
+  function showManageMsg(type, msg) {
+    const el = document.getElementById('manageUsersMsg');
+    if (!el) return;
+    if (!msg) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    if (type === 'ok') {
+      el.style.cssText = 'display:block; padding:10px 14px; font-size:12.5px; border-radius:8px; white-space:normal; border:1px solid #86efac; background:#f0fdf4; color:#166534;';
+    } else {
+      el.style.cssText = 'display:block; padding:10px 14px; font-size:12.5px; border-radius:8px; white-space:normal; border:1px solid #fca5a5; background:#fef2f2; color:#991b1b;';
+    }
+    el.textContent = msg;
+  }
+
+  async function loadUsersList() {
+    const listEl = document.getElementById('manageUsersList');
+    if (!listEl) return;
+    listEl.innerHTML = '<div style="color:var(--slate-400); font-size:13px; text-align:center; padding:10px;">Memuat...</div>';
+    try {
+      const res = await fetch('/api/admin/users').then(r => r.json());
+      if (!res.success) throw new Error(res.error || 'Gagal memuat akun');
+      const users = res.data || [];
+      if (users.length === 0) {
+        listEl.innerHTML = '<div style="color:var(--slate-400); font-size:13px; text-align:center; padding:10px;">Belum ada akun terdaftar.</div>';
+        return;
+      }
+      const roleBadge = r => {
+        const map = { admin:'#dc2626', bendahara:'#2563eb', user:'#059669' };
+        return `<span style="display:inline-block; padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:700; background:${map[r]||'#6b7280'}22; color:${map[r]||'#6b7280'};">${r}</span>`;
+      };
+      listEl.innerHTML = users.map(u => `
+        <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; background:var(--slate-50); border-radius:10px; border:1px solid var(--slate-100);">
+          <div style="font-size:18px;">👤</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:13px; font-weight:700; color:var(--slate-800);">${u.name || u.username} ${roleBadge(u.role)}</div>
+            <div style="font-size:11px; color:var(--slate-500);">@${u.username}</div>
+          </div>
+          <button onclick="editManageUser('${u.username}','${(u.name||'').replace(/'/g,"\\'")}','${u.role}')" class="btn btn-action-secondary" style="font-size:11px; padding:5px 10px;">✏️ Edit</button>
+          ${u.username !== (window._staSession && window._staSession.username) ? `<button onclick="deleteManageUser('${u.username}','${(u.name||u.username).replace(/'/g,"\\'")}',${u.id})" class="btn danger" style="font-size:11px; padding:5px 10px;">🗑️</button>` : ''}
+        </div>
+      `).join('');
+    } catch (err) {
+      listEl.innerHTML = `<div style="color:#991b1b; font-size:13px; text-align:center; padding:10px;">Gagal: ${err.message}</div>`;
+    }
+  }
+
+  function editManageUser(username, name, role) {
+    const $ = id => document.getElementById(id);
+    $('muUsername').value = username;
+    $('muUsername').readOnly = true;
+    $('muName').value = name;
+    $('muRole').value = role;
+    $('muPassword').value = '';
+    $('muMode').value = 'edit';
+    $('muPwHint').textContent = '(Kosongkan jika tidak diubah)';
+    $('manageUsersFormTitle').textContent = `EDIT AKUN: @${username}`;
+    $('muSubmitLabel').textContent = '💾 Perbarui Akun';
+    showManageMsg('', '');
+    $('muName').focus();
+  }
+
+  async function deleteManageUser(username, name, id) {
+    if (!confirm(`Hapus akun "${name}" (@${username})?\n\nAksi ini tidak dapat dibatalkan.`)) return;
+    try {
+      const res = await fetch('/api/admin/users/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, id }) }).then(r => r.json());
+      if (!res.success) throw new Error(res.error || 'Gagal menghapus akun');
+      showManageMsg('ok', `Akun @${username} berhasil dihapus.`);
+      await loadUsersList();
+    } catch (err) {
+      showManageMsg('err', err.message);
+    }
+  }
+
+  async function handleManageUser(e) {
+    e.preventDefault();
+    const $ = id => document.getElementById(id);
+    const username = ($('muUsername').value || '').trim().toLowerCase();
+    const name = ($('muName').value || '').trim();
+    const role = $('muRole').value;
+    const password = ($('muPassword').value || '');
+    const mode = $('muMode').value;
+
+    if (!username) return showManageMsg('err', 'Username tidak boleh kosong.');
+    if (mode === 'add' && password.length < 6) return showManageMsg('err', 'Kata sandi minimal 6 karakter untuk akun baru.');
+    if (password.length > 0 && password.length < 6) return showManageMsg('err', 'Kata sandi minimal 6 karakter.');
+
+    $('muSubmitLabel').textContent = '⏳ Menyimpan...';
+    try {
+      const body = { username, name, role };
+      if (password.length >= 6) body.password = password;
+      const res = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
+      if (!res.success) throw new Error(res.error || 'Gagal menyimpan');
+      showManageMsg('ok', res.message || `Akun @${username} berhasil disimpan.`);
+      resetManageUsersForm();
+      await loadUsersList();
+    } catch (err) {
+      showManageMsg('err', err.message);
+    } finally {
+      $('muSubmitLabel').textContent = '💾 Simpan Akun';
+    }
+  }
+
+  window.openManageUsers = openManageUsers;
+  window.closeManageUsers = closeManageUsers;
+  window.resetManageUsersForm = resetManageUsersForm;
+  window.editManageUser = editManageUser;
+  window.deleteManageUser = deleteManageUser;
+  window.handleManageUser = handleManageUser;
+
   async function importFromSheet() {
     if (!confirm('Tarik data dari spreadsheet ke Supabase sekarang? Data akan di-merge (upsert) ke tabel pendaftaran & uploads.')) return;
     const btn = $('btnImportSheet');
@@ -3525,17 +3873,96 @@ hideChangePwMsg();
   }
   window.importKeuanganFromSheet = importKeuanganFromSheet;
 
+  // Drawer sidebar untuk HP & tablet: buka/tutup via hamburger & backdrop.
+  function initSidebarDrawer() {
+    const menu = $('btnMenu');
+    const bd = $('sidebarBackdrop');
+    if (menu) menu.addEventListener('click', () => document.body.classList.add('sidebar-open'));
+    if (bd) bd.addEventListener('click', () => document.body.classList.remove('sidebar-open'));
+    // Tutup drawer begitu salah satu menu tab diklik.
+    document.querySelectorAll('.sidebar-nav .sidebar-btn').forEach((b) => {
+      b.addEventListener('click', () => document.body.classList.remove('sidebar-open'));
+    });
+    // Kembalikan ke layout desktop bila ukuran layar membesar.
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 1024) document.body.classList.remove('sidebar-open');
+    });
+  }
+  window.initSidebarDrawer = initSidebarDrawer;
+
+  // ---------- Manajemen durasi sesi (login tetap aktif saat refresh) ----------
+  // Durasi sesi sama dengan SESSION_TTL_MS di server (30 menit). Token membawa
+  // klaim `exp` (epoch ms) sehingga kita bisa mengukur sisa waktu & memaksa
+  // login ulang begitu kedaluwarsa.
+  const SESSION_TTL_MS = 30 * 60 * 1000; // 30 menit (keamanan)
+
+  function decodeTokenPayload(token) {
+    try {
+      const parts = String(token || '').split('.');
+      if (parts.length !== 2) return null;
+      const b64 = parts[0].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(atob(b64));
+    } catch (_) { return null; }
+  }
+  function getSessionExp() {
+    const s = getSession();
+    if (!s || !s.token) return 0;
+    const p = decodeTokenPayload(s.token);
+    return (p && p.exp) ? Number(p.exp) : 0;
+  }
+  function isSessionValid() {
+    return getSessionExp() > Date.now();
+  }
+  function fmtRemaining(ms) {
+    if (ms <= 0) return '0m';
+    const totalMin = Math.floor(ms / 60000);
+    const d = Math.floor(totalMin / 1440);
+    const h = Math.floor((totalMin % 1440) / 60);
+    const m = totalMin % 60;
+    if (d > 0) return d + 'h ' + h + 'j';
+    if (h > 0) return h + 'j ' + m + 'm';
+    return m + 'm';
+  }
+  let _sessionTimeout = null;
+  let _sessionCountdown = null;
+  function updateSessionIndicator() {
+    const el = $('sessionTimer');
+    if (!el) return;
+    const remain = getSessionExp() - Date.now();
+    if (remain <= 0) { el.textContent = 'Sesi habis'; el.classList.add('exp'); return; }
+    el.textContent = '⏱ ' + fmtRemaining(remain);
+    el.classList.toggle('warn', remain < 10 * 60000);
+  }
+  function startSessionMonitor() {
+    if (_sessionTimeout) clearTimeout(_sessionTimeout);
+    if (_sessionCountdown) clearInterval(_sessionCountdown);
+    updateSessionIndicator();
+    _sessionCountdown = setInterval(updateSessionIndicator, 30000);
+    const remain = getSessionExp() - Date.now();
+    if (remain <= 0) { handleSessionExpired(); return; }
+    _sessionTimeout = setTimeout(handleSessionExpired, remain);
+  }
+  function stopSessionMonitor() {
+    if (_sessionTimeout) { clearTimeout(_sessionTimeout); _sessionTimeout = null; }
+    if (_sessionCountdown) { clearInterval(_sessionCountdown); _sessionCountdown = null; }
+  }
+  function handleSessionExpired() {
+    stopSessionMonitor();
+    alert('Sesi login Anda telah berakhir (' + fmtRemaining(SESSION_TTL_MS) + '). Silakan login kembali.');
+    handleLogout();
+  }
+
   async function initAuth() {
-    const sess = getSession();
-    if (sess && sess.token) {
-      try {
-        const res = await fetch('/api/me');
-        const j = await res.json();
-        if (j.success) { setAuthedUI(j.user); loadData(); return; }
-      } catch (_) {}
+    // Refresh tidak lagi memaksa login: jika masih ada sesi tersimpan yang
+    // belum kedaluwarsa, langsung kembalikan ke dalam aplikasi.
+    const s = getSession();
+    if (s && s.user && isSessionValid()) {
+      setAuthedUI(s.user);
+      loadData().catch(() => {});
+    } else {
       clearSession();
+      setGuestUI();
     }
-    setGuestUI();
   }
 
   const badge = $('connStatus');
@@ -3889,10 +4316,12 @@ hideChangePwMsg();
       const upCount = uploadMap.get(r.id) || 0;
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td data-label="Aksi">
-          <button class="btn" data-action="view" data-id="${esc(r.id)}">👁 Detail</button>
-          <button class="btn" data-action="edit" data-id="${esc(r.id)}" style="background:#0284c7; color:#ffffff; font-weight:600;" title="Edit data pendaftaran">✏️ Edit</button>
-          ${isUserOnly() ? '' : `<button class="btn danger" data-action="delete" data-id="${esc(r.id)}">🗑 Hapus</button>`}
+        <td data-label="Aksi" style="white-space:nowrap; text-align:center;">
+          <div class="row-action-group">
+            <button class="btn-row-action btn-row-view" data-action="view" data-id="${esc(r.id)}" title="Lihat detail lengkap pendaftaran">👁️ Detail</button>
+            <button class="btn-row-action btn-row-edit" data-action="edit" data-id="${esc(r.id)}" title="Edit data pendaftaran">✏️ Edit</button>
+            ${isUserOnly() ? '' : `<button class="btn-row-action btn-row-del" data-action="delete" data-id="${esc(r.id)}" title="Hapus pendaftaran">🗑️ Hapus</button>`}
+          </div>
         </td>
         <td data-label="ID"><strong>${esc(r.id)}</strong> ${upCount ? `<span class="tag status-s" title="${upCount} upload">📎${upCount}</span>` : ''}</td>
         <td data-label="Tanggal">${esc(fmtTgl(r.timestamp) || '')}</td>
@@ -3939,10 +4368,12 @@ hideChangePwMsg();
       const { r, info, missing } = c;
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td data-label="Aksi">
-          <button class="btn primary" data-action="surat" data-id="${esc(r.id)}">🖨 Surat</button>
-          <button class="btn" data-action="surat-sporadik" data-id="${esc(r.id)}" title="Cetak Surat SPORADIK (Penguasaan Fisik Bidang Tanah)">🖨 SPORADIK</button>
-          <button class="btn" onclick="openDocsForId('${esc(r.id)}'); event.stopPropagation();" data-action="open-docs" data-id="${esc(r.id)}" style="background:#0284c7; color:#fff; font-weight:600;" title="Buka dan Edit di Tab Surat Docs">📄 Docs</button>
+        <td data-label="Aksi" style="white-space:nowrap; text-align:center;">
+          <div class="row-action-group">
+            <button class="btn-row-action btn-row-print" data-action="surat" data-id="${esc(r.id)}" title="Cetak Surat Resmi">🖨️ Surat</button>
+            <button class="btn-row-action btn-row-sporadik" data-action="surat-sporadik" data-id="${esc(r.id)}" title="Cetak Surat SPORADIK">📄 SPORADIK</button>
+            <button class="btn-row-action btn-row-docs" onclick="openDocsForId('${esc(r.id)}'); event.stopPropagation();" data-action="open-docs" data-id="${esc(r.id)}" title="Buka dan Edit di Tab Surat Docs">⚡ Docs</button>
+          </div>
         </td>
         <td data-label="ID"><strong>${esc(r.id)}</strong></td>
         <td data-label="Tanggal">${esc(fmtTgl(r.timestamp) || '')}</td>
@@ -4181,6 +4612,240 @@ hideChangePwMsg();
     </div>`;
   }
 
+  // ---- Filter tanggal dashboard ----
+  let dashFilterMonth = '';
+  let dashKeuState = [];
+
+  function dashFilteredData() {
+    if (!dashFilterMonth) return allData;
+    return allData.filter((r) => {
+      const ts = r.timestamp || r.created_at || '';
+      return String(ts).startsWith(dashFilterMonth);
+    });
+  }
+
+  function dashFilteredUploads() {
+    if (!dashFilterMonth) return uploads;
+    return uploads.filter((u) => {
+      const ts = u.timestamp || u.created_at || '';
+      return String(ts).startsWith(dashFilterMonth);
+    });
+  }
+
+  async function fetchDashKeuangan() {
+    const _setTxt = (id, val) => { const el = $(id); if (el) el.textContent = val; };
+    const _setHtml = (id, val) => { const el = $(id); if (el) el.innerHTML = val; };
+    try {
+      const [resRing, resTrx] = await Promise.all([
+        fetch('/api/keuangan/ringkasan'),
+        fetch('/api/keuangan/transaksi')
+      ]);
+      const [jsonRing, jsonTrx] = await Promise.all([resRing.json(), resTrx.json()]);
+      if (jsonTrx.success) dashKeuState = jsonTrx.data || [];
+      if (jsonRing.success && jsonRing.data) {
+        _setTxt('dbTotalPemasukan', formatRp(jsonRing.data.total_pemasukan));
+        _setTxt('dbTotalPengeluaran', formatRp(jsonRing.data.total_pengeluaran));
+        _setTxt('dbSaldoAkhir', formatRp(jsonRing.data.saldo_akhir));
+      }
+      // Hitung transaksi bulan ini
+      const nowMonth = new Date().toISOString().slice(0, 7);
+      const trxBulanIni = dashKeuState.filter((t) => t.tanggal && String(t.tanggal).startsWith(nowMonth));
+      _setTxt('dbTrxBulanIni', trxBulanIni.length);
+      renderDashKeuChart();
+      renderDashRekapKeu();
+    } catch (e) {
+      console.warn('Gagal memuat data keuangan dashboard:', e.message);
+    }
+  }
+
+  function renderDashKeuChart() {
+    const byMonth = {};
+    dashKeuState.forEach((t) => {
+      const d = new Date(t.tanggal);
+      if (isNaN(d.getTime())) return;
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      if (!byMonth[key]) byMonth[key] = { masuk: 0, keluar: 0 };
+      const isMasuk = String(t.jenis_transaksi || '').toLowerCase().includes('pemasukan');
+      const nom = Math.abs(Number(t.nominal || 0));
+      if (isMasuk) byMonth[key].masuk += nom;
+      else byMonth[key].keluar += nom;
+    });
+    const months = Object.keys(byMonth).sort().map((key) => {
+      const [y, m] = key.split('-');
+      const BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+      return { key, label: BULAN[parseInt(m, 10) - 1] + ' ' + y, masuk: byMonth[key].masuk, keluar: byMonth[key].keluar };
+    });
+    if (!months.length) {
+      const el = $('chartKeuTren'); if (el) el.innerHTML = '<div class="chart-empty">Belum ada data transaksi</div>';
+      return;
+    }
+    const max = Math.max(1, ...months.flatMap((m) => [m.masuk, m.keluar]));
+    const barH = 12, pairGap = 3, groupGap = 10, top = 6, charW = 7;
+    const labelW = Math.min(120, Math.max(...months.map((m) => String(m.label).length)) * charW);
+    const left = 12 + labelW + 12, plotW = 380, valGap = 8, valPad = 56;
+    const W = left + plotW + valGap + valPad;
+    const H = top + months.length * (barH * 2 + pairGap + groupGap) + 6;
+    const bars = months.map((m, i) => {
+      const y = top + i * (barH * 2 + pairGap + groupGap);
+      const mk = Math.max(2, (m.masuk / max) * plotW);
+      const kl = Math.max(2, (m.keluar / max) * plotW);
+      return `
+        <text x="${left - 12}" y="${y + barH + 4}" text-anchor="end" class="ch-label">${esc(m.label)}</text>
+        <rect x="${left}" y="${y}" width="${mk}" height="${barH}" rx="3" fill="#34d399"><title>Pemasukan ${esc(m.label)}: ${formatRp(m.masuk)}</title></rect>
+        <text x="${left + mk + valGap}" y="${y + barH - 2}" class="ch-val">${formatRp(m.masuk)}</text>
+        <rect x="${left}" y="${y + barH + pairGap}" width="${kl}" height="${barH}" rx="3" fill="#fb7185"><title>Pengeluaran ${esc(m.label)}: ${formatRp(m.keluar)}</title></rect>
+        <text x="${left + kl + valGap}" y="${y + barH + pairGap + barH - 2}" class="ch-val">${formatRp(m.keluar)}</text>`;
+    }).join('');
+    const html = `<div class="pie-legend" style="flex-direction:row; margin-bottom:10px;">
+        <div class="pie-legend-item"><span class="pie-swatch" style="background:#34d399"></span><span class="pie-leg-text">Pemasukan</span></div>
+        <div class="pie-legend-item"><span class="pie-swatch" style="background:#fb7185"></span><span class="pie-leg-text">Pengeluaran</span></div>
+      </div>
+      <svg viewBox="0 0 ${W} ${H}" class="svg-chart" role="img" aria-label="Grafik keuangan">${bars}</svg>`;
+    const el = $('chartKeuTren'); if (el) el.innerHTML = html;
+  }
+
+  function renderDashRekapKeu() {
+    const byMonth = {};
+    dashKeuState.forEach((t) => {
+      const d = new Date(t.tanggal);
+      if (isNaN(d.getTime())) return;
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      if (!byMonth[key]) byMonth[key] = { masuk: 0, keluar: 0, n: 0 };
+      const isMasuk = String(t.jenis_transaksi || '').toLowerCase().includes('pemasukan');
+      const nom = Math.abs(Number(t.nominal || 0));
+      if (isMasuk) byMonth[key].masuk += nom;
+      else byMonth[key].keluar += nom;
+      byMonth[key].n++;
+    });
+    const months = Object.keys(byMonth).sort().reverse().map((key) => {
+      const [y, m] = key.split('-');
+      const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      return { key, label: BULAN[parseInt(m, 10) - 1] + ' ' + y, masuk: byMonth[key].masuk, keluar: byMonth[key].keluar, n: byMonth[key].n, saldo: byMonth[key].masuk - byMonth[key].keluar };
+    });
+    if (!months.length) {
+      const el = $('dashRekapKeu'); if (el) el.innerHTML = '<div class="chart-empty">Belum ada data transaksi</div>';
+      return;
+    }
+    let html = '<table class="dt c1"><thead><tr><th>Bulan</th><th>Pemasukan</th><th>Pengeluaran</th><th>Saldo</th></tr></thead><tbody>';
+    months.forEach((m) => {
+      html += `<tr><td><strong>${esc(m.label)}</strong></td><td class="num" style="color:#059669;">${formatRp(m.masuk)}</td><td class="num" style="color:#e11d48;">${formatRp(m.keluar)}</td><td class="num"><strong>${formatRp(m.saldo)}</strong></td></tr>`;
+    });
+    html += '</tbody></table>';
+    const targetEl = $('dashRekapKeu'); if (targetEl) targetEl.innerHTML = html;
+  }
+
+  // ---- Laporan Bulanan ----
+  function renderLaporanBulanan() {
+    const body = $('laporanBody');
+    if (!body) return;
+    const now = new Date();
+    const bulanIni = now.toISOString().slice(0, 7);
+    const BULAN_FULL = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    const bulanLabel = BULAN_FULL[now.getMonth()] + ' ' + now.getFullYear();
+
+    // Filter data bulan ini
+    const pendaftaranBulan = allData.filter((r) => (r.timestamp || r.created_at || '').startsWith(bulanIni));
+    const uploadsBulan = uploads.filter((u) => (u.timestamp || u.created_at || '').startsWith(bulanIni));
+    const trxBulan = dashKeuState.filter((t) => t.tanggal && String(t.tanggal).startsWith(bulanIni));
+    const totalPemasukan = trxBulan.filter((t) => String(t.jenis_transaksi || '').toLowerCase().includes('pemasukan')).reduce((s, t) => s + Math.abs(Number(t.nominal || 0)), 0);
+    const totalPengeluaran = trxBulan.filter((t) => !String(t.jenis_transaksi || '').toLowerCase().includes('pemasukan')).reduce((s, t) => s + Math.abs(Number(t.nominal || 0)), 0);
+
+    // Status breakdown
+    const statusMap = {};
+    pendaftaranBulan.forEach((r) => {
+      const s = r.status_berkas || 'PENDING';
+      statusMap[s] = (statusMap[s] || 0) + 1;
+    });
+
+    // Layanan breakdown
+    const layananMap = {};
+    pendaftaranBulan.forEach((r) => {
+      const l = r.layanan || '-';
+      layananMap[l] = (layananMap[l] || 0) + 1;
+    });
+
+    let html = `
+      <div style="text-align:center; margin-bottom:20px; padding-bottom:16px; border-bottom:2px solid #14532d;">
+        <h2 style="font-size:18px; font-weight:800; color:#14532d; margin:0;">LAPORAN BULANAN PERTANAHAN</h2>
+        <p style="font-size:13px; color:#64748b; margin:4px 0 0;">Desa Batetangnga, Kec. Binuang, Kab. Polewali Mandar</p>
+        <p style="font-size:14px; font-weight:700; color:#1e293b; margin:6px 0 0;">Periode: ${esc(bulanLabel)}</p>
+      </div>
+
+      <!-- Ringkasan -->
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px;">
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:14px; text-align:center;">
+          <div style="font-size:11px; font-weight:700; color:#166534; text-transform:uppercase;">Pendaftaran Baru</div>
+          <div style="font-size:24px; font-weight:800; color:#14532d; margin:4px 0;">${pendaftaranBulan.length}</div>
+          <div style="font-size:10px; color:#64748b;">dari ${allData.length} total</div>
+        </div>
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:14px; text-align:center;">
+          <div style="font-size:11px; font-weight:700; color:#1e40af; text-transform:uppercase;">Upload Berkas</div>
+          <div style="font-size:24px; font-weight:800; color:#1e3a8a; margin:4px 0;">${uploadsBulan.length}</div>
+          <div style="font-size:10px; color:#64748b;">dari ${uploads.length} total</div>
+        </div>
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:14px; text-align:center;">
+          <div style="font-size:11px; font-weight:700; color:#166534; text-transform:uppercase;">Pemasukan</div>
+          <div style="font-size:20px; font-weight:800; color:#059669; margin:4px 0;">${formatRp(totalPemasukan)}</div>
+          <div style="font-size:10px; color:#64748b;">${trxBulan.filter((t) => String(t.jenis_transaksi || '').toLowerCase().includes('pemasukan')).length} transaksi</div>
+        </div>
+        <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; padding:14px; text-align:center;">
+          <div style="font-size:11px; font-weight:700; color:#9f1239; text-transform:uppercase;">Pengeluaran</div>
+          <div style="font-size:20px; font-weight:800; color:#e11d48; margin:4px 0;">${formatRp(totalPengeluaran)}</div>
+          <div style="font-size:10px; color:#64748b;">${trxBulan.filter((t) => !String(t.jenis_transaksi || '').toLowerCase().includes('pemasukan')).length} transaksi</div>
+        </div>
+      </div>
+
+      <!-- Status Berkas -->
+      <div style="margin-bottom:16px;">
+        <h3 style="font-size:14px; font-weight:800; color:#1e293b; margin:0 0 8px;">📊 Status Berkas</h3>
+        <table class="dt c1"><thead><tr><th>Status</th><th>Jumlah</th><th>Persen</th></tr></thead><tbody>
+          ${Object.entries(statusMap).sort((a, b) => b[1] - a[1]).map(([k, v]) => {
+            const pct = pendaftaranBulan.length ? ((v / pendaftaranBulan.length) * 100).toFixed(1) : 0;
+            return `<tr><td>${esc(k)}</td><td class="num">${v}</td><td class="num">${pct}%</td></tr>`;
+          }).join('')}
+        </tbody></table>
+      </div>
+
+      <!-- Jenis Layanan -->
+      <div style="margin-bottom:16px;">
+        <h3 style="font-size:14px; font-weight:800; color:#1e293b; margin:0 0 8px;">📋 Jenis Layanan</h3>
+        <table class="dt c1"><thead><tr><th>Layanan</th><th>Jumlah</th><th>Persen</th></tr></thead><tbody>
+          ${Object.entries(layananMap).sort((a, b) => b[1] - a[1]).map(([k, v]) => {
+            const pct = pendaftaranBulan.length ? ((v / pendaftaranBulan.length) * 100).toFixed(1) : 0;
+            return `<tr><td>${esc(k)}</td><td class="num">${v}</td><td class="num">${pct}%</td></tr>`;
+          }).join('')}
+        </tbody></table>
+      </div>
+
+      <!-- Daftar Pendaftaran Baru -->
+      <div style="margin-bottom:16px;">
+        <h3 style="font-size:14px; font-weight:800; color:#1e293b; margin:0 0 8px;">📝 Daftar Pendaftaran Baru (${pendaftaranBulan.length} data)</h3>
+        ${pendaftaranBulan.length ? `<table class="dt c1"><thead><tr><th>No</th><th>ID</th><th>Tanggal</th><th>Pemohon</th><th>Layanan</th><th>Status</th></tr></thead><tbody>
+          ${pendaftaranBulan.map((r, i) => `<tr><td>${i + 1}</td><td style="font-family:monospace; font-weight:700;">${esc(r.id)}</td><td>${esc(fmtTgl(r.timestamp) || '')}</td><td><strong>${esc(r.nama)}</strong></td><td><span class="tag ${esc(r.layanan)}">${esc(r.layanan)}</span></td><td>${esc(r.status_berkas || 'PENDING')}</td></tr>`).join('')}
+        </tbody></table>` : '<p style="color:#94a3b8; font-size:12px;">Tidak ada pendaftaran baru bulan ini.</p>'}
+      </div>
+
+      <!-- Daftar Transaksi Keuangan -->
+      <div style="margin-bottom:16px;">
+        <h3 style="font-size:14px; font-weight:800; color:#1e293b; margin:0 0 8px;">💰 Transaksi Keuangan (${trxBulan.length} data)</h3>
+        ${trxBulan.length ? `<table class="dt c1"><thead><tr><th>Tanggal</th><th>Jenis</th><th>Terkait</th><th>Nominal</th><th>Keterangan</th></tr></thead><tbody>
+          ${trxBulan.map((t) => {
+            const makerName = t.permohonan_surat_tanah ? t.permohonan_surat_tanah.nama : (t.id_permohonan || '-');
+            const isMasuk = String(t.jenis_transaksi || '').toLowerCase().includes('pemasukan');
+            return `<tr><td style="white-space:nowrap;">${new Date(t.tanggal).toLocaleDateString('id-ID')}</td><td><span class="tag ${isMasuk ? 'status-ok' : 'status-ko'}" style="font-weight:700;">${esc(t.jenis_transaksi)}</span></td><td>${esc(makerName)}</td><td class="num" style="font-weight:700; color:${isMasuk ? '#059669' : '#e11d48'};">${formatRp(t.nominal)}</td><td>${esc(t.keterangan || '-')}</td></tr>`;
+          }).join('')}
+        </tbody></table>` : '<p style="color:#94a3b8; font-size:12px;">Tidak ada transaksi bulan ini.</p>'}
+      </div>
+
+      <!-- Tanda Tangan -->
+      <div style="margin-top:30px; padding-top:16px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; font-size:11px; color:#64748b;">
+        <span>Dicetak: ${new Date().toLocaleString('id-ID')}</span>
+        <span>Sistem Informasi Pertanahan Desa Batetangnga</span>
+      </div>
+    `;
+    body.innerHTML = html;
+  }
+
   // Tab "Dashboard": analitik lengkap (tabel 1/2/3 arah + grafik batang/garis/pie).
   function renderDashboard() {
     const total = allData.length;
@@ -4216,6 +4881,13 @@ hideChangePwMsg();
     setTxt('dbDiukur', allData.filter((r) => r.status_berkas === 'SUDAH_DIUKUR').length);
     setTxt('dbCetak', allData.filter((r) => String(r.data_raw && r.data_raw._nomorSuratTercetak || '').trim()).length);
 
+    // Set default month filter
+    const monthInput = $('dashFilterMonth');
+    if (monthInput && !monthInput.value) monthInput.value = new Date().toISOString().slice(0, 7);
+
+    // Fetch & render keuangan
+    fetchDashKeuangan();
+
     const fLay = freq(allData.map((r) => r.layanan));
     const fSta = freq(allData.map((r) => r.status_berkas));
     const fBay = freq(allData.map((r) => payLabel(r)));
@@ -4247,6 +4919,8 @@ hideChangePwMsg();
       : '<div class="chart-empty">Belum ada data dusun pada pendaftaran.</div>');
 
     // Tabel 1 arah (frekuensi + persen).
+    freqTable(fLay, 'Layanan');
+    freqTable(fSta, 'Status');
     freqTable(fBay, 'Bayar');
     freqTable(fTan, 'Tanah');
 
@@ -4306,32 +4980,62 @@ hideChangePwMsg();
   }
 
   function renderUploads() {
-    const q = ($('uploadSearch').value || '').toLowerCase().trim();
+    const q = (($('uploadSearch') || {}).value || '').toLowerCase().trim();
+    const filterJenis = (($('uploadFilterJenis') || {}).value || '').toUpperCase().trim();
     const body = $('uploadBody');
+    if (!body) return;
     body.innerHTML = '';
+
     const rows2 = uploads.filter((u) => {
+      if (filterJenis && !String(u.jenis_upload || '').toUpperCase().includes(filterJenis)) return false;
       if (!q) return true;
-      const hay = [u.id_registrasi, u.jenis_upload, u.file_name].join(' ').toLowerCase();
+      const hay = [u.id_registrasi, u.jenis_upload, u.file_name, u.timestamp].join(' ').toLowerCase();
       return hay.includes(q);
     });
-    $('uploadEmpty').hidden = rows2.length > 0;
+
+    if ($('uploadCountBadge')) {
+      $('uploadCountBadge').textContent = `${uploads.length} Berkas Terdata`;
+    }
+    if ($('uploadEmpty')) $('uploadEmpty').hidden = rows2.length > 0;
+
     const stp = pageState.uploads;
     const totalPages = Math.max(1, Math.ceil(rows2.length / PER_PAGE));
     if (stp.p > totalPages) stp.p = totalPages;
     const shown = rows2.slice((stp.p - 1) * PER_PAGE, stp.p * PER_PAGE);
+
+    const frag = document.createDocumentFragment();
     shown.forEach((u) => {
       const tr = document.createElement('tr');
+      const ext = (u.file_name || '').split('.').pop().toLowerCase();
+      let fileIcon = '📄';
+      if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) fileIcon = '🖼️';
+      else if (ext === 'pdf') fileIcon = '📑';
+
       tr.innerHTML = `
-        <td data-label="ID Registrasi"><strong>${esc(u.id_registrasi)}</strong></td>
-        <td data-label="Jenis"><span class="tag status-s">${esc(u.jenis_upload)}</span></td>
-        <td data-label="Nama File" class="wrap">${esc(u.file_name)}</td>
-        <td data-label="Timestamp">${esc(u.timestamp)}</td>
-        <td data-label="File">
-          ${u.file_url ? `<a class="flink" href="${esc(u.file_url)}" target="_blank" rel="noopener">🔗 Buka</a>` : '—'}
-          ${(u.file_id && !isUserOnly()) ? ` <button class="btn" data-del-up="${esc(u.file_id)}">🗑</button>` : ''}
+        <td data-label="Aksi" style="white-space:nowrap; text-align:center;">
+          <div class="row-action-group">
+            ${u.file_url ? `<a class="btn-row-action btn-row-view" href="${esc(u.file_url)}" target="_blank" rel="noopener" title="Buka dan Unduh Berkas">👁️ Buka</a>` : '<span style="color:var(--slate-400); font-size:11px;">—</span>'}
+            ${(u.file_id && !isUserOnly()) ? `<button class="btn-row-action btn-row-del" data-del-up="${esc(u.file_id)}" title="Hapus Berkas Ini">🗑️ Hapus</button>` : ''}
+          </div>
+        </td>
+        <td data-label="ID Registrasi">
+          <span style="font-family:'Space Grotesk',monospace; font-weight:700; color:var(--primary-900);">${esc(u.id_registrasi || '-')}</span>
+        </td>
+        <td data-label="Jenis Dokumen">
+          <span class="tag status-s" style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px;">${esc(u.jenis_upload || 'DOKUMEN')}</span>
+        </td>
+        <td data-label="Nama File" class="wrap">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:14px;">${fileIcon}</span>
+            <span style="font-weight:600; color:var(--slate-800); word-break:break-word;">${esc(u.file_name || 'Berkas Tanpa Nama')}</span>
+          </div>
+        </td>
+        <td data-label="Waktu Upload" style="color:var(--slate-500); font-size:11.5px; white-space:nowrap;">
+          ${esc(u.timestamp ? fmtTgl(u.timestamp) || u.timestamp : '—')}
         </td>`;
-      body.appendChild(tr);
+      frag.appendChild(tr);
     });
+    body.appendChild(frag);
     drawPager('pagerUploads', 'uploads', rows2.length);
   }
 
@@ -4339,27 +5043,91 @@ hideChangePwMsg();
     const r = allData.find((x) => x.id === id);
     if (!r) return;
     const info = rawToRow(r);
-    const keys = Object.keys(info).sort();
-    const grid = keys.map((k) => {
-      const isName = String(k).toUpperCase().includes('NAMA');
-      return `<div class="k">${esc(k)}</div><div>${isName ? '<strong>' + esc(info[k]) + '</strong>' : esc(info[k])}</div>`;
-    }).join('');
     const ups = uploads.filter((u) => u.id_registrasi === id);
+    
     const upHtml = ups.length
       ? ups.map((u) =>
-          `<div class="k">📎 ${esc(u.jenis_upload)}</div><div><a class="flink" href="${esc(u.file_url || '#')}" target="_blank" rel="noopener">${esc(u.file_name)}</a></div>`
+          `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:6px;">
+             <span style="font-size:12px; font-weight:700; color:#334155;">📎 ${esc(u.jenis_upload)}: ${esc(u.file_name)}</span>
+             <a href="${esc(u.file_url || '#')}" target="_blank" rel="noopener" class="btn btn-action-secondary" style="padding:3px 10px; font-size:11px; text-decoration:none;">Buka Berkas ↗</a>
+           </div>`
         ).join('')
-      : '<div class="k">📎 File</div><div>—</div>';
-    $('detailTitle').textContent = 'Detail ' + id;
-    $('detailBody').innerHTML =
-      `<div class="detail-grid">
-         ${grid}
-         <div class="k">TIMESTAMP</div><div>${esc(r.timestamp)}</div>
-         ${upHtml}
-         <div class="k">DATA_RAW (JSON)</div>
-         <pre class="raw-json">${esc(prettyRaw(r.data_raw))}</pre>
-       </div>`;
-    $('detailModal').showModal();
+      : '<div style="font-size:12px; color:#94a3b8; font-style:italic; padding:6px 0;">Belum ada berkas lampiran yang diunggah.</div>';
+
+    const titleEl = $('detailTitle');
+    if (titleEl) titleEl.textContent = 'Detail Pendaftaran ' + id;
+    
+    const bodyEl = $('detailBody');
+    if (!bodyEl) return;
+
+    bodyEl.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <!-- Header Info Card -->
+        <div style="background:linear-gradient(135deg, #064e3b, #047857); color:#fff; padding:16px 20px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 12px rgba(6,78,59,0.15);">
+          <div>
+            <div style="font-size:10.5px; color:#a7f3d0; font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">NOMOR REGISTRASI</div>
+            <div style="font-size:20px; font-weight:800; font-family:'Space Grotesk', sans-serif; letter-spacing:-0.3px;">${esc(r.id)}</div>
+            <div style="font-size:12.5px; color:#ecfdf5; margin-top:3px;">Pemohon: <strong>${esc(r.nama)}</strong></div>
+          </div>
+          <div style="text-align:right;">
+            <span class="tag ${esc(r.layanan)}" style="font-size:11px; padding:4px 12px; font-weight:700;">${esc(r.layanan)}</span>
+            <div style="margin-top:6px; font-size:11.5px; color:#d1fae5;">Status: <strong>${esc(r.status_berkas || 'PENDING')}</strong></div>
+          </div>
+        </div>
+
+        <!-- Section 1: Data Para Pihak -->
+        <div class="card" style="padding:14px 16px; margin:0;">
+          <div class="card-header-title" style="font-size:12.5px; margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid #f1f5f9;">
+            👤 Data Para Pihak
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; font-size:12px;">
+            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">NAMA PEMOHON</span><strong>${esc(r.nama || '—')}</strong></div>
+            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">NOMOR HP / WHATSAPP</span><strong>${esc(r.hp || '—')}</strong></div>
+            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">PIHAK PERTAMA / PENJUAL</span><strong>${esc(pihakPertamaNama(r.layanan, info) || '—')}</strong></div>
+            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">ALAMAT LENGKAP</span>${esc(alamatPemohon(r.layanan, info) || '—')}</div>
+          </div>
+        </div>
+
+        <!-- Section 2: Data Objek Tanah -->
+        <div class="card" style="padding:14px 16px; margin:0;">
+          <div class="card-header-title" style="font-size:12.5px; margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid #f1f5f9;">
+            🗺️ Rincian Objek Tanah
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; font-size:12px;">
+            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">JENIS / PENGGUNAAN TANAH</span><strong>${esc(info.jenis_tanah || info.penggunaan_tanah || '—')}</strong></div>
+            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">LUAS TANAH</span><strong>${esc(info.luas_tanah ? info.luas_tanah + ' M²' : '—')}</strong></div>
+            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">DUSUN / LOKASI</span><strong>${esc(info.dusun || info.letak_tanah || '—')}</strong></div>
+            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">NOMOR SPORADIK / SURAT</span><strong>${esc(info._nomorSuratTercetak || 'Belum Dicetak')}</strong></div>
+          </div>
+
+          <div style="margin-top:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+            <div style="font-size:11px; font-weight:700; color:#334155; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">BATAS-BATAS TANAH:</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; font-size:11.5px;">
+              <div><span style="color:#64748b; font-weight:600;">Utara:</span> ${esc(info.batas_utara || info.utara || '—')}</div>
+              <div><span style="color:#64748b; font-weight:600;">Timur:</span> ${esc(info.batas_timur || info.timur || '—')}</div>
+              <div><span style="color:#64748b; font-weight:600;">Selatan:</span> ${esc(info.batas_selatan || info.selatan || '—')}</div>
+              <div><span style="color:#64748b; font-weight:600;">Barat:</span> ${esc(info.batas_barat || info.barat || '—')}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Lampiran Berkas Upload -->
+        <div class="card" style="padding:14px 16px; margin:0;">
+          <div class="card-header-title" style="font-size:12.5px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #f1f5f9;">
+            📎 Berkas &amp; Lampiran (${ups.length})
+          </div>
+          ${upHtml}
+        </div>
+
+        <!-- Section 4: Catatan Admin & Waktu -->
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#64748b; padding:4px 8px; flex-wrap:wrap; gap:6px;">
+          <span>Waktu Pendaftaran: ${esc(r.timestamp || r.created_at || '—')}</span>
+          <span>Catatan: ${esc(r.catatan_admin || 'Tidak ada')}</span>
+        </div>
+      </div>
+    `;
+
+    openModalCentered($('detailModal'));
   }
 
   function prettyRaw(raw) {
@@ -4374,7 +5142,7 @@ hideChangePwMsg();
     currentEditLayanan = r.layanan || 'HIBAH';
     const raw = parseRaw(r.data_raw);
     renderEditBody(r, raw);
-    $('editModal').showModal();
+    openModalCentered($('editModal'));
   }
   window.openEdit = openEdit;
 
@@ -4427,26 +5195,26 @@ hideChangePwMsg();
         </div>
 
         <div class="form-box">
-          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
+          <div class="field-grid">
             ${secs(TAMBAH_SECTIONS.pemohon)}
           </div>
         </div>
 
         <div class="form-box">
-          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
+          <div class="field-grid">
             ${secs(TAMBAH_SECTIONS[currentEditLayanan] || [])}
             <div id="editAnakWrap" class="field full" style="grid-column: 1 / -1 !important;"></div>
           </div>
         </div>
 
         <div class="form-box">
-          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
+          <div class="field-grid">
             ${secs(TAMBAH_SECTIONS.tanah)}
           </div>
         </div>
 
         <div class="form-box">
-          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
+          <div class="field-grid">
             <div class="field full" style="grid-column: 1 / -1 !important;"><label>Catatan Admin</label><textarea id="ed_catatan" rows="3">${esc(r.catatan_admin || '')}</textarea></div>
           </div>
         </div>
@@ -5279,7 +6047,7 @@ hideChangePwMsg();
       return `
         <div class="se-group" style="display: flex; flex-direction: column; width: 100%; margin-bottom: 16px;">
           <div class="se-group-head">${sec.title}</div>
-          <div class="se-group-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important; align-items: start !important;">${fieldItems.join('')}</div>
+          <div class="se-group-grid">${fieldItems.join('')}</div>
         </div>`;
     }).join('');
 
@@ -5289,7 +6057,7 @@ hideChangePwMsg();
       fieldsHtml += `
         <div class="se-group" style="display: flex; flex-direction: column; width: 100%; margin-bottom: 16px;">
           <div class="se-group-head">📋 INFORMASI LAINNYA</div>
-          <div class="se-group-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important; align-items: start !important;">${leftoverItems.join('')}</div>
+          <div class="se-group-grid">${leftoverItems.join('')}</div>
         </div>`;
     }
 
@@ -6485,6 +7253,7 @@ hideChangePwMsg();
         });
     }
     else if (activeTab === 'suratdocs') {
+        showTab('suratdocs', () => {});
         fetchPemohonList();
         renderDocsHistory();
         if ($('docsIdReg') && $('docsIdReg').value) {
@@ -6494,6 +7263,8 @@ hideChangePwMsg();
         }
     }
   }
+  window.switchTab = switchTab;
+  window._staSwitchTab = switchTab;
 
   // ============================================================
   // TAMBAH DATA — form dinamis 3 jenis surat (Hibah/JualBeli/AhliWaris)
@@ -6562,11 +7333,16 @@ hideChangePwMsg();
       { id: 'batas_timur', label: 'Timur' },
       { id: 'batas_selatan', label: 'Selatan' },
       { id: 'batas_barat', label: 'Barat' },
-      { sec: '👥 Saksi' },
-      { id: 'saksi1_nama', label: 'Saksi 1' },
+      { sec: '👥 Saksi 1' },
+      { id: 'saksi1_nama', label: 'Nama Saksi 1', req: true },
       { id: 'saksi1_tanggal_lahir', label: 'Tanggal Lahir Saksi 1', type: 'date' },
-      { id: 'saksi2_nama', label: 'Saksi 2' },
-      { id: 'saksi2_tanggal_lahir', label: 'Tanggal Lahir Saksi 2', type: 'date' }
+      { id: 'saksi1_pekerjaan', label: 'Pekerjaan Saksi 1' },
+      { id: 'saksi1_alamat', label: 'Alamat Saksi 1', full: true },
+      { sec: '👥 Saksi 2' },
+      { id: 'saksi2_nama', label: 'Nama Saksi 2', req: true },
+      { id: 'saksi2_tanggal_lahir', label: 'Tanggal Lahir Saksi 2', type: 'date' },
+      { id: 'saksi2_pekerjaan', label: 'Pekerjaan Saksi 2' },
+      { id: 'saksi2_alamat', label: 'Alamat Saksi 2', full: true }
     ]
   };
 
@@ -6720,20 +7496,20 @@ hideChangePwMsg();
         </div>
 
         <div class="form-box">
-          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
+          <div class="field-grid">
             ${tambahSeksiHtml(TAMBAH_SECTIONS.pemohon)}
           </div>
         </div>
 
         <div class="form-box">
-          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
+          <div class="field-grid">
             ${tambahSeksiHtml(TAMBAH_SECTIONS[tambahLayanan] || [])}
             <div id="tambahAnakWrap" class="field full" style="grid-column: 1 / -1 !important;"></div>
           </div>
         </div>
 
         <div class="form-box">
-          <div class="field-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px 14px !important; width: 100% !important;">
+          <div class="field-grid">
             ${tambahSeksiHtml(TAMBAH_SECTIONS.tanah)}
           </div>
         </div>
@@ -6959,7 +7735,7 @@ hideChangePwMsg();
   function openTambahData() {
     tambahLayanan = 'HIBAH';
     renderTambahBody();
-    $('tambahModal').showModal();
+    openModalCentered($('tambahModal'));
   }
 
   // ---- Laporan: Rekap Alamat (per dusun), Tabel Kosong, Group by NIK/Nama ----
@@ -7191,7 +7967,7 @@ hideChangePwMsg();
     buildRekapToolbar();
     rekapSnapshot();
     renderRekap();
-    $('rekapModal').showModal();
+    openModalCentered($('rekapModal'));
     if (window.lucide) window.lucide.createIcons();
   }
 
@@ -7237,6 +8013,7 @@ hideChangePwMsg();
   on('spFilterLayanan', 'change', () => { resetPage('sporadik'); renderSporadik(); });
   on('spFilterKelengkapan', 'change', () => { resetPage('sporadik'); renderSporadik(); });
   on('uploadSearch', 'input', () => { resetPage('uploads'); renderUploads(); });
+  on('uploadFilterJenis', 'change', () => { resetPage('uploads'); renderUploads(); });
   [['pagerPendaftaran', 'pendaftaran'], ['pagerSporadik', 'sporadik'], ['pagerUploads', 'uploads'], ['pagerKeuangan', 'keuangan']].forEach(([pid, key]) => {
     on(pid, 'click', (e) => {
       const btn = e.target.closest('.pg-btn');
@@ -7292,6 +8069,17 @@ hideChangePwMsg();
   on('btnCloseModal', 'click', () => $('detailModal') && $('detailModal').close());
   on('btnCloseEdit', 'click', () => $('editModal') && $('editModal').close());
   on('btnTambahData', 'click', openTambahData);
+  window.openTambahData = openTambahData;
+  window.handleHeroTambahData = function() {
+    switchTab('pendaftaran');
+    setTimeout(() => openTambahData(), 100);
+  };
+  window.handleHeroCetakSporadik = function() {
+    switchTab('sporadik');
+  };
+  window.handleHeroKasKeuangan = function() {
+    switchTab('keuangan');
+  };
   on('btnCloseTambah', 'click', () => $('tambahModal') && $('tambahModal').close());
   on('btnRekapAlamat', 'click', () => openRekap('alamat', 'REKAP DATA BERDASARKAN DUSUN'));
   on('btnTabelKosong', 'click', () => openRekap('tabelKosong', 'TABEL KOSONG / DAFTAR PENGUKURAN'));
@@ -7301,6 +8089,13 @@ hideChangePwMsg();
   on('btnBackSurat', 'click', backToSporadik);
   on('btnPrintSurat', 'click', handleCetak);
   on('btnSaveSuratEdit', 'click', handleSimpan);
+  on('btnCekTbModal', 'click', () => {
+    const inp = $('spSearch');
+    if (inp) {
+      inp.focus();
+      inp.select();
+    }
+  });
   if ($('btnOpenDocsFromSporadik')) {
     on('btnOpenDocsFromSporadik', 'click', () => {
       if (currentSurat && currentSurat.r && currentSurat.r.id) {
@@ -7311,13 +8106,97 @@ hideChangePwMsg();
   on('srTgl', 'input', renderSurat);
   if ($('srTgl')) maskDmyInput($('srTgl'));
   on('srNoUrut', 'input', renderSurat);
+  // Fungsi menggeser (drag & move) dialog modal secara presisi
+  function makeDialogsDraggable() {
+    document.querySelectorAll('dialog').forEach((d) => {
+      const head = d.querySelector('.modal-head');
+      if (!head || head.dataset.dragReady) return;
+      head.dataset.dragReady = 'true';
+
+      let isDragging = false;
+      let startX = 0, startY = 0;
+      let initX = 0, initY = 0;
+
+      head.addEventListener('mousedown', (e) => {
+        // Jangan geser jika yang diklik adalah tombol close (✕), tombol aksi, atau input
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        const rect = d.getBoundingClientRect();
+        // Konversi dari transform translate ke posisi absolut pixel
+        d.style.transform = 'none';
+        d.style.left = rect.left + 'px';
+        d.style.top = rect.top + 'px';
+        d.style.margin = '0';
+
+        initX = rect.left;
+        initY = rect.top;
+
+        const onMove = (me) => {
+          if (!isDragging) return;
+          const dx = me.clientX - startX;
+          const dy = me.clientY - startY;
+          const maxLeft = Math.max(10, window.innerWidth - d.offsetWidth - 10);
+          const maxTop = Math.max(10, window.innerHeight - d.offsetHeight - 10);
+          const newLeft = Math.max(10, Math.min(maxLeft, initX + dx));
+          const newTop = Math.max(10, Math.min(maxTop, initY + dy));
+          d.style.left = newLeft + 'px';
+          d.style.top = newTop + 'px';
+        };
+
+        const onUp = () => {
+          isDragging = false;
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('mouseup', onUp);
+        };
+
+        window.addEventListener('mousemove', onMove, { passive: true });
+        window.addEventListener('mouseup', onUp, { passive: true });
+      });
+
+      // Kunci modal: tidak bisa ditutup selain lewat tombol X atau tombol Batal
+      d.addEventListener('cancel', (ce) => ce.preventDefault());
+    });
+  }
+
+  // Helper buka dialog: selalu reset posisi ke tengah layar
+  function openModalCentered(dialogEl) {
+    if (!dialogEl) return;
+    dialogEl.style.left = '50%';
+    dialogEl.style.top = '50%';
+    dialogEl.style.transform = 'translate(-50%, -50%)';
+    dialogEl.style.margin = '0';
+    if (typeof dialogEl.showModal === 'function') dialogEl.showModal();
+    else dialogEl.setAttribute('open', '');
+    makeDialogsDraggable();
+  }
+  window.openModalCentered = openModalCentered;
+
   // Kunci SEMUA pop-up: tidak bisa hilang oleh klik luar / tombol Esc.
-  // Hanya tombol close (✕ / Batal) masing-masing yang boleh menutupnya.
+  // Hanya tombol close (✕ / Batal / Tutup) masing-masing yang boleh menutupnya.
   document.querySelectorAll('dialog').forEach((d) => {
     on(d, 'click', (e) => {
       if (e.target === d) e.preventDefault();
     });
     on(d, 'cancel', (e) => e.preventDefault());
+  });
+  makeDialogsDraggable();
+
+  // Delegasi event global: Semua tombol bertuliskan "Tutup" atau "Batal" di dalam dialog
+  // otomatis berfungsi menutup pop-up terkait persis seperti tombol [X]
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const txt = (btn.textContent || '').trim().toLowerCase();
+    if (txt === 'tutup' || txt === 'batal' || btn.classList.contains('btn-close-modal') || btn.classList.contains('btn-ghost')) {
+      const d = btn.closest('dialog');
+      if (d && typeof d.close === 'function') {
+        d.close();
+      }
+    }
   });
 
   // Tutup semua dropdown autocomplete saat klik di luar field autocomplete.
@@ -7335,6 +8214,48 @@ hideChangePwMsg();
   on('togglePassword', 'click', togglePassword);
   on('btnCloseChangePw', 'click', closeChangePw);
   on('changePwForm', 'submit', handleChangePw);
+
+  // ---- Dashboard: filter tanggal & laporan ----
+  on('btnDashFilterApply', 'click', () => {
+    dashFilterMonth = $('dashFilterMonth').value || '';
+    // Apply filter to data for dashboard charts
+    const filtered = dashFilteredData();
+    // Re-render dashboard with filtered data (for now, just re-fetch keuangan)
+    fetchDashKeuangan();
+  });
+  on('btnDashFilterReset', 'click', () => {
+    dashFilterMonth = '';
+    $('dashFilterMonth').value = '';
+    fetchDashKeuangan();
+  });
+  on('btnLaporanBulanan', 'click', () => {
+    renderLaporanBulanan();
+    openModalCentered($('laporanModal'));
+  });
+  on('btnCetakLaporan', 'click', () => {
+    const content = $('laporanBody').innerHTML;
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (!w) { alert('Pop-up diblokir. Izinkan pop-up lalu coba lagi.'); return; }
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Laporan Bulanan Pertanahan</title>
+      <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #0f172a; font-size: 12pt; }
+        h2 { font-size: 20px; margin: 0 0 4px; }
+        h3 { font-size: 14px; margin: 14px 0 8px; }
+        table { border-collapse: collapse; width: 100%; font-size: 11pt; margin-bottom: 12px; }
+        th { background: #1e293b; color: #fff; padding: 7px 6px; text-align: left; border: 1px solid #334155; }
+        td { padding: 6px; border: 1px solid #cbd5e1; vertical-align: top; }
+        .num { text-align: right; font-family: 'Space Grotesk', monospace; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10pt; font-weight: 700; }
+        .tag.HIBAH { background: #dcfce7; color: #166534; }
+        .tag.JUALBELI { background: #dbeafe; color: #1e40af; }
+        .tag.AHLIWARIS { background: #fef3c7; color: #92400e; }
+        @media print { body { padding: 12px; } }
+      </style></head><body>
+      ${content}
+      </body></html>`);
+    w.document.close();
+    setTimeout(() => { w.focus(); w.print(); }, 400);
+  });
   on('toggleCpNew', 'click', () => {
     const inp = $('cpNew');
     if (!inp) return;
@@ -7353,6 +8274,8 @@ hideChangePwMsg();
   initAuth();
   initKeuangan();
   initDocsTab();
+  initShowcaseCarousel();
+  initSidebarDrawer();
 
   // ===== Cetak pas 1 halaman: JANGAN susutkan lembar di mode cetak =====
   // Dulu lembar di-zoom < 1 agar pas 1 halaman, tetapi itu MEMBATALKAN
