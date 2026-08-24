@@ -95,7 +95,63 @@
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col font-sans">
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col font-sans relative">
+
+  <!-- FULL SCREEN LOGIN GATE (TAMPIL DI AWAL JIKA BELUM LOGIN) -->
+  <div id="loginGateScreen" class="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 space-y-5 border border-slate-100 transform transition-all">
+      <div class="text-center space-y-2">
+        <div class="w-16 h-16 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-2xl mx-auto flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+          <i data-lucide="lock" class="w-8 h-8"></i>
+        </div>
+        <div>
+          <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">Sistem Cetak Label Undangan</h2>
+          <p class="text-xs font-medium text-slate-500">Silakan login untuk mengakses database & mencetak label</p>
+        </div>
+      </div>
+
+      <div id="loginGateAlert" class="hidden p-3.5 rounded-xl text-xs font-medium bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2">
+        <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+        <span id="loginGateAlertText">Username atau kata sandi salah.</span>
+      </div>
+
+      <form onsubmit="handleGateLoginSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">Username / Nama Pengguna:</label>
+          <div class="relative">
+            <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5"></i>
+            <input type="text" id="gateUsername" required placeholder="Contoh: admin" 
+              class="w-full pl-10 pr-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none font-medium transition" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">Kata Sandi (Password):</label>
+          <div class="relative">
+            <i data-lucide="key" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5"></i>
+            <input type="password" id="gatePassword" required placeholder="Masukkan kata sandi" 
+              class="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none font-medium transition" />
+            <button type="button" onclick="toggleGateShowPassword()" class="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600">
+              <i data-lucide="eye" id="gateIconEye" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" id="gateRememberMe" checked class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4">
+            <span class="font-medium">Ingat login saya</span>
+          </label>
+          <span class="text-slate-400 text-[11px] bg-slate-100 px-2 py-0.5 rounded font-mono">admin / admin123</span>
+        </div>
+
+        <button type="submit" id="btnGateSubmit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-bold rounded-xl shadow-lg shadow-emerald-200 transition flex items-center justify-center space-x-2">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span id="btnGateText">Masuk Sekarang</span>
+        </button>
+      </form>
+    </div>
+  </div>
 
   <!-- TOP NAVBAR -->
   <header class="no-print bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
@@ -591,69 +647,6 @@
 
   </main>
 
-  <!-- AUTH / LOGIN MODAL -->
-  <div id="loginModal" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 transform transition-all">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-9 h-9 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center shadow-xs">
-            <i data-lucide="lock" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="text-base font-bold text-slate-900">Masuk Akun Pengelola</h3>
-            <p class="text-xs text-slate-500">Akses Database Supabase & Sinkronisasi</p>
-          </div>
-        </div>
-        <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <div id="loginAlert" class="hidden p-3 rounded-xl text-xs font-medium bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2">
-        <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
-        <span id="loginAlertText">Username atau kata sandi salah.</span>
-      </div>
-
-      <form onsubmit="handleLoginSubmit(event)" class="space-y-3.5">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Username / Nama Pengguna:</label>
-          <div class="relative">
-            <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
-            <input type="text" id="loginUsername" required placeholder="Contoh: admin" 
-              class="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none font-medium" />
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Kata Sandi (Password):</label>
-          <div class="relative">
-            <i data-lucide="key" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
-            <input type="password" id="loginPassword" required placeholder="Masukkan kata sandi" 
-              class="w-full pl-9 pr-10 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none font-medium" />
-            <button type="button" onclick="toggleShowPassword()" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
-              <i data-lucide="eye" id="iconEye" class="w-4 h-4"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
-          <label class="flex items-center space-x-1.5 cursor-pointer">
-            <input type="checkbox" id="rememberMe" checked class="rounded text-emerald-600 focus:ring-emerald-500">
-            <span>Ingat saya di perangkat ini</span>
-          </label>
-          <span class="text-slate-400 text-[11px]">Default: admin / admin123</span>
-        </div>
-
-        <div class="pt-2">
-          <button type="submit" id="btnLoginSubmit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-200 transition flex items-center justify-center space-x-2">
-            <i data-lucide="log-in" class="w-4 h-4"></i>
-            <span id="btnLoginText">Masuk Sekarang</span>
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- BULK IMPORT MODAL -->
   <div id="bulkModal" class="no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4 transform transition-all">
@@ -687,9 +680,9 @@
             </button>
           </div>
           <textarea id="bulkPasteTextarea" rows="7" placeholder="Contoh format (Tab / Koma terpisah):
-DR. H. ANDI SYAHRUL, S.E., M.Si. [TAB] Kepala Dinas [TAB] Makassar
-Bpk. Ir. H. Muhammad Ridwan & Istri [TAB] Sekeluarga [TAB] Bandung
-AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none"></textarea>
+AMIRULLAH S, Sos [TAB] Sekretaris Desa Paku [TAB] Tempat
+Drs SYAMSUDDIN [TAB] Kepala Desa Paku [TAB] Tempat
+HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none"></textarea>
         </div>
 
         <div class="flex items-center justify-between text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200/60">
@@ -714,11 +707,11 @@ AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 
   <!-- JAVASCRIPT LOGIC -->
   <script>
     // State Keys
-    const STORAGE_KEY = 'sta_label_undangan_data_v10';
-    const CONFIG_KEY = 'sta_label_undangan_config_v10';
-    const ACARA_KEY = 'sta_label_undangan_acara_list_v10';
-    const AUTH_TOKEN_KEY = 'sta_label_token_v10';
-    const AUTH_USER_KEY = 'sta_label_user_v10';
+    const STORAGE_KEY = 'sta_label_undangan_data_v11';
+    const CONFIG_KEY = 'sta_label_undangan_config_v11';
+    const ACARA_KEY = 'sta_label_undangan_acara_list_v11';
+    const AUTH_TOKEN_KEY = 'sta_label_token_v11';
+    const AUTH_USER_KEY = 'sta_label_user_v11';
 
     // Preset Specifications (In Millimeters)
     const PRESETS = {
@@ -830,18 +823,22 @@ AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 
       if (window.lucide) window.lucide.createIcons();
     });
 
-    // Authentication Management
+    // Authentication Management (Full Gate)
     function checkAuthStatus() {
+      const gate = document.getElementById('loginGateScreen');
       try {
         const savedUser = localStorage.getItem(AUTH_USER_KEY);
         const token = localStorage.getItem(AUTH_TOKEN_KEY);
         if (savedUser && token) {
           currentUser = JSON.parse(savedUser);
+          if (gate) gate.classList.add('hidden');
         } else {
           currentUser = null;
+          if (gate) gate.classList.remove('hidden');
         }
       } catch (e) {
         currentUser = null;
+        if (gate) gate.classList.remove('hidden');
       }
       renderAuthWidget();
     }
@@ -852,7 +849,7 @@ AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 
 
       if (currentUser) {
         container.innerHTML = `
-          <div class="flex items-center space-x-2 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl text-xs">
+          <div class="flex items-center space-x-2 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl text-xs shadow-xs">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span class="font-bold text-emerald-950">${escapeHtml(currentUser.name || currentUser.username)}</span>
             <span class="text-[10px] font-semibold bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded">${escapeHtml(currentUser.role || 'Admin')}</span>
@@ -863,7 +860,7 @@ AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 
         `;
       } else {
         container.innerHTML = `
-          <button onclick="openLoginModal()" class="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition flex items-center space-x-1.5">
+          <button onclick="openLoginGate()" class="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition flex items-center space-x-1.5">
             <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
             <span>Masuk / Login</span>
           </button>
@@ -872,18 +869,14 @@ AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 
       if (window.lucide) window.lucide.createIcons();
     }
 
-    function openLoginModal() {
-      document.getElementById('loginModal').classList.remove('hidden');
-      document.getElementById('loginAlert').classList.add('hidden');
-      document.getElementById('loginUsername').focus();
+    function openLoginGate() {
+      const gate = document.getElementById('loginGateScreen');
+      if (gate) gate.classList.remove('hidden');
+      document.getElementById('gateUsername').focus();
     }
 
-    function closeLoginModal() {
-      document.getElementById('loginModal').classList.add('hidden');
-    }
-
-    function toggleShowPassword() {
-      const passInput = document.getElementById('loginPassword');
+    function toggleGateShowPassword() {
+      const passInput = document.getElementById('gatePassword');
       if (passInput.type === 'password') {
         passInput.type = 'text';
       } else {
@@ -891,13 +884,14 @@ AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 
       }
     }
 
-    async function handleLoginSubmit(e) {
+    async function handleGateLoginSubmit(e) {
       e.preventDefault();
-      const u = document.getElementById('loginUsername').value.trim();
-      const p = document.getElementById('loginPassword').value;
-      const alertBox = document.getElementById('loginAlert');
-      const alertText = document.getElementById('loginAlertText');
-      const btnText = document.getElementById('btnLoginText');
+      const u = document.getElementById('gateUsername').value.trim();
+      const p = document.getElementById('gatePassword').value.trim();
+      const alertBox = document.getElementById('loginGateAlert');
+      const alertText = document.getElementById('loginGateAlertText');
+      const btnText = document.getElementById('btnGateText');
+      const gate = document.getElementById('loginGateScreen');
 
       if (!u || !p) return;
 
@@ -914,22 +908,21 @@ AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 
           currentUser = json.user;
           localStorage.setItem(AUTH_TOKEN_KEY, json.token);
           localStorage.setItem(AUTH_USER_KEY, JSON.stringify(json.user));
-          closeLoginModal();
+          if (gate) gate.classList.add('hidden');
           renderAuthWidget();
-          alert(`✅ Selamat datang, ${currentUser.name}! Anda berhasil masuk.`);
+          await fetchFromDatabaseServer();
         } else {
           alertBox.classList.remove('hidden');
           alertText.textContent = json.error || 'Username atau password salah.';
         }
       } catch (err) {
         // Fallback local verification
-        if ((u === 'admin' && (p === 'admin123' || p === 'admin')) || (u === 'petugas' && p === 'user123')) {
-          currentUser = { username: u, name: u === 'admin' ? 'Administrator' : 'Petugas Undangan', role: u === 'admin' ? 'admin' : 'user' };
+        if ((u.toLowerCase() === 'admin' && (p === 'admin123' || p === 'admin')) || (u.toLowerCase() === 'petugas' && (p === 'user123' || p === 'petugas'))) {
+          currentUser = { username: u, name: u.toLowerCase() === 'admin' ? 'Administrator' : 'Petugas Undangan', role: u.toLowerCase() === 'admin' ? 'admin' : 'user' };
           localStorage.setItem(AUTH_TOKEN_KEY, 'local-session-token');
           localStorage.setItem(AUTH_USER_KEY, JSON.stringify(currentUser));
-          closeLoginModal();
+          if (gate) gate.classList.add('hidden');
           renderAuthWidget();
-          alert(`✅ Berhasil masuk sebagai ${currentUser.name}!`);
         } else {
           alertBox.classList.remove('hidden');
           alertText.textContent = 'Kredensial tidak cocok. Gunakan username: admin, password: admin123';
@@ -945,6 +938,8 @@ AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 
         localStorage.removeItem(AUTH_TOKEN_KEY);
         localStorage.removeItem(AUTH_USER_KEY);
         renderAuthWidget();
+        const gate = document.getElementById('loginGateScreen');
+        if (gate) gate.classList.remove('hidden');
       }
     }
 
@@ -1005,7 +1000,8 @@ AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 
             renderPreview();
             
             if (json.source === 'supabase') {
-              document.getElementById('supaStatusBadge').innerHTML = '<i data-lucide="cloud-check" class="w-3 h-3 text-emerald-600"></i> Supabase Cloud DB';
+              const b = document.getElementById('supaStatusBadge');
+              if (b) b.innerHTML = '<i data-lucide="cloud-check" class="w-3 h-3 text-emerald-600"></i> Supabase Cloud DB';
             }
           }
         }
@@ -1536,10 +1532,11 @@ AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 
     function downloadExcelTemplate() {
       const sample = [
         ['Nama Tamu & Gelar', 'Jabatan / Keterangan', 'Alamat / Tempat'],
-        ['DR. H. ANDI SYAHRUL, S.E., M.Si.', 'Kepala Dinas Pendidikan', 'Makassar'],
-        ['Ir. Muhammad Ridwan & Istri', 'Sekeluarga', 'Tempat'],
-        ['Bpk. H. Rustam & Rekan', 'Ketua RT 05', 'Polewali Mandar'],
-        ['dr. Andi Nurul Fatimah, Sp.A', 'Dokter Spesialis', 'Tempat']
+        ['AMIRULLAH S, Sos', 'Sekretaris Desa Paku', 'Tempat'],
+        ['Drs SYAMSUDDIN', 'Kepala Desa Paku', 'Tempat'],
+        ['HERMAN SH', 'Kepala Desa Kaleok', 'Tempat'],
+        ['MUH ALWI', 'Sekretaris Desa Mammi', 'Tempat'],
+        ['ABDUL NAING S.Pd. I', 'Kepala Desa Mammi', 'Tempat']
       ];
       const ws = XLSX.utils.aoa_to_sheet(sample);
       const wb = XLSX.utils.book_new();
@@ -1566,12 +1563,17 @@ AMIRULLAH S. Sos [TAB] Sekretaris Desa [TAB] Polewali Mandar" class="w-full p-3 
 
     function generateSampleData() {
       guests = [
-        { id: '1', name: 'DR. H. ANDI SYAHRUL, S.E., M.Si.', jabatan: 'Kepala Dinas Pendidikan', alamat: 'Makassar', kategori: 'Pernikahan', selected: true },
-        { id: '2', name: 'Ir. H. Muhammad Ridwan & Istri', jabatan: 'Keluarga Besar Alm. H. Mahmud', alamat: 'Tempat', kategori: 'Keluarga Besar', selected: true },
-        { id: '3', name: 'Drs. H. Baharuddin, M.Pd.', jabatan: 'Ketua Pengurus Yayasan', alamat: 'Polewali Mandar', kategori: 'Pernikahan', selected: true },
-        { id: '4', name: 'Keluarga Bpk. H. Syamsul Bahri', jabatan: 'Tokoh Masyarakat', alamat: 'Batetangnga', kategori: 'Tamu VVIP / Tokoh', selected: true },
-        { id: '5', name: 'dr. Andi Nurul Fatimah, Sp.A', jabatan: 'Dokter Spesialis Anak', alamat: 'Makassar', kategori: 'Sahabat & Rekan', selected: true },
-        { id: '6', name: 'AMIRULLAH S. Sos', jabatan: 'Sekretaris Desa Paku', alamat: 'Tempat', kategori: 'Sahabat & Rekan', selected: true }
+        { id: "1787569549915", name: "AMIRULLAH S, Sos", jabatan: "Sekretaris Desa Paku", alamat: "Tempat", kategori: "Pernikahan", selected: true },
+        { id: "1787569500373", name: "Drs SYAMSUDDIN", jabatan: "Kepala Desa Paku", alamat: "Tempat", kategori: "Pernikahan", selected: true },
+        { id: "1787569439937", name: "HERMAN SH", jabatan: "Kepala Desa Kaleok", alamat: "Tempat", kategori: "Pernikahan", selected: true },
+        { id: "1787569393704", name: "MUH ALWI", jabatan: "Sekretaris Desa Mammi", alamat: "Tempat", kategori: "Pernikahan", selected: true },
+        { id: "1787569354984", name: "ABDUL NAING S.Pd. I", jabatan: "Kepala Desa Mammi", alamat: "Tempat", kategori: "Pernikahan", selected: true },
+        { id: "1787569282672", name: "HERNAWATI", jabatan: "Sekretaris Desa Amola", alamat: "Tempat", kategori: "Pernikahan", selected: true },
+        { id: "1787569212704", name: "SYAMSUDDIN S.Ip", jabatan: "Kepala Desa Mirring", alamat: "Tempat", kategori: "Pernikahan", selected: true },
+        { id: "1787569143367", name: "RAKHMAT ADITIA WARDHANA", jabatan: "Sekretaris Desa Rea", alamat: "Tempat", kategori: "Pernikahan", selected: true },
+        { id: "1787569059376", name: "ZAIFULLAH", jabatan: "Kepala Desa Rea", alamat: "Tempat", kategori: "Pernikahan", selected: true },
+        { id: "1787569025331", name: "ISMAIL", jabatan: "Sekretaris Desa Mirring", alamat: "Tempat", kategori: "Pernikahan", selected: true },
+        { id: "1", name: "SARIANTO A.Md", jabatan: "Kepala Desa Mirring", alamat: "Tempat", kategori: "Pernikahan", selected: true }
       ];
       saveGuests();
       renderGuestList();
