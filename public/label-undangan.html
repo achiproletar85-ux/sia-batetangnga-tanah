@@ -363,10 +363,61 @@
 
       </div>
 
-      <!-- RIGHT COLUMN: PENGATURAN FORMAT LABEL & LIVE PREVIEW (7 Cols) -->
+      <!-- RIGHT COLUMN: LIVE PREVIEW (PALING ATAS) & PENGATURAN FORMAT (7 Cols) -->
       <div class="lg:col-span-7 space-y-5">
 
-        <!-- CARD 3: PENGATURAN FORMAT HURUF & KALIBRASI KERTAS -->
+        <!-- CARD 1 (TOP): LIVE SHEET PREVIEW (PRATINJAU LEMBAR CETAK - PALING ATAS) -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center space-x-2">
+              <span class="p-1.5 bg-purple-50 text-purple-600 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></span>
+              <h3 class="font-bold text-slate-800 text-sm sm:text-base">Pratinjau Kertas Stiker (Live Preview)</h3>
+            </div>
+
+            <!-- Pagination preview if multiple sheets -->
+            <div class="flex items-center space-x-2 text-xs">
+              <button onclick="prevSheet()" id="btnPrevSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              </button>
+              <span id="previewSheetIndicator" class="font-semibold text-slate-700">Lembar 1 dari 1</span>
+              <button onclick="nextSheet()" id="btnNextSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="text-[11px] text-slate-500 flex items-center justify-between">
+            <span>Kertas: <strong>153 × 193 mm</strong> (2×5 = 10 Label). Hanya nama yang dicentang yang akan tercetak.</span>
+            <span class="font-medium text-emerald-600" id="previewStats">10 label / lembar</span>
+          </div>
+
+          <!-- Preview Interactive Canvas Container -->
+          <div class="overflow-x-auto p-4 bg-slate-200/60 rounded-2xl flex justify-center items-center min-h-[440px]">
+            <div id="screenPreviewContainer" class="transition-all duration-200">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <!-- Footer preview info & Direct Print Banner -->
+          <div class="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                <i data-lucide="printer" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="text-xs font-bold text-emerald-950">Siap untuk dicetak ke Kertas 153 × 193 mm?</div>
+                <div class="text-[11px] text-emerald-700">Set Margin printer ke "None" (Tanpa Margin) dan Skala 100%.</div>
+              </div>
+            </div>
+            <button onclick="doPrint()" class="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-200 transition flex items-center justify-center space-x-2">
+              <i data-lucide="printer" class="w-4 h-4"></i>
+              <span>Cetak <span id="btnCountPrint">0</span> Label Terpilih</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- CARD 2 (BELOW): PENGATURAN FORMAT HURUF & KALIBRASI KERTAS -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
           <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div class="flex items-center space-x-2">
@@ -601,57 +652,6 @@
               <span class="text-amber-700 font-medium">Cetak Garis Bantu (Untuk Kertas Biasa)</span>
             </label>
           </div>
-        </div>
-
-        <!-- CARD 4: LIVE SHEET PREVIEW (PRATINJAU LEMBAR CETAK) -->
-        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div class="flex items-center space-x-2">
-              <span class="p-1.5 bg-purple-50 text-purple-600 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></span>
-              <h3 class="font-bold text-slate-800 text-sm sm:text-base">Pratinjau Kertas Stiker (Live Preview)</h3>
-            </div>
-
-            <!-- Pagination preview if multiple sheets -->
-            <div class="flex items-center space-x-2 text-xs">
-              <button onclick="prevSheet()" id="btnPrevSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
-                <i data-lucide="chevron-left" class="w-4 h-4"></i>
-              </button>
-              <span id="previewSheetIndicator" class="font-semibold text-slate-700">Lembar 1 dari 1</span>
-              <button onclick="nextSheet()" id="btnNextSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
-                <i data-lucide="chevron-right" class="w-4 h-4"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Kertas: <strong>153 × 193 mm</strong> (2×5 = 10 Label). Hanya nama yang dicentang yang akan tercetak.</span>
-            <span class="font-medium text-emerald-600" id="previewStats">10 label / lembar</span>
-          </div>
-
-          <!-- Preview Interactive Canvas Container -->
-          <div class="overflow-x-auto p-4 bg-slate-200/60 rounded-2xl flex justify-center items-center min-h-[440px]">
-            <div id="screenPreviewContainer" class="transition-all duration-200">
-              <!-- Rendered by JS -->
-            </div>
-          </div>
-
-          <!-- Footer preview info & Direct Print Banner -->
-          <div class="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div class="flex items-center space-x-3">
-              <div class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-                <i data-lucide="printer" class="w-5 h-5"></i>
-              </div>
-              <div>
-                <div class="text-xs font-bold text-emerald-950">Siap untuk dicetak ke Kertas 153 × 193 mm?</div>
-                <div class="text-[11px] text-emerald-700">Set Margin printer ke "None" (Tanpa Margin) dan Skala 100%.</div>
-              </div>
-            </div>
-            <button onclick="doPrint()" class="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-200 transition flex items-center justify-center space-x-2">
-              <i data-lucide="printer" class="w-4 h-4"></i>
-              <span>Cetak <span id="btnCountPrint">0</span> Label Terpilih</span>
-            </button>
-          </div>
-
         </div>
 
       </div>
