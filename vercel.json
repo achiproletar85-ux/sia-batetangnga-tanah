@@ -25,6 +25,18 @@
       "destination": "/sporadik-executive.html"
     },
     {
+      "source": "/label",
+      "destination": "/label-undangan.html"
+    },
+    {
+      "source": "/label-undangan",
+      "destination": "/label-undangan.html"
+    },
+    {
+      "source": "/cetak-label",
+      "destination": "/label-undangan.html"
+    },
+    {
       "source": "/api",
       "destination": "/api/index"
     },

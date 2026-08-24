@@ -2978,8 +2978,8 @@ function saveLocalTamuData(data) {
   }
 }
 
-// GET /api/tamu-undangan -> Ambil semua data tamu & daftar acara dari database
-app.get('/api/tamu-undangan', async (req, res) => {
+// GET /api/tamu & /api/tamu-undangan -> Ambil semua data tamu & daftar acara dari database
+app.get(['/api/tamu', '/api/tamu-undangan'], async (req, res) => {
   try {
     let guests = [];
     let acaraList = ['Pernikahan', 'Acara Kantor / Dinas', 'Keluarga Besar', 'Tamu VVIP / Tokoh', 'Sahabat & Rekan'];
@@ -3017,8 +3017,8 @@ app.get('/api/tamu-undangan', async (req, res) => {
   }
 });
 
-// POST /api/tamu-undangan/sync -> Simpan / Sinkronisasi seluruh daftar tamu ke database
-app.post('/api/tamu-undangan/sync', async (req, res) => {
+// POST /api/tamu/sync & /api/tamu-undangan/sync -> Simpan / Sinkronisasi seluruh daftar tamu ke database
+app.post(['/api/tamu/sync', '/api/tamu-undangan/sync'], async (req, res) => {
   try {
     const { guests, acaraList } = req.body;
     if (!Array.isArray(guests)) {
