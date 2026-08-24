@@ -845,18 +845,27 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
         const token = localStorage.getItem(AUTH_TOKEN_KEY);
         if (savedUser && token) {
           currentUser = JSON.parse(savedUser);
+          gate.classList.add('hidden');
+          gate.classList.remove('flex');
           gate.style.display = 'none';
           app.classList.remove('hidden');
+          app.style.display = 'flex';
           fetchFromDatabaseServer();
         } else {
           currentUser = null;
+          gate.classList.remove('hidden');
+          gate.classList.add('flex');
           gate.style.display = 'flex';
           app.classList.add('hidden');
+          app.style.display = 'none';
         }
       } catch (e) {
         currentUser = null;
+        gate.classList.remove('hidden');
+        gate.classList.add('flex');
         gate.style.display = 'flex';
         app.classList.add('hidden');
+        app.style.display = 'none';
       }
       renderAuthWidget();
     }
@@ -914,6 +923,7 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
       const gate = document.getElementById('loginGateScreen');
       const app = document.getElementById('mainAppWrapper');
 
+      if (alertBox) alertBox.classList.add('hidden');
       if (!u || !p) return;
 
       btnText.textContent = 'Memverifikasi...';
@@ -929,35 +939,53 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
           currentUser = json.user;
           localStorage.setItem(AUTH_TOKEN_KEY, json.token);
           localStorage.setItem(AUTH_USER_KEY, JSON.stringify(json.user));
+          
+          gate.classList.add('hidden');
+          gate.classList.remove('flex');
           gate.style.display = 'none';
           app.classList.remove('hidden');
+          app.style.display = 'flex';
+
           renderAuthWidget();
           await fetchFromDatabaseServer();
         } else if ((u.toLowerCase() === 'admin' && (p === 'admin123' || p === 'admin')) || (u.toLowerCase() === 'petugas' && (p === 'user123' || p === 'petugas'))) {
           currentUser = { username: u, name: u.toLowerCase() === 'admin' ? 'Administrator' : 'Petugas Undangan', role: u.toLowerCase() === 'admin' ? 'admin' : 'user' };
           localStorage.setItem(AUTH_TOKEN_KEY, 'local-session-token');
           localStorage.setItem(AUTH_USER_KEY, JSON.stringify(currentUser));
+          
+          gate.classList.add('hidden');
+          gate.classList.remove('flex');
           gate.style.display = 'none';
           app.classList.remove('hidden');
+          app.style.display = 'flex';
+
           renderAuthWidget();
           await fetchFromDatabaseServer();
         } else {
-          alertBox.classList.remove('hidden');
-          alertText.textContent = json.error || 'Username atau password salah.';
+          if (alertBox) {
+            alertBox.classList.remove('hidden');
+            alertText.textContent = json.error || 'Username atau password salah.';
+          }
         }
       } catch (err) {
-        // Fallback standard verification
         if ((u.toLowerCase() === 'admin' && (p === 'admin123' || p === 'admin')) || (u.toLowerCase() === 'petugas' && (p === 'user123' || p === 'petugas'))) {
           currentUser = { username: u, name: u.toLowerCase() === 'admin' ? 'Administrator' : 'Petugas Undangan', role: u.toLowerCase() === 'admin' ? 'admin' : 'user' };
           localStorage.setItem(AUTH_TOKEN_KEY, 'local-session-token');
           localStorage.setItem(AUTH_USER_KEY, JSON.stringify(currentUser));
+          
+          gate.classList.add('hidden');
+          gate.classList.remove('flex');
           gate.style.display = 'none';
           app.classList.remove('hidden');
+          app.style.display = 'flex';
+
           renderAuthWidget();
           await fetchFromDatabaseServer();
         } else {
-          alertBox.classList.remove('hidden');
-          alertText.textContent = 'Kredensial tidak cocok. Gunakan username: admin, password: admin123';
+          if (alertBox) {
+            alertBox.classList.remove('hidden');
+            alertText.textContent = 'Kredensial tidak cocok. Gunakan username: admin, password: admin123';
+          }
         }
       } finally {
         btnText.textContent = 'Masuk ke Aplikasi';
@@ -972,8 +1000,15 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
         renderAuthWidget();
         const gate = document.getElementById('loginGateScreen');
         const app = document.getElementById('mainAppWrapper');
-        gate.style.display = 'flex';
-        app.classList.add('hidden');
+        if (gate) {
+          gate.classList.remove('hidden');
+          gate.classList.add('flex');
+          gate.style.display = 'flex';
+        }
+        if (app) {
+          app.classList.add('hidden');
+          app.style.display = 'none';
+        }
         document.getElementById('gatePassword').value = '';
       }
     }
