@@ -197,6 +197,12 @@
             <!-- Rendered dynamically -->
           </div>
 
+          <!-- Format Teks & Huruf Button -->
+          <button onclick="toggleSettingsPanel()" id="btnNavToggleSettings" class="px-3.5 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-300 border border-indigo-200 rounded-xl transition flex items-center space-x-1.5 shadow-xs" title="Buka/Tutup Pengaturan Format Teks & Huruf jika dibutuhkan">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4 text-indigo-600"></i>
+            <span class="hidden sm:inline">Format & Huruf</span>
+          </button>
+
           <!-- Sync / Save to Database -->
           <button onclick="saveToDatabaseServer()" id="btnSyncDB" class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 rounded-lg transition flex items-center space-x-1.5 shadow-sm" title="Simpan perubahan ke Database Supabase">
             <i data-lucide="refresh-cw" class="w-4 h-4 text-emerald-600"></i>
@@ -374,15 +380,23 @@
               <h3 class="font-bold text-slate-800 text-sm sm:text-base">Pratinjau Kertas Stiker (Live Preview)</h3>
             </div>
 
-            <!-- Pagination preview if multiple sheets -->
-            <div class="flex items-center space-x-2 text-xs">
-              <button onclick="prevSheet()" id="btnPrevSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
-                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            <!-- Quick Format & Huruf Button + Pagination -->
+            <div class="flex items-center space-x-2">
+              <button onclick="toggleSettingsPanel()" class="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-300 border border-indigo-200 rounded-xl transition flex items-center space-x-1.5 shadow-xs" title="Buka menu pengaturan format teks, huruf, dan ukuran">
+                <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-indigo-600"></i>
+                <span>⚙️ Format & Huruf</span>
               </button>
-              <span id="previewSheetIndicator" class="font-semibold text-slate-700">Lembar 1 dari 1</span>
-              <button onclick="nextSheet()" id="btnNextSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
-                <i data-lucide="chevron-right" class="w-4 h-4"></i>
-              </button>
+
+              <!-- Pagination preview if multiple sheets -->
+              <div class="flex items-center space-x-1 text-xs">
+                <button onclick="prevSheet()" id="btnPrevSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
+                  <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                </button>
+                <span id="previewSheetIndicator" class="font-semibold text-slate-700">Lembar 1 dari 1</span>
+                <button onclick="nextSheet()" id="btnNextSheet" class="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed">
+                  <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -417,21 +431,30 @@
 
         </div>
 
-        <!-- CARD 2 (BELOW): PENGATURAN FORMAT HURUF & KALIBRASI KERTAS -->
-        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <!-- CARD 2 (BELOW): PENGATURAN FORMAT HURUF & KALIBRASI KERTAS (MUNCUL JIKA DIBUTUHKAN) -->
+        <div id="settingsPanel" class="hidden bg-white rounded-2xl border-2 border-indigo-200 shadow-xl p-5 space-y-4 transition-all duration-300">
+          <div class="flex items-center justify-between pb-3 border-b border-indigo-100 bg-indigo-50/50 -mx-5 -mt-5 p-4 rounded-t-2xl">
             <div class="flex items-center space-x-2">
-              <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><i data-lucide="type" class="w-4 h-4"></i></span>
-              <h2 class="font-bold text-slate-800 text-sm sm:text-base">Pengaturan Format Teks & Huruf</h2>
+              <span class="p-1.5 bg-indigo-600 text-white rounded-lg shadow-sm"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i></span>
+              <div>
+                <h2 class="font-bold text-slate-900 text-sm sm:text-base">Pengaturan Format Teks, Huruf & Ukuran Kertas</h2>
+                <p class="text-[11px] text-slate-500 font-medium">Ubah format besar/kecil huruf, gaya font, dan kalibrasi cetak</p>
+              </div>
             </div>
 
-            <!-- Quick Preset Selector -->
             <div class="flex items-center space-x-2">
+              <!-- Quick Preset Selector -->
               <select id="presetSelect" onchange="applyPreset(this.value)" class="text-xs font-bold bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-amber-500 outline-none cursor-pointer">
                 <option value="kertas_saya" selected>⭐ Kertas Saya (153 × 193 mm — 10 Stiker)</option>
                 <option value="121">Label No. 121 (165 × 206 mm — 10 Stiker 2x5)</option>
                 <option value="103">Label No. 103 (200 × 137 mm — 12 Stiker 3x4)</option>
               </select>
+
+              <!-- Close Button -->
+              <button onclick="toggleSettingsPanel(false)" class="text-xs font-bold text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 px-3 py-1.5 rounded-xl transition flex items-center space-x-1 shadow-xs" title="Tutup / Sembunyikan Panel Pengaturan">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                <span>Tutup</span>
+              </button>
             </div>
           </div>
 
@@ -1180,6 +1203,22 @@ HERMAN SH [TAB] Kepala Desa Kaleok [TAB] Tempat" class="w-full p-3 text-xs font-
       applyConfigToUI();
       saveConfig();
       renderPreview();
+    }
+
+    // Toggle Tampilan Panel Format & Huruf (Urgent Control Panel)
+    function toggleSettingsPanel(forceState) {
+      const panel = document.getElementById('settingsPanel');
+      if (!panel) return;
+      const isHidden = panel.classList.contains('hidden');
+      const shouldOpen = (typeof forceState === 'boolean') ? forceState : isHidden;
+
+      if (shouldOpen) {
+        panel.classList.remove('hidden');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        panel.classList.add('hidden');
+      }
+      if (window.lucide) window.lucide.createIcons();
     }
 
     // Quick Offset Adjuster (Naik/Turun/Kiri/Kanan)
