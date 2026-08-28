@@ -211,6 +211,7 @@
 
   function initKeuangan() {
     on('btnTambahTransaksi', 'click', () => openTrxModal(null));
+    on('btnHeroTambahTrx', 'click', () => openTrxModal(null));
     on('btnCloseTrx', 'click', closeTrxModal);
     on('trxForm', 'submit', handleTrxFormSubmit);
     on('keuSearchInput', 'input', () => { if(pageState.keuangan) pageState.keuangan.p = 1; renderKeuanganTable(); });
@@ -218,9 +219,11 @@
     on('btnCloseCekTb', 'click', closeCekTbPanel);
     on('btnCekTbCari', 'click', () => cekTagihanBerkas());
     on('btnCetakKeuangan', 'click', cetakLaporanKeuangan);
+    on('btnHeroCetakKeu', 'click', cetakLaporanKeuangan);
     on('cekTbId', 'keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); cekTagihanBerkas(); } });
     on('trxJenis', 'change', (e) => {
-      if ($('trxPemohonLabel')) $('trxPemohonLabel').style.display = e.target.value === 'Pemasukan Cicilan' ? 'block' : 'none';
+      const row = $('trxPemohonRow') || $('trxPemohonLabel');
+      if (row) row.style.display = e.target.value === 'Pemasukan Cicilan' ? 'block' : 'none';
     });
     on('keuBody', 'click', (e) => {
       const delBtn = e.target.closest('[data-del-trx]');
@@ -3393,8 +3396,12 @@ window.openDocsForId = openDocsForId;
   }
 
   function openTrxModal(trx) {
-    if (!isBendahara()) return; // User tidak boleh membuka form transaksi keuangan
+    if (!isBendahara()) {
+      showToast('Hanya akun Bendahara atau Admin yang memiliki akses untuk menambah atau mengedit transaksi kas.', 'warning', 'Akses Terbatas');
+      return;
+    }
     const m = $('trxModal');
+    if (!m) return;
     $('trxForm').reset();
     $('trxId').value = '';
     $('trxBukti').value = '';
@@ -3411,22 +3418,25 @@ window.openDocsForId = openDocsForId;
       $('trxKeterangan').value = trx.keterangan || '';
       if (trx.url_bukti && trx.url_bukti !== '-') {
         $('trxBuktiOld').value = trx.url_bukti;
-        $('trxBuktiPreview').innerHTML = `<a href="${esc(trx.url_bukti)}" target="_blank">Lihat Bukti Lama</a>`;
+        $('trxBuktiPreview').innerHTML = `<a href="${esc(trx.url_bukti)}" target="_blank" rel="noopener">Lihat Bukti Lama</a>`;
       }
     } else {
       $('trxModalTitle').textContent = 'Tambah Transaksi';
       $('trxTanggal').value = new Date().toISOString().split('T')[0];
     }
 
-    $('trxPemohonLabel').style.display = $('trxJenis').value === 'Pemasukan Cicilan' ? 'block' : 'none';
+    const row = $('trxPemohonRow') || $('trxPemohonLabel');
+    if (row) row.style.display = $('trxJenis').value === 'Pemasukan Cicilan' ? 'block' : 'none';
     fetchPemohonList();
     openModalCentered(m);
   }
+  window.openTrxModal = openTrxModal;
 
   function closeTrxModal() {
     const m = $('trxModal');
     if (m && typeof m.close === 'function') m.close();
   }
+  window.closeTrxModal = closeTrxModal;
 
   async function handleTrxFormSubmit(e) {
     e.preventDefault();
