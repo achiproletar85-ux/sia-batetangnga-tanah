@@ -1462,13 +1462,48 @@
 
         <div class="glass-card">
           <h3 class="glass-card-title">Nominal &amp; Keterangan</h3>
-          <div class="glass-field" style="margin-bottom: 12px;">
-            <label for="trxNominal">Nominal (Rp)</label>
-            <input type="number" id="trxNominal" class="glass-input" placeholder="Contoh: 150000" required min="1" />
+          
+          <div class="glass-field" style="margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label for="trxNominal">Nominal (Rp) <span style="color:#ef4444;">*</span></label>
+              <span id="trxNominalTerbilang" style="font-size: 11px; font-weight: 750; color: #059669;"></span>
+            </div>
+
+            <!-- Dropdown Pilihan Cepat & Input Manual -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <select id="trxNominalDropdown" class="glass-input" style="font-weight: 600;">
+                <option value="">— Pilih Nominal Sering Digunakan —</option>
+                <option value="100000">Rp 100.000 (Sering digunakan)</option>
+                <option value="150000">Rp 150.000 (Sering digunakan)</option>
+                <option value="200000">Rp 200.000</option>
+                <option value="250000">Rp 250.000</option>
+                <option value="500000">Rp 500.000</option>
+                <option value="custom">✍️ Tulis Angka Manual Lainnya</option>
+              </select>
+              <input type="number" id="trxNominal" list="nominalPresets" class="glass-input" placeholder="Ketik atau pilih (contoh: 150000)" required min="1" style="font-weight: 700; font-size: 13.5px;" />
+            </div>
+
+            <datalist id="nominalPresets">
+              <option value="100000">Rp 100.000</option>
+              <option value="150000">Rp 150.000</option>
+              <option value="200000">Rp 200.000</option>
+              <option value="250000">Rp 250.000</option>
+              <option value="500000">Rp 500.000</option>
+            </datalist>
+
+            <!-- Quick Pill Buttons for 1-Click Fill -->
+            <div style="display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap;">
+              <span style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Pintasan:</span>
+              <button type="button" class="trx-quick-pill" data-nom="100000">⚡ Rp 100.000</button>
+              <button type="button" class="trx-quick-pill" data-nom="150000">⚡ Rp 150.000</button>
+              <button type="button" class="trx-quick-pill" data-nom="200000">Rp 200.000</button>
+              <button type="button" class="trx-quick-pill" data-nom="500000">Rp 500.000</button>
+            </div>
           </div>
+
           <div class="glass-field">
-            <label for="trxKeterangan">Keterangan Peruntukan</label>
-            <textarea id="trxKeterangan" class="glass-input glass-textarea" rows="3" placeholder="Rincian peruntukan transaksi..." required></textarea>
+            <label for="trxKeterangan">Keterangan Peruntukan <span style="color:#ef4444;">*</span></label>
+            <textarea id="trxKeterangan" class="glass-input glass-textarea" rows="3" placeholder="Rincian peruntukan transaksi kas..." required></textarea>
           </div>
         </div>
 

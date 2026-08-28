@@ -225,6 +225,50 @@
       const row = $('trxPemohonRow') || $('trxPemohonLabel');
       if (row) row.style.display = e.target.value === 'Pemasukan Cicilan' ? 'block' : 'none';
     });
+
+    on('trxNominalDropdown', 'change', (e) => {
+      const v = e.target.value;
+      const nomInp = $('trxNominal');
+      if (!nomInp) return;
+      if (v && v !== 'custom') {
+        nomInp.value = v;
+        nomInp.dispatchEvent(new Event('input', { bubbles: true }));
+      } else if (v === 'custom') {
+        nomInp.focus();
+        nomInp.select();
+      }
+    });
+
+    on('trxNominal', 'input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      const terbilangEl = $('trxNominalTerbilang');
+      if (terbilangEl) {
+        terbilangEl.textContent = val > 0 ? formatRp(val) : '';
+      }
+      const dd = $('trxNominalDropdown');
+      if (dd) {
+        const strVal = String(val || '');
+        if (['100000', '150000', '200000', '250000', '500000'].includes(strVal)) {
+          dd.value = strVal;
+        } else if (val > 0) {
+          dd.value = 'custom';
+        } else {
+          dd.value = '';
+        }
+      }
+      document.querySelectorAll('.trx-quick-pill').forEach(btn => {
+        btn.classList.toggle('active', String(btn.dataset.nom) === String(e.target.value));
+      });
+    });
+
+    document.querySelectorAll('.trx-quick-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nomInp = $('trxNominal');
+        if (!nomInp) return;
+        nomInp.value = btn.dataset.nom;
+        nomInp.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
     on('keuBody', 'click', (e) => {
       const delBtn = e.target.closest('[data-del-trx]');
       if (delBtn) {
@@ -3423,6 +3467,11 @@ window.openDocsForId = openDocsForId;
     } else {
       $('trxModalTitle').textContent = 'Tambah Transaksi';
       $('trxTanggal').value = new Date().toISOString().split('T')[0];
+      $('trxNominal').value = '';
+    }
+
+    if ($('trxNominal')) {
+      $('trxNominal').dispatchEvent(new Event('input', { bubbles: true }));
     }
 
     const row = $('trxPemohonRow') || $('trxPemohonLabel');

@@ -1991,6 +1991,40 @@ dialog::backdrop {
   border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
+.trx-quick-pill {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 750;
+  color: #047857;
+  background: rgba(209, 250, 229, 0.85);
+  border: 1px solid rgba(110, 231, 183, 0.9);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.trx-quick-pill:hover {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.trx-quick-pill:active {
+  transform: scale(0.96);
+}
+
+.trx-quick-pill.active {
+  background: #059669;
+  color: #ffffff;
+  border-color: #047857;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+}
+
 /* Glass Buttons */
 .btn-glass {
   display: inline-flex;
