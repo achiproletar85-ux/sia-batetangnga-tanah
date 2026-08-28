@@ -3603,6 +3603,7 @@ window.openDocsForId = openDocsForId;
     hideIfNoInput('keuDashboard');
     hideIfNoInput('btnTambahTransaksi');
     hideIfNoInput('btnHeroTambahTrx');
+    hideIfNoInput('keuMobileFab');
     hideIfNoInput('btnCetakKeuangan');
     hideIfNoInput('btnHeroCetakKeu');
     hideIfNoInput('keuMainTableSection');

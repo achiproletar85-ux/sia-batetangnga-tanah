@@ -3366,8 +3366,147 @@ body.guest-mode .auth-guest-notice {
 }
 
 /* ==========================================================================
-   MISC UTILITIES
+   MOBILE & TABLET ERGONOMICS ENHANCEMENT (HP & TABLET FIRST)
    ========================================================================== */
-.print-hide { }
 
-.auth-data { }
+/* Floating Action Button for mobile & tablet finance entry */
+.keu-mobile-fab {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  z-index: 999;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50px;
+  padding: 12px 20px;
+  font-size: 13.5px;
+  font-weight: 800;
+  box-shadow:
+    0 8px 24px rgba(16, 185, 129, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+  cursor: pointer;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.keu-mobile-fab:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.5);
+}
+
+.keu-mobile-fab:active {
+  transform: scale(0.96);
+}
+
+/* Tablet & Mobile Screens */
+@media screen and (max-width: 900px) {
+  .keu-mobile-fab {
+    display: inline-flex;
+  }
+  
+  .keu-stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+  }
+
+  .keu-card-in, .keu-card-out, .keu-card-balance {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .keu-stat-grid .stat-val {
+    font-size: 18px !important;
+  }
+}
+
+/* Mobile Screens (<640px) */
+@media screen and (max-width: 640px) {
+  /* Modal optimization */
+  .modal-glass {
+    width: 96vw !important;
+    max-width: 96vw !important;
+    max-height: 92vh !important;
+    border-radius: 20px !important;
+  }
+
+  .modal-glass-head {
+    padding: 14px 16px !important;
+    gap: 10px !important;
+  }
+
+  .modal-glass-icon {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 18px !important;
+    border-radius: 12px !important;
+  }
+
+  .modal-glass-title {
+    font-size: 14.5px !important;
+  }
+
+  .modal-glass-subtitle {
+    font-size: 10.5px !important;
+  }
+
+  .modal-glass-body {
+    padding: 14px 16px !important;
+    max-height: calc(92vh - 130px) !important;
+  }
+
+  .modal-glass-foot {
+    padding: 12px 16px !important;
+    flex-direction: column-reverse;
+    gap: 8px !important;
+  }
+
+  .modal-glass-foot .btn-glass {
+    width: 100% !important;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  /* Form and Input touch targets */
+  .glass-input {
+    font-size: 14px !important;
+    padding: 12px 14px !important;
+    border-radius: 12px !important;
+  }
+
+  .glass-field-row {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Quick Pills in finance modal */
+  .trx-quick-pill {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    border-radius: 10px !important;
+    flex: 1 1 calc(50% - 6px);
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Financial table cards */
+  .row-action-group {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px !important;
+  }
+
+  .row-action-group .btn-row-action {
+    padding: 6px 12px !important;
+    font-size: 11.5px !important;
+  }
+
+  /* Search input */
+  .tb-search {
+    width: 100% !important;
+  }
+}
