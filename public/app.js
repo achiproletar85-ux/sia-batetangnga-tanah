@@ -18,6 +18,175 @@
     if (el) el.addEventListener(evt, handler);
   };
 
+  function esc(v) {
+    if (v === null || v === undefined) return '';
+    return String(v).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  // =========================================================================
+  // MODERN POPUP NOTIFICATION & CONFIRMATION ENGINE (SWEETALERT-GRADE UI)
+  // =========================================================================
+
+  function showToast(message, type = 'info', title = null, duration = 3500) {
+    if (!message) return;
+    let wrap = $('appToastContainer');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.id = 'appToastContainer';
+      wrap.className = 'app-toast-container';
+      document.body.appendChild(wrap);
+    }
+
+    let cleanMsg = String(message).trim();
+    let detectedType = type;
+    if (cleanMsg.startsWith('✅')) {
+      cleanMsg = cleanMsg.replace(/^✅\s*/, '');
+      if (type === 'info') detectedType = 'success';
+    } else if (cleanMsg.startsWith('❌') || cleanMsg.toLowerCase().startsWith('gagal') || cleanMsg.toLowerCase().includes('ditolak')) {
+      cleanMsg = cleanMsg.replace(/^❌\s*/, '');
+      if (type === 'info') detectedType = 'error';
+    } else if (cleanMsg.startsWith('⚠️') || cleanMsg.startsWith('❗')) {
+      cleanMsg = cleanMsg.replace(/^[⚠️❗]\s*/, '');
+      if (type === 'info') detectedType = 'warning';
+    }
+
+    const typeIcons = {
+      success: '✓',
+      error: '✕',
+      warning: '!',
+      info: 'ℹ'
+    };
+
+    const defaultTitles = {
+      success: 'Berhasil',
+      error: 'Terjadi Kendala',
+      warning: 'Peringatan',
+      info: 'Informasi'
+    };
+
+    const finalTitle = title || defaultTitles[detectedType] || 'Pemberitahuan';
+    const icon = typeIcons[detectedType] || 'ℹ';
+
+    const toast = document.createElement('div');
+    toast.className = `app-toast ${detectedType}`;
+    toast.innerHTML = `
+      <div class="app-toast-icon">${icon}</div>
+      <div class="app-toast-content">
+        <div class="app-toast-title">${esc(finalTitle)}</div>
+        <div class="app-toast-text">${esc(cleanMsg)}</div>
+      </div>
+      <button type="button" class="app-toast-close" aria-label="Tutup">✕</button>
+      <div class="app-toast-progress" style="animation-duration: ${duration}ms;"></div>
+    `;
+
+    const closeBtn = toast.querySelector('.app-toast-close');
+    let timer = null;
+
+    function dismiss() {
+      if (timer) clearTimeout(timer);
+      toast.classList.add('is-leaving');
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 260);
+    }
+
+    if (closeBtn) closeBtn.addEventListener('click', dismiss);
+    timer = setTimeout(dismiss, duration);
+
+    wrap.appendChild(toast);
+    return toast;
+  }
+  window.showToast = showToast;
+
+  function showConfirm(options = {}) {
+    return new Promise((resolve) => {
+      const dlg = $('appCustomConfirmDialog');
+      if (!dlg) {
+        const res = window.confirm(options.text || options.title || 'Lanjutkan tindakan?');
+        resolve(res);
+        return;
+      }
+
+      const title = options.title || 'Konfirmasi Tindakan';
+      const text = options.text || 'Apakah Anda yakin ingin melanjutkan tindakan ini?';
+      const type = options.type || 'warning';
+      const confirmText = options.confirmText || (type === 'danger' ? 'Ya, Hapus' : 'Ya, Lanjutkan');
+      const cancelText = options.cancelText || 'Batal';
+
+      const iconBox = $('appConfirmIconBox');
+      const titleEl = $('appConfirmTitle');
+      const textEl = $('appConfirmText');
+      const okBtn = $('appConfirmOkBtn');
+      const cancelBtn = $('appConfirmCancelBtn');
+
+      if (titleEl) titleEl.textContent = title;
+      if (textEl) textEl.innerHTML = esc(text).replace(/\n/g, '<br/>');
+
+      if (iconBox) {
+        iconBox.className = `app-confirm-icon-box ${type}`;
+        const icons = {
+          danger: '🗑️',
+          warning: '⚠️',
+          success: '✅',
+          info: 'ℹ️'
+        };
+        iconBox.textContent = icons[type] || '⚠️';
+      }
+
+      if (okBtn) {
+        okBtn.textContent = confirmText;
+        okBtn.className = `btn-glass ${type === 'danger' ? 'btn-glass-danger' : 'btn-glass-primary'}`;
+      }
+      if (cancelBtn) {
+        cancelBtn.textContent = cancelText;
+      }
+
+      function cleanup() {
+        if (okBtn) okBtn.removeEventListener('click', onOk);
+        if (cancelBtn) cancelBtn.removeEventListener('click', onCancel);
+        dlg.removeEventListener('cancel', onCancel);
+        try { dlg.close(); } catch (_) {}
+      }
+
+      function onOk() {
+        cleanup();
+        resolve(true);
+      }
+
+      function onCancel() {
+        cleanup();
+        resolve(false);
+      }
+
+      if (okBtn) okBtn.addEventListener('click', onOk, { once: true });
+      if (cancelBtn) cancelBtn.addEventListener('click', onCancel, { once: true });
+      dlg.addEventListener('cancel', onCancel, { once: true });
+
+      openModalCentered(dlg);
+    });
+  }
+  window.showConfirm = showConfirm;
+
+  function showAlert(options = {}) {
+    const text = typeof options === 'string' ? options : (options.text || options.message || '');
+    const type = options.type || (text.includes('✅') ? 'success' : (text.includes('❌') || text.toLowerCase().includes('gagal') || text.toLowerCase().includes('ditolak') ? 'error' : 'info'));
+    const title = options.title || null;
+    showToast(text, type, title);
+  }
+  window.showAlert = showAlert;
+
+  // Intercept window.alert so all notifications show modern glassmorphic toasts
+  const _origAlert = window.alert;
+  window.alert = function (msg) {
+    if (typeof msg === 'string') {
+      showAlert(msg);
+    } else {
+      _origAlert(msg);
+    }
+  };
+
   // Indikator "sedang bekerja" pada tombol: nonaktifkan + spinner + label
   // (label asli disimpan agar bisa dipulihkan setelah selesai).
   function busyBtn(btn, on, label) {
@@ -70,7 +239,13 @@
 
   async function deleteTrxRow(id) {
     if (!id) return;
-    if (!confirm(`Anda yakin ingin menghapus transaksi ${id}?`)) return;
+    const ok = await showConfirm({
+      title: 'Hapus Transaksi Kas',
+      text: `Apakah Anda yakin ingin menghapus transaksi "${id}"?\nSaldo kas desa akan otomatis dihitung ulang.`,
+      type: 'danger',
+      confirmText: 'Ya, Hapus Transaksi'
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/keuangan/transaksi/${id}`, { method: 'DELETE' });
       const json = await res.json();
@@ -78,8 +253,9 @@
       await Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]);
       if (isBendahara()) renderKeuanganDashboard();
       renderKeuanganTable();
+      showToast('Transaksi berhasil dihapus dari pembukuan kas.', 'success');
     } catch(e) {
-      alert(`Gagal menghapus: ${e.message}`);
+      showToast(`Gagal menghapus: ${e.message}`, 'error');
     }
   }
 
@@ -710,7 +886,13 @@
   }
 
   async function docsDeleteLinkForJenis(jenisId) {
-    if (!confirm(`Hapus link template untuk jenis surat "${jenisId}"?`)) return;
+    const ok = await showConfirm({
+      title: 'Hapus Link Template',
+      text: `Hapus tautan link template Google Docs untuk jenis surat "${jenisId}"?`,
+      type: 'danger',
+      confirmText: 'Ya, Hapus Link'
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/docs/template?jenis=${encodeURIComponent(jenisId)}`, { method: 'DELETE' });
       const json = await res.json();
@@ -721,9 +903,9 @@
       if (docsState.jenis === jenisId) {
         docsLoadTemplate(jenisId);
       }
-      alert('Link template berhasil dihapus.');
+      showToast('Link template berhasil dihapus.', 'success');
     } catch (e) {
-      alert('Gagal menghapus link: ' + e.message);
+      showToast('Gagal menghapus link: ' + e.message, 'error');
     }
   }
 
@@ -749,14 +931,20 @@
       docsFetchAllMasterLinks();
       namaInp.value = '';
       if ($('docsManageModal')) $('docsManageModal').close();
-      alert(`Jenis surat "${nama}" berhasil ditambahkan!`);
+      showToast(`Jenis surat "${nama}" berhasil ditambahkan!`, 'success');
     } catch (err) {
-      alert('Gagal menambah jenis surat: ' + err.message);
+      showToast('Gagal menambah jenis surat: ' + err.message, 'error');
     }
   }
 
   async function docsDeleteJenis(id) {
-    if (!confirm(`Hapus jenis surat "${id}"? Link template terkait juga akan dihapus.`)) return;
+    const ok = await showConfirm({
+      title: 'Hapus Jenis Dokumen',
+      text: `Hapus jenis surat "${id}"?\nTemplate Google Docs terkait juga akan dinonaktifkan.`,
+      type: 'danger',
+      confirmText: 'Ya, Hapus Jenis'
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/docs/jenis/${encodeURIComponent(id)}`, { method: 'DELETE' });
       const json = await res.json();
@@ -770,9 +958,9 @@
       docsRenderDropdownSelector();
       docsRenderManageList();
       docsLoadTemplate(docsState.jenis);
-      alert('Jenis surat berhasil dihapus.');
+      showToast('Jenis surat berhasil dihapus.', 'success');
     } catch (err) {
-      alert('Gagal menghapus jenis surat: ' + err.message);
+      showToast('Gagal menghapus jenis surat: ' + err.message, 'error');
     }
   }
 
@@ -1290,14 +1478,21 @@
   }
 
   async function docsDeleteHistory(id) {
-    if (!confirm('Hapus riwayat surat ini?')) return;
+    const ok = await showConfirm({
+      title: 'Hapus Riwayat Dokumen',
+      text: 'Apakah Anda yakin ingin menghapus arsip riwayat pembuatan surat ini?',
+      type: 'danger',
+      confirmText: 'Ya, Hapus Riwayat'
+    });
+    if (!ok) return;
     try {
       const res = await fetch('/api/docs/history/' + encodeURIComponent(id), { method: 'DELETE' });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Gagal menghapus.');
       renderDocsHistory();
+      showToast('Riwayat surat berhasil dihapus.', 'success');
     } catch (e) {
-      alert('Gagal menghapus: ' + e.message);
+      showToast('Gagal menghapus: ' + e.message, 'error');
     }
   }
 
@@ -3779,14 +3974,22 @@ window.openDocsForId = openDocsForId;
   }
 
   async function deleteManageUser(username, name, id) {
-    if (!confirm(`Hapus akun "${name}" (@${username})?\n\nAksi ini tidak dapat dibatalkan.`)) return;
+    const ok = await showConfirm({
+      title: 'Hapus Akun Pengguna',
+      text: `Apakah Anda yakin ingin menghapus akun "${name}" (@${username})?\nAksi ini tidak dapat dibatalkan.`,
+      type: 'danger',
+      confirmText: 'Ya, Hapus Akun'
+    });
+    if (!ok) return;
     try {
       const res = await fetch('/api/admin/users/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, id }) }).then(r => r.json());
       if (!res.success) throw new Error(res.error || 'Gagal menghapus akun');
       showManageMsg('ok', `Akun @${username} berhasil dihapus.`);
+      showToast(`Akun @${username} berhasil dihapus.`, 'success');
       await loadUsersList();
     } catch (err) {
       showManageMsg('err', err.message);
+      showToast(err.message, 'error');
     }
   }
 
@@ -3810,10 +4013,12 @@ window.openDocsForId = openDocsForId;
       const res = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
       if (!res.success) throw new Error(res.error || 'Gagal menyimpan');
       showManageMsg('ok', res.message || `Akun @${username} berhasil disimpan.`);
+      showToast(`Akun @${username} berhasil disimpan.`, 'success');
       resetManageUsersForm();
       await loadUsersList();
     } catch (err) {
       showManageMsg('err', err.message);
+      showToast(err.message, 'error');
     } finally {
       $('muSubmitLabel').textContent = '💾 Simpan Akun';
     }
@@ -3827,7 +4032,13 @@ window.openDocsForId = openDocsForId;
   window.handleManageUser = handleManageUser;
 
   async function importFromSheet() {
-    if (!confirm('Tarik data dari spreadsheet ke Supabase sekarang? Data akan di-merge (upsert) ke tabel pendaftaran & uploads.')) return;
+    const ok = await showConfirm({
+      title: 'Tarik Data dari Spreadsheet',
+      text: 'Tarik data dari spreadsheet ke Supabase sekarang?\nData akan digabungkan (upsert) ke tabel pendaftaran & uploads.',
+      type: 'info',
+      confirmText: 'Ya, Tarik Data'
+    });
+    if (!ok) return;
     const btn = $('btnImportSheet');
     busyBtn(btn, true, 'Mengimpor…');
     try {
@@ -3838,11 +4049,10 @@ window.openDocsForId = openDocsForId;
       });
       const j = await res.json();
       if (!res.ok || !j.success) throw new Error((j && j.error) || 'Gagal import dari spreadsheet.');
-      const parts = (j.tables || []).map((t) => t.sheet + ': ditulis ' + t.upserted + ' dari ' + t.received + ' | dilewati (sudah terbaru): ' + (t.skipped || 0));
-      alert('Import selesai (latest-wins).\n' + parts.join('\n') + '\nTotal ditulis: ' + j.totalUpserted + ' baris.');
+      showToast('Import spreadsheet selesai. Total ditulis: ' + j.totalUpserted + ' baris.', 'success', 'Import Sukses');
       await loadData();
     } catch (e) {
-      alert('Import gagal: ' + (e && e.message));
+      showToast('Import gagal: ' + (e && e.message), 'error');
     } finally {
       busyBtn(btn, false);
     }
@@ -3851,7 +4061,13 @@ window.openDocsForId = openDocsForId;
 
   // ---------- Import manual transaksi keuangan dari spreadsheet (CSV publik) ----------
   async function importKeuanganFromSheet() {
-    if (!confirm('Tarik data transaksi keuangan dari spreadsheet sekarang? Data akan di-merge (upsert) ke tabel transaksi_keuangan.')) return;
+    const ok = await showConfirm({
+      title: 'Tarik Transaksi Keuangan',
+      text: 'Tarik data transaksi keuangan dari spreadsheet sekarang?\nData akan digabungkan (upsert) ke tabel kas keuangan.',
+      type: 'info',
+      confirmText: 'Ya, Tarik Transaksi'
+    });
+    if (!ok) return;
     const btn = $('btnImportKeuangan');
     busyBtn(btn, true, 'Mengimpor…');
     try {
@@ -3862,11 +4078,11 @@ window.openDocsForId = openDocsForId;
       });
       const j = await res.json();
       if (!res.ok || !j.success) throw new Error((j && j.error) || 'Gagal import keuangan.');
-      alert('Import keuangan selesai (latest-wins).\nDitulis (baru/diperbarui): ' + (j.inserted || 0) + ' transaksi.\nDilewati (data di aplikasi lebih baru/sama): ' + (j.skipped || 0) + ' baris.');
+      showToast('Import keuangan selesai. Ditulis: ' + (j.inserted || 0) + ' transaksi.', 'success', 'Import Sukses');
       await Promise.all([fetchKeuanganSummary(), fetchKeuanganTransaksi()]);
       renderKeuanganTable();
     } catch (e) {
-      alert('Import keuangan gagal: ' + (e && e.message));
+      showToast('Import keuangan gagal: ' + (e && e.message), 'error');
     } finally {
       busyBtn(btn, false);
     }
@@ -5046,13 +5262,17 @@ window.openDocsForId = openDocsForId;
     const ups = uploads.filter((u) => u.id_registrasi === id);
     
     const upHtml = ups.length
-      ? ups.map((u) =>
-          `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:6px;">
-             <span style="font-size:12px; font-weight:700; color:#334155;">📎 ${esc(u.jenis_upload)}: ${esc(u.file_name)}</span>
-             <a href="${esc(u.file_url || '#')}" target="_blank" rel="noopener" class="btn btn-action-secondary" style="padding:3px 10px; font-size:11px; text-decoration:none;">Buka Berkas ↗</a>
+      ? `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">` +
+        ups.map((u) =>
+          `<div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:rgba(248,250,252,0.85); border:1px solid rgba(226,232,240,0.9); border-radius:12px; transition:all 0.15s ease;">
+             <div style="min-width:0; flex:1; margin-right:8px;">
+               <div style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase;">${esc(u.jenis_upload)}</div>
+               <div style="font-size:12px; font-weight:700; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">📄 ${esc(u.file_name)}</div>
+             </div>
+             <a href="${esc(u.file_url || '#')}" target="_blank" rel="noopener" class="btn-glass btn-glass-secondary" style="padding:5px 10px; font-size:11px; text-decoration:none; white-space:nowrap;">Buka ↗</a>
            </div>`
-        ).join('')
-      : '<div style="font-size:12px; color:#94a3b8; font-style:italic; padding:6px 0;">Belum ada berkas lampiran yang diunggah.</div>';
+        ).join('') + `</div>`
+      : '<div style="font-size:12.5px; color:#94a3b8; font-style:italic; padding:12px 14px; background:rgba(248,250,252,0.6); border-radius:10px; text-align:center;">Belum ada berkas lampiran yang diunggah.</div>';
 
     const titleEl = $('detailTitle');
     if (titleEl) titleEl.textContent = 'Detail Pendaftaran ' + id;
@@ -5060,69 +5280,121 @@ window.openDocsForId = openDocsForId;
     const bodyEl = $('detailBody');
     if (!bodyEl) return;
 
+    const statusMap = {
+      'SELESAI': { bg: '#dcfce7', text: '#15803d', border: '#86efac' },
+      'PROSES': { bg: '#fef3c7', text: '#b45309', border: '#fcd34d' },
+      'PENDING': { bg: '#e0f2fe', text: '#0369a1', border: '#7dd3fc' },
+      'DITOLAK': { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' }
+    };
+    const stKey = String(r.status_berkas || 'PENDING').toUpperCase();
+    const stStyle = statusMap[stKey] || statusMap['PENDING'];
+
     bodyEl.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:14px;">
-        <!-- Header Info Card -->
-        <div style="background:linear-gradient(135deg, #064e3b, #047857); color:#fff; padding:16px 20px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 12px rgba(6,78,59,0.15);">
-          <div>
-            <div style="font-size:10.5px; color:#a7f3d0; font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">NOMOR REGISTRASI</div>
-            <div style="font-size:20px; font-weight:800; font-family:'Space Grotesk', sans-serif; letter-spacing:-0.3px;">${esc(r.id)}</div>
-            <div style="font-size:12.5px; color:#ecfdf5; margin-top:3px;">Pemohon: <strong>${esc(r.nama)}</strong></div>
+        <!-- Hero Overview Banner -->
+        <div style="background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #059669 100%); color:#fff; padding:20px 22px; border-radius:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 8px 24px rgba(6,78,59,0.2), 0 0 0 1px rgba(255,255,255,0.15) inset;">
+          <div style="display:flex; align-items:center; gap:14px;">
+            <div style="width:48px; height:48px; border-radius:14px; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; border:1px solid rgba(255,255,255,0.35);">
+              👤
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:11px; color:#a7f3d0; font-weight:800; text-transform:uppercase; letter-spacing:0.8px;">NO. REGISTRASI</span>
+                <span style="font-family:var(--font-mono, monospace); font-size:12px; background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:6px; font-weight:700;">${esc(r.id)}</span>
+              </div>
+              <div style="font-size:20px; font-weight:800; font-family:var(--font-display, 'Space Grotesk', sans-serif); letter-spacing:-0.4px; margin-top:2px;">
+                ${esc(r.nama || 'Tanpa Nama')}
+              </div>
+            </div>
           </div>
-          <div style="text-align:right;">
-            <span class="tag ${esc(r.layanan)}" style="font-size:11px; padding:4px 12px; font-weight:700;">${esc(r.layanan)}</span>
-            <div style="margin-top:6px; font-size:11.5px; color:#d1fae5;">Status: <strong>${esc(r.status_berkas || 'PENDING')}</strong></div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+            <span class="tag ${esc(r.layanan)}" style="font-size:11.5px; padding:4px 14px; font-weight:800; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15);">${esc(r.layanan)}</span>
+            <span style="font-size:11px; font-weight:800; padding:3px 10px; border-radius:6px; background:${stStyle.bg}; color:${stStyle.text}; border:1px solid ${stStyle.border};">
+              ● ${esc(r.status_berkas || 'PENDING')}
+            </span>
           </div>
         </div>
 
         <!-- Section 1: Data Para Pihak -->
-        <div class="card" style="padding:14px 16px; margin:0;">
-          <div class="card-header-title" style="font-size:12.5px; margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid #f1f5f9;">
-            👤 Data Para Pihak
-          </div>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; font-size:12px;">
-            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">NAMA PEMOHON</span><strong>${esc(r.nama || '—')}</strong></div>
-            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">NOMOR HP / WHATSAPP</span><strong>${esc(r.hp || '—')}</strong></div>
-            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">PIHAK PERTAMA / PENJUAL</span><strong>${esc(pihakPertamaNama(r.layanan, info) || '—')}</strong></div>
-            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">ALAMAT LENGKAP</span>${esc(alamatPemohon(r.layanan, info) || '—')}</div>
+        <div class="glass-card" style="margin-bottom:0;">
+          <h3 class="glass-card-title">
+            <span style="font-size:14px;">👥</span> Identitas Para Pihak
+          </h3>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px;">
+            <div>
+              <span style="color:#64748b; font-size:10.5px; font-weight:750; display:block; text-transform:uppercase; margin-bottom:2px;">Nama Pemohon</span>
+              <strong style="font-size:13.5px; color:#0f172a;">${esc(r.nama || '—')}</strong>
+            </div>
+            <div>
+              <span style="color:#64748b; font-size:10.5px; font-weight:750; display:block; text-transform:uppercase; margin-bottom:2px;">Nomor HP / WhatsApp</span>
+              <strong style="font-size:13.5px; color:#0f172a;">${esc(r.hp || '—')}</strong>
+            </div>
+            <div>
+              <span style="color:#64748b; font-size:10.5px; font-weight:750; display:block; text-transform:uppercase; margin-bottom:2px;">Pihak Pertama / Penjual</span>
+              <strong style="font-size:13.5px; color:#0f172a;">${esc(pihakPertamaNama(r.layanan, info) || '—')}</strong>
+            </div>
+            <div>
+              <span style="color:#64748b; font-size:10.5px; font-weight:750; display:block; text-transform:uppercase; margin-bottom:2px;">Alamat Lengkap</span>
+              <span style="font-size:12.5px; color:#334155;">${esc(alamatPemohon(r.layanan, info) || '—')}</span>
+            </div>
           </div>
         </div>
 
-        <!-- Section 2: Data Objek Tanah -->
-        <div class="card" style="padding:14px 16px; margin:0;">
-          <div class="card-header-title" style="font-size:12.5px; margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid #f1f5f9;">
-            🗺️ Rincian Objek Tanah
-          </div>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; font-size:12px;">
-            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">JENIS / PENGGUNAAN TANAH</span><strong>${esc(info.jenis_tanah || info.penggunaan_tanah || '—')}</strong></div>
-            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">LUAS TANAH</span><strong>${esc(info.luas_tanah ? info.luas_tanah + ' M²' : '—')}</strong></div>
-            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">DUSUN / LOKASI</span><strong>${esc(info.dusun || info.letak_tanah || '—')}</strong></div>
-            <div><span style="color:#64748b; font-size:10.5px; font-weight:600; display:block;">NOMOR SPORADIK / SURAT</span><strong>${esc(info._nomorSuratTercetak || 'Belum Dicetak')}</strong></div>
+        <!-- Section 2: Objek Tanah & Batas -->
+        <div class="glass-card" style="margin-bottom:0;">
+          <h3 class="glass-card-title">
+            <span style="font-size:14px;">🗺️</span> Rincian Objek Tanah
+          </h3>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:14px;">
+            <div>
+              <span style="color:#64748b; font-size:10.5px; font-weight:750; display:block; text-transform:uppercase; margin-bottom:2px;">Jenis / Penggunaan Tanah</span>
+              <strong style="font-size:13px; color:#0f172a;">${esc(info.jenis_tanah || info.penggunaan_tanah || '—')}</strong>
+            </div>
+            <div>
+              <span style="color:#64748b; font-size:10.5px; font-weight:750; display:block; text-transform:uppercase; margin-bottom:2px;">Luas Tanah</span>
+              <strong style="font-size:13px; color:#059669;">${esc(info.luas_tanah ? info.luas_tanah + ' M²' : '—')}</strong>
+            </div>
+            <div>
+              <span style="color:#64748b; font-size:10.5px; font-weight:750; display:block; text-transform:uppercase; margin-bottom:2px;">Dusun / Lokasi</span>
+              <strong style="font-size:13px; color:#0f172a;">${esc(info.dusun || info.letak_tanah || '—')}</strong>
+            </div>
+            <div>
+              <span style="color:#64748b; font-size:10.5px; font-weight:750; display:block; text-transform:uppercase; margin-bottom:2px;">Nomor SPORADIK / Dokumen</span>
+              <strong style="font-size:13px; color:#0f172a;">${esc(info._nomorSuratTercetak || 'Belum Dicetak')}</strong>
+            </div>
           </div>
 
-          <div style="margin-top:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
-            <div style="font-size:11px; font-weight:700; color:#334155; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">BATAS-BATAS TANAH:</div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; font-size:11.5px;">
-              <div><span style="color:#64748b; font-weight:600;">Utara:</span> ${esc(info.batas_utara || info.utara || '—')}</div>
-              <div><span style="color:#64748b; font-weight:600;">Timur:</span> ${esc(info.batas_timur || info.timur || '—')}</div>
-              <div><span style="color:#64748b; font-weight:600;">Selatan:</span> ${esc(info.batas_selatan || info.selatan || '—')}</div>
-              <div><span style="color:#64748b; font-weight:600;">Barat:</span> ${esc(info.batas_barat || info.barat || '—')}</div>
+          <div style="background:rgba(248,250,252,0.85); border:1px solid rgba(226,232,240,0.9); border-radius:12px; padding:14px;">
+            <div style="font-size:11px; font-weight:800; color:#334155; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
+              🧭 Batas-Batas Bidang Tanah
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; font-size:12px;">
+              <div style="padding:6px 10px; background:#fff; border-radius:8px; border:1px solid #e2e8f0;"><span style="color:#64748b; font-weight:700;">Utara:</span> ${esc(info.batas_utara || info.utara || '—')}</div>
+              <div style="padding:6px 10px; background:#fff; border-radius:8px; border:1px solid #e2e8f0;"><span style="color:#64748b; font-weight:700;">Timur:</span> ${esc(info.batas_timur || info.timur || '—')}</div>
+              <div style="padding:6px 10px; background:#fff; border-radius:8px; border:1px solid #e2e8f0;"><span style="color:#64748b; font-weight:700;">Selatan:</span> ${esc(info.batas_selatan || info.selatan || '—')}</div>
+              <div style="padding:6px 10px; background:#fff; border-radius:8px; border:1px solid #e2e8f0;"><span style="color:#64748b; font-weight:700;">Barat:</span> ${esc(info.batas_barat || info.barat || '—')}</div>
             </div>
           </div>
         </div>
 
         <!-- Section 3: Lampiran Berkas Upload -->
-        <div class="card" style="padding:14px 16px; margin:0;">
-          <div class="card-header-title" style="font-size:12.5px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #f1f5f9;">
-            📎 Berkas &amp; Lampiran (${ups.length})
-          </div>
+        <div class="glass-card" style="margin-bottom:0;">
+          <h3 class="glass-card-title">
+            <span style="font-size:14px;">📎</span> Berkas Lampiran (${ups.length})
+          </h3>
           ${upHtml}
         </div>
 
-        <!-- Section 4: Catatan Admin & Waktu -->
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#64748b; padding:4px 8px; flex-wrap:wrap; gap:6px;">
-          <span>Waktu Pendaftaran: ${esc(r.timestamp || r.created_at || '—')}</span>
-          <span>Catatan: ${esc(r.catatan_admin || 'Tidak ada')}</span>
+        <!-- Section 4: Metadata Log & Quick Action -->
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; color:#64748b; padding:8px 12px; background:rgba(255,255,255,0.6); border-radius:12px; border:1px solid rgba(226,232,240,0.8); flex-wrap:wrap; gap:10px;">
+          <div>
+            <span>🕒 Waktu Pendaftaran: <strong>${esc(r.timestamp || r.created_at || '—')}</strong></span>
+            <span style="margin-left:12px;">📝 Catatan: <strong>${esc(r.catatan_admin || 'Tidak ada')}</strong></span>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" onclick="$('detailModal').close(); openEdit('${esc(r.id)}');" class="btn-glass btn-glass-secondary" style="padding:6px 12px; font-size:11.5px;">✏️ Edit Data</button>
+            <button type="button" onclick="$('detailModal').close(); cetakSporadik('${esc(r.id)}');" class="btn-glass btn-glass-primary" style="padding:6px 12px; font-size:11.5px;">🖨️ Cetak Surat</button>
+          </div>
         </div>
       </div>
     `;
@@ -5160,75 +5432,104 @@ window.openDocsForId = openDocsForId;
     const urutMatch = /145-(\d{3})\//.exec(nomor);
     const tglSurat = toISODate(raw._tglCetakSurat || raw._tglSurat);
     const html = `
-      <div class="form">
-        <div class="edit-meta">
-          <div class="field"><label>ID Registrasi</label><input id="ed_id" readonly value="${esc(r.id)}"></div>
-          <div class="field"><label>Jenis Surat</label>
-            <select id="ed_layanan">
-              <option value="HIBAH"${currentEditLayanan === 'HIBAH' ? ' selected' : ''}>HIBAH</option>
-              <option value="JUALBELI"${currentEditLayanan === 'JUALBELI' ? ' selected' : ''}>JUAL BELI</option>
-              <option value="AHLIWARIS"${currentEditLayanan === 'AHLIWARIS' ? ' selected' : ''}>AHLI WARIS</option>
-            </select></div>
-          <div class="field"><label>Status Berkas</label>
-            <select id="ed_status">
-              <option value="">— Pilih —</option>
-              <option${String(r.status_berkas || '') === 'PENDING' ? ' selected' : ''}>PENDING</option>
-              <option${String(r.status_berkas || '') === 'PROSES' ? ' selected' : ''}>PROSES</option>
-              <option${String(r.status_berkas || '') === 'DIPROSES' ? ' selected' : ''}>DIPROSES</option>
-              <option${String(r.status_berkas || '') === 'SUDAH_DIUKUR' ? ' selected' : ''}>SUDAH_DIUKUR</option>
-              <option${String(r.status_berkas || '') === 'BELUM_DIUKUR' ? ' selected' : ''}>BELUM_DIUKUR</option>
-              <option${String(r.status_berkas || '') === 'DITOLAK' ? ' selected' : ''}>DITOLAK</option>
-              <option${String(r.status_berkas || '') === 'SELESAI' ? ' selected' : ''}>SELESAI</option>
-            </select></div>
-        </div>
-
-        <div class="form-box form-box-nomor">
-          <h4>📄 Nomor Surat (Otomatis)</h4>
-          <p>Nomor urut diambil dari surat terakhir; bisa diubah manual. Kosongkan jika belum mau dicetak.</p>
-          <div class="tambah-nomor-row">
-            <div class="field"><label>Tanggal Surat</label><input type="date" id="${p}tglSurat" value="${esc(tglSurat)}"></div>
-            <div class="field"><label>Nomor Urut (3 digit)</label><input type="text" id="${p}noUrut" inputmode="numeric" maxlength="3" value="${esc(urutMatch ? urutMatch[1] : '')}" placeholder="001"></div>
-            <button id="${p}btnNoUrut" class="btn" type="button">🔄 Auto</button>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- Status & Metadata Card -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">📌 Status &amp; Registrasi</h3>
+          <div class="glass-field-row" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <div class="glass-field">
+              <label for="ed_id">ID Registrasi</label>
+              <input id="ed_id" class="glass-input" readonly value="${esc(r.id)}" style="font-weight: 700; font-family: var(--font-mono, monospace); background: rgba(241,245,249,0.7);">
+            </div>
+            <div class="glass-field">
+              <label for="ed_layanan">Jenis Surat</label>
+              <select id="ed_layanan" class="glass-input" style="font-weight: 700;">
+                <option value="HIBAH"${currentEditLayanan === 'HIBAH' ? ' selected' : ''}>HIBAH</option>
+                <option value="JUALBELI"${currentEditLayanan === 'JUALBELI' ? ' selected' : ''}>JUAL BELI</option>
+                <option value="AHLIWARIS"${currentEditLayanan === 'AHLIWARIS' ? ' selected' : ''}>AHLI WARIS</option>
+              </select>
+            </div>
+            <div class="glass-field">
+              <label for="ed_status">Status Berkas</label>
+              <select id="ed_status" class="glass-input" style="font-weight: 700;">
+                <option value="">— Pilih Status —</option>
+                <option${String(r.status_berkas || '') === 'PENDING' ? ' selected' : ''}>PENDING</option>
+                <option${String(r.status_berkas || '') === 'PROSES' ? ' selected' : ''}>PROSES</option>
+                <option${String(r.status_berkas || '') === 'DIPROSES' ? ' selected' : ''}>DIPROSES</option>
+                <option${String(r.status_berkas || '') === 'SUDAH_DIUKUR' ? ' selected' : ''}>SUDAH_DIUKUR</option>
+                <option${String(r.status_berkas || '') === 'BELUM_DIUKUR' ? ' selected' : ''}>BELUM_DIUKUR</option>
+                <option${String(r.status_berkas || '') === 'DITOLAK' ? ' selected' : ''}>DITOLAK</option>
+                <option${String(r.status_berkas || '') === 'SELESAI' ? ' selected' : ''}>SELESAI</option>
+              </select>
+            </div>
           </div>
-          <div class="field"><label>Nomor Surat (hasil)</label>
-            <input type="text" id="${p}nomorSurat" readonly value="${esc(nomor)}"></div>
         </div>
 
-        <div class="form-box">
+        <!-- Penomoran Surat Otomatis Card -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">📄 Nomor Surat Terbit</h3>
+          <div class="glass-field-row" style="grid-template-columns: 1fr 1fr auto; align-items: flex-end; margin-bottom: 10px;">
+            <div class="glass-field">
+              <label for="${p}tglSurat">Tanggal Surat</label>
+              <input type="date" id="${p}tglSurat" class="glass-input" value="${esc(tglSurat)}">
+            </div>
+            <div class="glass-field">
+              <label for="${p}noUrut">Nomor Urut (3 digit)</label>
+              <input type="text" id="${p}noUrut" class="glass-input" inputmode="numeric" maxlength="3" value="${esc(urutMatch ? urutMatch[1] : '')}" placeholder="001">
+            </div>
+            <button id="${p}btnNoUrut" class="btn-glass btn-glass-secondary" type="button" style="padding: 10px 14px; white-space: nowrap;">🔄 Auto</button>
+          </div>
+          <div class="glass-field">
+            <label for="${p}nomorSurat">Nomor Surat Hasil Format</label>
+            <input type="text" id="${p}nomorSurat" class="glass-input" readonly value="${esc(nomor)}" style="font-weight: 700; background: rgba(241,245,249,0.7); font-family: var(--font-mono, monospace);">
+          </div>
+        </div>
+
+        <!-- Data Pemohon -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">👤 Identitas Pemohon</h3>
           <div class="field-grid">
             ${secs(TAMBAH_SECTIONS.pemohon)}
           </div>
         </div>
 
-        <div class="form-box">
+        <!-- Data Para Pihak -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">👥 Data Para Pihak Terkait</h3>
           <div class="field-grid">
             ${secs(TAMBAH_SECTIONS[currentEditLayanan] || [])}
-            <div id="editAnakWrap" class="field full" style="grid-column: 1 / -1 !important;"></div>
+            <div id="editAnakWrap" class="glass-field full" style="grid-column: 1 / -1 !important;"></div>
           </div>
         </div>
 
-        <div class="form-box">
+        <!-- Data Tanah -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">🗺️ Rincian Objek Tanah</h3>
           <div class="field-grid">
             ${secs(TAMBAH_SECTIONS.tanah)}
           </div>
         </div>
 
-        <div class="form-box">
-          <div class="field-grid">
-            <div class="field full" style="grid-column: 1 / -1 !important;"><label>Catatan Admin</label><textarea id="ed_catatan" rows="3">${esc(r.catatan_admin || '')}</textarea></div>
+        <!-- Catatan Admin -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">📝 Catatan Petugas / Admin</h3>
+          <div class="glass-field">
+            <textarea id="ed_catatan" class="glass-input glass-textarea" rows="2" placeholder="Tuliskan catatan berkas jika ada...">${esc(r.catatan_admin || '')}</textarea>
           </div>
         </div>
 
-        <div class="form-box form-box-upload">
-          <h4>📎 Upload Dokumen (PDF / Gambar)</h4>
-          <p>Pilih file baru untuk mengganti, atau kosongkan jika tidak diubah. File yang sudah ada dari Tambah Data tetap tampil.</p>
-          ${((TAMBAH_UPLOADS[currentEditLayanan] || []).concat([{ key: 'DOKUMEN LAIN', label: 'Dokumen Tambahan' }])).map((s) =>
-            `<div class="field full"><label>${esc(s.label)}</label><input type="file" data-jenis="${esc(s.key)}" accept="image/*,.pdf" multiple><div class="slot-status" data-status-for="${esc(s.key)}"></div></div>`
-          ).join('')}
-        </div>
-
-        <div class="form-actions">
-          <button id="btnSaveEdit" class="btn primary">💾 Simpan Data</button>
+        <!-- Upload Dokumen -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">📎 Berkas &amp; Lampiran</h3>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${((TAMBAH_UPLOADS[currentEditLayanan] || []).concat([{ key: 'DOKUMEN LAIN', label: 'Dokumen Tambahan' }])).map((s) =>
+              `<div class="glass-field full">
+                <label>${esc(s.label)}</label>
+                <input type="file" class="glass-input glass-file" data-jenis="${esc(s.key)}" accept="image/*,.pdf" multiple>
+                <div class="slot-status" data-status-for="${esc(s.key)}" style="margin-top: 4px; font-size: 11.5px;"></div>
+              </div>`
+            ).join('')}
+          </div>
         </div>
       </div>`;
     $('editBody').innerHTML = html;
@@ -5250,7 +5551,10 @@ window.openDocsForId = openDocsForId;
       const h = $(`${p}harga_pembelian`);
       if (h) h.addEventListener('input', () => { formatHargaInput(h); $(`${p}harga_terbilang`).value = terbilangHarga(h); });
     }
-    $('btnSaveEdit').addEventListener('click', saveEdit);
+    const saveBtn = $('btnSaveEdit');
+    if (saveBtn) {
+      saveBtn.onclick = saveEdit;
+    }
   }
 
   // Kumpulkan nilai semua input ed_* (untuk re-render saat layanan berubah).
@@ -5396,18 +5700,25 @@ window.openDocsForId = openDocsForId;
   async function deleteRow(id) {
     const targetId = id || currentEditId;
     if (!targetId) return;
-    if (!confirm('Hapus pendaftaran ' + targetId + ' dari Supabase?')) return;
+    const ok = await showConfirm({
+      title: 'Hapus Data Pendaftaran',
+      text: `Apakah Anda yakin ingin menghapus pendaftaran "${targetId}" dari database Supabase?\nData berkas dan riwayat terkait akan dihapus.`,
+      type: 'danger',
+      confirmText: 'Ya, Hapus Pendaftaran'
+    });
+    if (!ok) return;
     try {
       const res = await fetch('/api/permohonan/' + encodeURIComponent(targetId), { method: 'DELETE' });
       const json = await res.json();
       if (!json.success) {
-        alert('Hapus gagal: ' + (json.error || ''));
+        showToast('Hapus gagal: ' + (json.error || ''), 'error');
         return;
       }
       $('editModal').close();
+      showToast(`Pendaftaran ${targetId} berhasil dihapus.`, 'success');
       await loadData();
     } catch (e) {
-      alert('Hapus gagal: ' + e.message);
+      showToast('Hapus gagal: ' + e.message, 'error');
     }
   }
 
@@ -7210,13 +7521,20 @@ window.openDocsForId = openDocsForId;
   };
 
   async function deleteUpload(fileId) {
-    if (!confirm('Hapus upload ini?')) return;
+    const ok = await showConfirm({
+      title: 'Hapus Berkas Upload',
+      text: 'Apakah Anda yakin ingin menghapus berkas lampiran ini?',
+      type: 'danger',
+      confirmText: 'Ya, Hapus Berkas'
+    });
+    if (!ok) return;
     const res = await fetch('/api/uploads/' + encodeURIComponent(fileId), { method: 'DELETE' });
     const json = await res.json();
     if (!json.success) {
-      alert('Hapus gagal: ' + (json.error || ''));
+      showToast('Hapus gagal: ' + (json.error || ''), 'error');
       return;
     }
+    showToast('Berkas lampiran berhasil dihapus.', 'success');
     await loadData();
   }
 
@@ -7372,29 +7690,29 @@ window.openDocsForId = openDocsForId;
   function tambahFieldHtml(f, val, prefix) {
     const p = prefix || 'tb_';
     const v = val == null ? '' : String(val);
-    const cls = f.full ? 'field full' : 'field';
+    const cls = f.full ? 'glass-field full' : 'glass-field';
     const synced = f.sync ? ` data-sync="${f.sync}"` : '';
-    const lockHint = f.sync ? '<small class="sync-hint">⚡ Otomatis mengikuti Data Pemohon</small>' : '';
+    const lockHint = f.sync ? '<small class="glass-sync-hint">⚡ Otomatis sinkron Data Pemohon</small>' : '';
     let inp;
     if (f.select) {
-      inp = `<select id="${p}${f.id}"${f.sync ? ' disabled' : ''}><option value="">— Pilih —</option>` +
+      inp = `<select id="${p}${f.id}" class="glass-input"${f.sync ? ' disabled' : ''}><option value="">— Pilih —</option>` +
         f.select.map((o) => `<option value="${esc(o)}"${o === v ? ' selected' : ''}>${esc(o)}</option>`).join('') + '</select>';
     } else {
       const type = f.type || 'text';
-      const umurHint = type === 'date' ? `<span class="umur-hint" id="${p}${f.id}_umur"></span>` : '';
+      const umurHint = type === 'date' ? `<span class="glass-umur-hint" id="${p}${f.id}_umur"></span>` : '';
       const ro = (f.ro || f.sync) ? ' readonly' : '';
       const maxLen = f.digits ? ` maxlength="${f.digits}"` : '';
       const inpMode = f.digits ? ' inputmode="numeric"' : '';
-      inp = `<input type="${type}" id="${p}${f.id}" value="${esc(v)}"${f.min != null ? ` min="${f.min}"` : ''}${f.max != null ? ` max="${f.max}"` : ''}${ro}${f.price ? ' data-price="1"' : ''}${maxLen}${inpMode}${f.req ? ' required' : ''}${synced}>${umurHint}`;
+      inp = `<input type="${type}" class="glass-input" id="${p}${f.id}" value="${esc(v)}"${f.min != null ? ` min="${f.min}"` : ''}${f.max != null ? ` max="${f.max}"` : ''}${ro}${f.price ? ' data-price="1"' : ''}${maxLen}${inpMode}${f.req ? ' required' : ''}${synced}>${umurHint}`;
     }
-    const colStyle = f.full ? 'grid-column: 1 / -1 !important;' : 'grid-column: span 1 !important;';
-    return `<div class="${cls}${f.sync ? ' locked' : ''}" style="${colStyle} display: flex; flex-direction: column; width: 100%;"><label>${esc(f.label)}${f.req ? ' *' : ''}</label>${inp}${lockHint}</div>`;
+    const colStyle = f.full ? 'grid-column: 1 / -1 !important;' : '';
+    return `<div class="${cls}${f.sync ? ' glass-field-locked' : ''}" style="${colStyle}"><label>${esc(f.label)}${f.req ? ' <span style="color:#ef4444;">*</span>' : ''}</label>${inp}${lockHint}</div>`;
   }
 
   function tambahSeksiHtml(sections, prefix, raw) {
     const p = prefix || 'tb_';
     return sections.map((f) =>
-      f.sec ? `<div class="sec-title">${esc(f.sec)}</div>` : tambahFieldHtml(f, raw ? raw[f.id] : '', p)
+      f.sec ? `<div class="glass-field full glass-section-divider"><span>${esc(f.sec)}</span></div>` : tambahFieldHtml(f, raw ? raw[f.id] : '', p)
     ).join('');
   }
 
@@ -7466,66 +7784,82 @@ window.openDocsForId = openDocsForId;
 
   function renderTambahBody() {
     const html = `
-      <div class="form">
-        <label>Jenis Surat <select id="tb_layanan">
-          <option value="HIBAH"${tambahLayanan === 'HIBAH' ? ' selected' : ''}>HIBAH</option>
-          <option value="JUALBELI"${tambahLayanan === 'JUALBELI' ? ' selected' : ''}>JUAL BELI</option>
-          <option value="AHLIWARIS"${tambahLayanan === 'AHLIWARIS' ? ' selected' : ''}>AHLI WARIS</option>
-        </select></label>
-
-        <div class="form-box form-box-search">
-          <h4>⚡ Cari Pemohon Sebelumnya</h4>
-          <p>Ketik nama dan klik CARI untuk mengisi otomatis.</p>
-          <div class="tambah-search-row">
-            <input type="text" id="tb_cari" placeholder="🔍 Ketik nama pemohon…" autocomplete="off">
-            <button id="tb_btnCari" class="btn" type="button">CARI</button>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- Jenis Layanan & Pencarian Cepat Card -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">⚡ Jenis Layanan &amp; Cari Pemohon</h3>
+          <div class="glass-field" style="margin-bottom: 12px;">
+            <label for="tb_layanan">Pilih Jenis Layanan Surat</label>
+            <select id="tb_layanan" class="glass-input" style="font-weight: 700; font-size: 14px;">
+              <option value="HIBAH"${tambahLayanan === 'HIBAH' ? ' selected' : ''}>SURAT KETERANGAN HIBAH</option>
+              <option value="JUALBELI"${tambahLayanan === 'JUALBELI' ? ' selected' : ''}>SURAT KETERANGAN JUAL BELI</option>
+              <option value="AHLIWARIS"${tambahLayanan === 'AHLIWARIS' ? ' selected' : ''}>SURAT KETERANGAN AHLI WARIS</option>
+            </select>
           </div>
-          <div id="tb_hasilCari" class="tambah-hasil"></div>
+          <div class="glass-field">
+            <label for="tb_cari">Cari Pemohon Sebelumnya (Auto-Fill)</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="tb_cari" class="glass-input" placeholder="🔍 Ketik nama, NIK, atau nomor HP pemohon…" autocomplete="off">
+              <button id="tb_btnCari" class="btn-glass btn-glass-secondary" type="button" style="white-space: nowrap; padding: 10px 16px;">🔍 Cari</button>
+            </div>
+            <div id="tb_hasilCari" class="tambah-hasil" style="margin-top: 6px;"></div>
+          </div>
         </div>
 
-        <div class="form-box form-box-nomor">
-          <h4>📄 Nomor Surat (Otomatis)</h4>
-          <p>Nomor urut diambil dari surat terakhir; bisa diubah manual. Kosongkan jika belum mau dicetak.</p>
-          <div class="tambah-nomor-row">
-            <div class="field"><label>Tanggal Surat</label><input type="text" id="tb_tglSurat" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY"></div>
-            <div class="field"><label>Nomor Urut (3 digit)</label><input type="text" id="tb_noUrut" inputmode="numeric" maxlength="3" placeholder="001"></div>
-            <button id="tb_btnNoUrut" class="btn" type="button">🔄 Auto</button>
+        <!-- Penomoran Surat Otomatis Card -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">📄 Nomor Surat Terbit</h3>
+          <div class="glass-field-row" style="grid-template-columns: 1fr 1fr auto; align-items: flex-end; margin-bottom: 10px;">
+            <div class="glass-field">
+              <label for="tb_tglSurat">Tanggal Surat</label>
+              <input type="text" id="tb_tglSurat" class="glass-input" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY">
+            </div>
+            <div class="glass-field">
+              <label for="tb_noUrut">Nomor Urut (3 digit)</label>
+              <input type="text" id="tb_noUrut" class="glass-input" inputmode="numeric" maxlength="3" placeholder="001">
+            </div>
+            <button id="tb_btnNoUrut" class="btn-glass btn-glass-secondary" type="button" style="padding: 10px 14px; white-space: nowrap;">🔄 Auto</button>
           </div>
-          <div class="field"><label>Nomor Surat (hasil)</label>
-            <input type="text" id="tb_nomorSurat" readonly></div>
+          <div class="glass-field">
+            <label for="tb_nomorSurat">Nomor Surat Hasil Format</label>
+            <input type="text" id="tb_nomorSurat" class="glass-input" readonly style="font-weight: 700; background: rgba(241,245,249,0.7); font-family: var(--font-mono, monospace);">
+          </div>
         </div>
 
-        <div class="form-box">
+        <!-- Data Pemohon -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">👤 Identitas Pemohon</h3>
           <div class="field-grid">
             ${tambahSeksiHtml(TAMBAH_SECTIONS.pemohon)}
           </div>
         </div>
 
-        <div class="form-box">
+        <!-- Data Para Pihak -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">👥 Data Para Pihak Terkait</h3>
           <div class="field-grid">
             ${tambahSeksiHtml(TAMBAH_SECTIONS[tambahLayanan] || [])}
-            <div id="tambahAnakWrap" class="field full" style="grid-column: 1 / -1 !important;"></div>
+            <div id="tambahAnakWrap" class="glass-field full" style="grid-column: 1 / -1 !important;"></div>
           </div>
         </div>
 
-        <div class="form-box">
+        <!-- Data Tanah -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">🗺️ Rincian Objek Tanah</h3>
           <div class="field-grid">
             ${tambahSeksiHtml(TAMBAH_SECTIONS.tanah)}
           </div>
         </div>
 
-        <div class="form-box form-box-upload">
-          <h4>📎 Upload Dokumen (PDF / Gambar)</h4>
-          <p>Maks 8 MB per file. Kosongkan jika belum ada.</p>
-          ${(TAMBAH_UPLOADS[tambahLayanan] || []).map((s) =>
-            `<div class="field full"><label>${esc(s.label)}</label><input type="file" data-jenis="${esc(s.key)}" accept="image/*,.pdf"></div>`
-          ).join('')}
-          <div class="field full"><label>Dokumen Tambahan (boleh lebih dari satu)</label><input type="file" data-jenis="DOKUMEN LAIN" accept="image/*,.pdf" multiple></div>
-        </div>
-
-        <div class="form-actions">
-          <button id="btnSaveTambah" class="btn primary">💾 Simpan Data</button>
-          <button id="btnBatalTambah" class="btn" type="button">Batal</button>
+        <!-- Upload Dokumen -->
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">📎 Upload Berkas &amp; Lampiran</h3>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${(TAMBAH_UPLOADS[tambahLayanan] || []).map((s) =>
+              `<div class="glass-field full"><label>${esc(s.label)}</label><input type="file" class="glass-input glass-file" data-jenis="${esc(s.key)}" accept="image/*,.pdf"></div>`
+            ).join('')}
+            <div class="glass-field full"><label>Dokumen Tambahan (Boleh lebih dari satu)</label><input type="file" class="glass-input glass-file" data-jenis="DOKUMEN LAIN" accept="image/*,.pdf" multiple></div>
+          </div>
         </div>
       </div>`;
     $('tambahBody').innerHTML = html;
@@ -7547,8 +7881,10 @@ window.openDocsForId = openDocsForId;
       const h = $('tb_harga_pembelian');
       if (h) h.addEventListener('input', () => { formatHargaInput(h); $('tb_harga_terbilang').value = terbilangHarga(h); });
     }
-    $('btnSaveTambah').addEventListener('click', saveTambahData);
-    $('btnBatalTambah').addEventListener('click', () => $('tambahModal').close());
+    const saveBtn = $('btnSaveTambah');
+    if (saveBtn) saveBtn.onclick = saveTambahData;
+    const cancelBtn = $('btnBatalTambah');
+    if (cancelBtn) cancelBtn.onclick = () => $('tambahModal').close();
   }
 
   function renderTambahAnak() {

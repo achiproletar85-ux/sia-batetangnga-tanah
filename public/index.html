@@ -1217,99 +1217,114 @@
   </div>
 
   <!-- Datalist Autocomplete -->
-  <datalist id="pemohonList"></datalist>
+  <datalist id="pemohonList"></datalist>  <!-- =========================================================================
+       MODALS — MODERN GLASSMORPHISM DIALOGS
+       ========================================================================= -->
 
-  <!-- =========================================================
-       MODALS & DIALOGS
-       ========================================================= -->
-
-  <!-- Modal Detail -->
-  <dialog id="detailModal" style="max-width: 680px; width: 92vw;">
-    <div class="modal-head">
-      <h2 id="detailTitle">Detail Lengkap Pendaftaran</h2>
-      <button id="btnCloseModal" class="btn-ghost" onclick="$('detailModal').close()">✕</button>
+  <!-- Modal Detail Lengkap -->
+  <dialog id="detailModal" class="modal-glass" style="max-width: 780px; width: 94vw;">
+    <div class="modal-glass-head">
+      <div class="modal-glass-icon" style="background: linear-gradient(135deg, #059669, #10b981);">📋</div>
+      <div style="flex: 1; min-width: 0;">
+        <h2 id="detailTitle" class="modal-glass-title">Detail Lengkap Pendaftaran</h2>
+        <p class="modal-glass-subtitle">Informasi lengkap pemohon, objek tanah, batas wilayah, dan berkas lampiran</p>
+      </div>
+      <button id="btnCloseModal" class="modal-glass-close" onclick="$('detailModal').close()" aria-label="Tutup">✕</button>
     </div>
-    <div class="modal-body" id="detailBody" style="max-height: calc(85vh - 120px); overflow-y: auto; padding: 16px;"></div>
-    <div class="modal-foot">
-      <button class="btn btn-action-secondary" onclick="$('detailModal').close()">Tutup</button>
+    <div class="modal-glass-body" id="detailBody" style="max-height: calc(85vh - 140px); overflow-y: auto;"></div>
+    <div class="modal-glass-foot">
+      <button type="button" class="btn-glass btn-glass-secondary" onclick="$('detailModal').close()">Tutup</button>
     </div>
   </dialog>
 
   <!-- Modal Edit Pendaftaran -->
-  <dialog id="editModal" style="max-width: 780px; width: 95vw;">
-    <div class="modal-head">
-      <h2 id="editTitle">Edit Data Pendaftaran</h2>
-      <button id="btnCloseEdit" class="btn-ghost" onclick="$('editModal').close()">✕</button>
+  <dialog id="editModal" class="modal-glass" style="max-width: 840px; width: 95vw;">
+    <div class="modal-glass-head">
+      <div class="modal-glass-icon" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">✏️</div>
+      <div style="flex: 1; min-width: 0;">
+        <h2 id="editTitle" class="modal-glass-title">Edit Data Pendaftaran</h2>
+        <p class="modal-glass-subtitle">Perbarui informasi pemohon, objek tanah, dan data saksi</p>
+      </div>
+      <button id="btnCloseEdit" class="modal-glass-close" onclick="$('editModal').close()" aria-label="Tutup">✕</button>
     </div>
-    <div class="modal-body" id="editBody" style="max-height: calc(85vh - 120px); overflow-y: auto; padding: 16px;"></div>
+    <div class="modal-glass-body" id="editBody"></div>
+    <div class="modal-glass-foot">
+      <button type="button" class="btn-glass btn-glass-secondary" onclick="$('editModal').close()">Batal</button>
+      <button type="button" id="btnSaveEdit" class="btn-glass btn-glass-primary">Simpan Perubahan</button>
+    </div>
   </dialog>
 
   <!-- Modal Tambah Data Baru -->
-  <dialog id="tambahModal" style="max-width: 820px; width: 95vw;">
-    <div class="modal-head">
-      <h2>Tambah Data Pendaftaran Baru</h2>
-      <button id="btnCloseTambah" class="btn-ghost" onclick="$('tambahModal').close()">✕</button>
+  <dialog id="tambahModal" class="modal-glass" style="max-width: 880px; width: 95vw;">
+    <div class="modal-glass-head">
+      <div class="modal-glass-icon" style="background: linear-gradient(135deg, #10b981, #059669);">➕</div>
+      <div style="flex: 1; min-width: 0;">
+        <h2 class="modal-glass-title">Tambah Pendaftaran Baru</h2>
+        <p class="modal-glass-subtitle">Isi data identitas pemohon, letak objek tanah, dan saksi batas</p>
+      </div>
+      <button id="btnCloseTambah" class="modal-glass-close" onclick="$('tambahModal').close()" aria-label="Tutup">✕</button>
     </div>
-    <div class="modal-body" id="tambahBody" style="max-height: calc(85vh - 120px); overflow-y: auto; padding: 16px;"></div>
+    <div class="modal-glass-body" id="tambahBody"></div>
+    <div class="modal-glass-foot">
+      <button type="button" id="btnBatalTambah" class="btn-glass btn-glass-secondary" onclick="$('tambahModal').close()">Batal</button>
+      <button type="button" id="btnSaveTambah" class="btn-glass btn-glass-primary">Simpan Data</button>
+    </div>
   </dialog>
 
   <!-- Modal Ubah Sandi -->
-  <dialog id="modalChangePw" style="max-width: 460px; width: 92vw; border-radius: 18px;">
-    <div class="modal-head">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 20px;">🔑</span>
-        <h2 style="font-size: 17px; font-weight: 800; color: var(--slate-900);">Ubah Kata Sandi Admin</h2>
+  <dialog id="modalChangePw" class="modal-glass" style="max-width: 480px; width: 92vw;">
+    <div class="modal-glass-head">
+      <div class="modal-glass-icon" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">🔑</div>
+      <div style="flex: 1; min-width: 0;">
+        <h2 class="modal-glass-title">Ubah Kata Sandi Admin</h2>
+        <p class="modal-glass-subtitle">Perbarui kredensial kata sandi akun sistem</p>
       </div>
-      <button class="btn-ghost" onclick="closeChangePw()">✕</button>
+      <button class="modal-glass-close" onclick="closeChangePw()" aria-label="Tutup">✕</button>
     </div>
     <form id="changePwForm" onsubmit="handleChangePw(event)">
       <input type="text" name="username" autocomplete="username" style="display:none;" aria-hidden="true" value="admin" />
-      <div class="modal-body" style="display:flex; flex-direction:column; gap:14px; padding: 18px 20px;">
-        <div id="changePwError" class="badge err" style="display:none; padding:10px 14px; font-size:12.5px; border-radius:var(--radius-sm); border:1px solid #fca5a5; background:#fef2f2; color:#991b1b; white-space:normal;"></div>
-        <div id="changePwOk" class="badge ok" style="display:none; padding:10px 14px; font-size:12.5px; border-radius:var(--radius-sm); border:1px solid #86efac; background:#f0fdf4; color:#166534; white-space:normal;"></div>
+      <div class="modal-glass-body">
+        <div id="changePwError" class="badge err" style="display:none; padding:10px 14px; font-size:12.5px; border-radius:10px; border:1px solid #fca5a5; background:#fef2f2; color:#991b1b; white-space:normal; margin-bottom:14px;"></div>
+        <div id="changePwOk" class="badge ok" style="display:none; padding:10px 14px; font-size:12.5px; border-radius:10px; border:1px solid #86efac; background:#f0fdf4; color:#166534; white-space:normal; margin-bottom:14px;"></div>
 
-        <div>
-          <label style="font-size: 11.5px; font-weight: 800; color: var(--slate-700); margin-bottom: 6px; display: block;">
-            KATA SANDI SAAT INI
-          </label>
-          <div style="position: relative;">
-            <input type="password" id="cpCurrent" class="docs-select-input" placeholder="Masukkan kata sandi lama" required autocomplete="current-password" style="padding-left: 36px; padding-right: 40px; height: 42px; font-size: 14px; width: 100%; border-radius: 10px;" />
-            <i data-lucide="lock" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--slate-400);"></i>
-            <button type="button" onclick="toggleFieldPassword('cpCurrent', this)" class="auth-pwd-toggle" title="Lihat/Sembunyikan Sandi" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--slate-500); padding: 4px;">
-              <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
-            </button>
+        <div class="glass-card" style="margin-bottom: 0;">
+          <div class="glass-field" style="margin-bottom: 12px;">
+            <label for="cpCurrent">KATA SANDI SAAT INI</label>
+            <div style="position: relative;">
+              <input type="password" id="cpCurrent" class="glass-input" placeholder="Masukkan kata sandi lama" required autocomplete="current-password" style="padding-left: 38px; padding-right: 40px;" />
+              <i data-lucide="lock" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--slate-400);"></i>
+              <button type="button" onclick="toggleFieldPassword('cpCurrent', this)" class="auth-pwd-toggle" title="Lihat/Sembunyikan Sandi" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--slate-400); padding: 4px;">
+                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div>
-          <label style="font-size: 11.5px; font-weight: 800; color: var(--slate-700); margin-bottom: 6px; display: block;">
-            KATA SANDI BARU <span style="font-weight: 500; color: var(--slate-500);">(Min. 6 Karakter)</span>
-          </label>
-          <div style="position: relative;">
-            <input type="password" id="cpNew" class="docs-select-input" placeholder="Masukkan kata sandi baru" required minlength="6" autocomplete="new-password" style="padding-left: 36px; padding-right: 40px; height: 42px; font-size: 14px; width: 100%; border-radius: 10px;" />
-            <i data-lucide="key" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--slate-400);"></i>
-            <button type="button" onclick="toggleFieldPassword('cpNew', this)" class="auth-pwd-toggle" title="Lihat/Sembunyikan Sandi" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--slate-500); padding: 4px;">
-              <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
-            </button>
+          <div class="glass-field" style="margin-bottom: 12px;">
+            <label for="cpNew">KATA SANDI BARU <span style="font-weight: 500; color: var(--slate-400);">(Min. 6 Karakter)</span></label>
+            <div style="position: relative;">
+              <input type="password" id="cpNew" class="glass-input" placeholder="Masukkan kata sandi baru" required minlength="6" autocomplete="new-password" style="padding-left: 38px; padding-right: 40px;" />
+              <i data-lucide="key" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--slate-400);"></i>
+              <button type="button" onclick="toggleFieldPassword('cpNew', this)" class="auth-pwd-toggle" title="Lihat/Sembunyikan Sandi" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--slate-400); padding: 4px;">
+                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div>
-          <label style="font-size: 11.5px; font-weight: 800; color: var(--slate-700); margin-bottom: 6px; display: block;">
-            KONFIRMASI KATA SANDI BARU
-          </label>
-          <div style="position: relative;">
-            <input type="password" id="cpConfirm" class="docs-select-input" placeholder="Ulangi kata sandi baru" required minlength="6" autocomplete="new-password" style="padding-left: 36px; padding-right: 40px; height: 42px; font-size: 14px; width: 100%; border-radius: 10px;" />
-            <i data-lucide="check-circle" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--slate-400);"></i>
-            <button type="button" onclick="toggleFieldPassword('cpConfirm', this)" class="auth-pwd-toggle" title="Lihat/Sembunyikan Sandi" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--slate-500); padding: 4px;">
-              <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
-            </button>
+          <div class="glass-field">
+            <label for="cpConfirm">KONFIRMASI KATA SANDI BARU</label>
+            <div style="position: relative;">
+              <input type="password" id="cpConfirm" class="glass-input" placeholder="Ulangi kata sandi baru" required minlength="6" autocomplete="new-password" style="padding-left: 38px; padding-right: 40px;" />
+              <i data-lucide="check-circle" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--slate-400);"></i>
+              <button type="button" onclick="toggleFieldPassword('cpConfirm', this)" class="auth-pwd-toggle" title="Lihat/Sembunyikan Sandi" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--slate-400); padding: 4px;">
+                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
-      <div class="modal-foot" style="padding: 14px 20px; border-top: 1px solid var(--slate-100); display: flex; justify-content: flex-end; gap: 10px;">
-        <button type="button" id="btnCancelChangePw" class="btn btn-action-secondary" onclick="closeChangePw()">Batal</button>
-        <button type="submit" id="btnChangePwSubmit" class="btn primary" style="font-weight: 800; display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px;">
+      <div class="modal-glass-foot">
+        <button type="button" id="btnCancelChangePw" class="btn-glass btn-glass-secondary" onclick="closeChangePw()">Batal</button>
+        <button type="submit" id="btnChangePwSubmit" class="btn-glass btn-glass-primary" style="background: linear-gradient(135deg, #4f46e5, #4338ca);">
           <span id="changePwSpinner" style="display:none;">⏳</span>
           <span id="changePwSubmitLabel">💾 Simpan Sandi Baru</span>
         </button>
@@ -1318,55 +1333,54 @@
   </dialog>
 
   <!-- Modal Kelola Akun Pengguna (Admin Only) -->
-  <dialog id="modalManageUsers" style="max-width: 680px; width: 95vw; border-radius: 18px;">
-    <div class="modal-head">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 20px;">👥</span>
-        <h2 style="font-size: 17px; font-weight: 800; color: var(--slate-900);">Kelola Akun Pengguna</h2>
+  <dialog id="modalManageUsers" class="modal-glass" style="max-width: 740px; width: 95vw;">
+    <div class="modal-glass-head">
+      <div class="modal-glass-icon" style="background: linear-gradient(135deg, #0284c7, #0369a1);">👥</div>
+      <div style="flex: 1; min-width: 0;">
+        <h2 class="modal-glass-title">Kelola Akun Pengguna</h2>
+        <p class="modal-glass-subtitle">Manajemen daftar petugas, hak akses, dan kredensial login</p>
       </div>
-      <button class="btn-ghost" onclick="closeManageUsers()">✕</button>
+      <button class="modal-glass-close" onclick="closeManageUsers()" aria-label="Tutup">✕</button>
     </div>
-    <div class="modal-body" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 18px;">
-      <div id="manageUsersMsg" style="display:none; padding:10px 14px; font-size:12.5px; border-radius:8px; white-space:normal;"></div>
+    <div class="modal-glass-body" style="display: flex; flex-direction: column; gap: 16px;">
+      <div id="manageUsersMsg" style="display:none; padding:10px 14px; font-size:12.5px; border-radius:10px; white-space:normal;"></div>
 
       <!-- Daftar Pengguna -->
-      <div>
-        <div style="font-size:12px; font-weight:800; color:var(--slate-500); margin-bottom:10px; letter-spacing:.04em;">DAFTAR AKUN TERDAFTAR</div>
+      <div class="glass-card" style="margin-bottom: 0;">
+        <h3 class="glass-card-title">Daftar Akun Terdaftar</h3>
         <div id="manageUsersList" style="display: flex; flex-direction: column; gap: 8px; min-height: 40px;">
           <div style="color: var(--slate-400); font-size: 13px; text-align: center; padding: 10px;">Memuat...</div>
         </div>
       </div>
 
-      <hr style="border: none; border-top: 1px solid var(--slate-100); margin: 0;" />
-
       <!-- Form Tambah / Reset Sandi -->
-      <div>
-        <div style="font-size:12px; font-weight:800; color:var(--slate-500); margin-bottom:10px; letter-spacing:.04em;" id="manageUsersFormTitle">TAMBAH / EDIT AKUN</div>
+      <div class="glass-card" style="margin-bottom: 0;">
+        <h3 class="glass-card-title" id="manageUsersFormTitle">Tambah / Edit Akun</h3>
         <form id="manageUsersForm" onsubmit="handleManageUser(event)" style="display: flex; flex-direction: column; gap: 12px;">
           <input type="hidden" id="muMode" value="add" />
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <div>
-              <label style="font-size:11px; font-weight:700; color:var(--slate-600); display:block; margin-bottom:5px;">USERNAME</label>
-              <input type="text" id="muUsername" class="docs-select-input" placeholder="cth: bendahara" style="height:38px; font-size:13px;" autocomplete="off" />
+          <div class="glass-field-row">
+            <div class="glass-field">
+              <label for="muUsername">USERNAME</label>
+              <input type="text" id="muUsername" class="glass-input" placeholder="cth: bendahara" autocomplete="off" />
             </div>
-            <div>
-              <label style="font-size:11px; font-weight:700; color:var(--slate-600); display:block; margin-bottom:5px;">NAMA LENGKAP</label>
-              <input type="text" id="muName" class="docs-select-input" placeholder="cth: Bendahara Desa" style="height:38px; font-size:13px;" autocomplete="off" />
+            <div class="glass-field">
+              <label for="muName">NAMA LENGKAP</label>
+              <input type="text" id="muName" class="glass-input" placeholder="cth: Bendahara Desa" autocomplete="off" />
             </div>
           </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <div>
-              <label style="font-size:11px; font-weight:700; color:var(--slate-600); display:block; margin-bottom:5px;">ROLE</label>
-              <select id="muRole" class="docs-select-input" style="height:38px; font-size:13px;">
+          <div class="glass-field-row">
+            <div class="glass-field">
+              <label for="muRole">ROLE / HAK AKSES</label>
+              <select id="muRole" class="glass-input">
                 <option value="admin">admin — Akses Penuh</option>
                 <option value="bendahara" selected>bendahara — Keuangan</option>
                 <option value="user">user — Hanya Baca</option>
               </select>
             </div>
-            <div>
-              <label style="font-size:11px; font-weight:700; color:var(--slate-600); display:block; margin-bottom:5px;">KATA SANDI <span id="muPwHint" style="font-weight:400; color:var(--slate-400);">(Min. 6 kar.)</span></label>
+            <div class="glass-field">
+              <label for="muPassword">KATA SANDI <span id="muPwHint" style="font-weight:400; color:var(--slate-400);">(Min. 6 kar.)</span></label>
               <div style="position:relative;">
-                <input type="password" id="muPassword" class="docs-select-input" placeholder="Kata sandi baru" style="height:38px; font-size:13px; padding-right:38px;" autocomplete="new-password" />
+                <input type="password" id="muPassword" class="glass-input" placeholder="Kata sandi baru" style="padding-right:38px;" autocomplete="new-password" />
                 <button type="button" onclick="toggleFieldPassword('muPassword', this)" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--slate-400); padding:4px;">
                   <i data-lucide="eye" style="width:15px; height:15px;"></i>
                 </button>
@@ -1374,189 +1388,254 @@
             </div>
           </div>
           <div style="display:flex; gap:10px; justify-content: flex-end; margin-top:4px;">
-            <button type="button" onclick="resetManageUsersForm()" class="btn btn-action-secondary" style="font-size:12px; padding:7px 14px;">Batal / Reset</button>
-            <button type="submit" class="btn primary" style="font-size:12px; padding:7px 16px; font-weight:700;">
+            <button type="button" onclick="resetManageUsersForm()" class="btn-glass btn-glass-secondary" style="font-size:12px; padding:8px 14px;">Batal / Reset</button>
+            <button type="submit" class="btn-glass btn-glass-primary" style="font-size:12px; padding:8px 18px;">
               <span id="muSubmitLabel">💾 Simpan Akun</span>
             </button>
           </div>
         </form>
       </div>
     </div>
+    <div class="modal-glass-foot">
+      <button type="button" class="btn-glass btn-glass-secondary" onclick="closeManageUsers()">Tutup</button>
+    </div>
   </dialog>
 
   <!-- Modal Rekap Cetak -->
-  <dialog id="rekapModal" style="max-width: 960px; width: 96vw;">
-    <div class="modal-head">
-      <div>
-        <h2 id="rekapTitle">Rekap Data</h2>
-        <div id="rekapTotal" style="font-size: 11.5px; color: var(--slate-500); margin-top: 2px;"></div>
+  <dialog id="rekapModal" class="modal-glass" style="max-width: 980px; width: 96vw;">
+    <div class="modal-glass-head">
+      <div class="modal-glass-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">📊</div>
+      <div style="flex: 1; min-width: 0;">
+        <h2 id="rekapTitle" class="modal-glass-title">Rekap Data Pendaftaran</h2>
+        <div id="rekapTotal" class="modal-glass-subtitle">Menampilkan ringkasan data pendaftaran tanah</div>
       </div>
-      <button id="btnCloseRekap" class="btn-ghost" onclick="$('rekapModal').close()">✕</button>
+      <button id="btnCloseRekap" class="modal-glass-close" onclick="$('rekapModal').close()" aria-label="Tutup">✕</button>
     </div>
-    <div style="padding: 12px 16px 0 16px;">
+    <div style="padding: 14px 24px 0 24px;">
       <div class="rk-toolbar" id="rekapToolbar"></div>
     </div>
-    <div class="modal-body" id="rekapContent" style="max-height: calc(75vh - 120px); overflow-y: auto; padding: 16px;"></div>
-    <div class="modal-foot">
-      <button id="btnCetakRekap" class="btn primary">🖨️ Cetak Rekap</button>
-      <button class="btn btn-action-secondary" onclick="$('rekapModal').close()">Tutup</button>
+    <div class="modal-glass-body" id="rekapContent" style="max-height: calc(75vh - 130px); overflow-y: auto;"></div>
+    <div class="modal-glass-foot">
+      <button id="btnCetakRekap" class="btn-glass btn-glass-primary" style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">🖨️ Cetak Rekap</button>
+      <button class="btn-glass btn-glass-secondary" onclick="$('rekapModal').close()">Tutup</button>
     </div>
   </dialog>
 
   <!-- Modal Tambah / Edit Transaksi Kas -->
-  <dialog id="trxModal" style="max-width: 560px; width: 92vw;">
-    <div class="modal-head">
-      <h2 id="trxModalTitle">Tambah Transaksi Keuangan</h2>
-      <button id="btnCloseTrx" class="btn-ghost" onclick="$('trxModal').close()">✕</button>
-    </div>
+  <dialog id="trxModal" class="modal-glass" style="max-width: 580px; width: 92vw;">
     <form id="trxForm">
       <input type="hidden" id="trxId" />
-      <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
-        <label style="font-size:11px; font-weight:700; color:var(--slate-700); text-transform:uppercase;">Tanggal Transaksi
-          <input type="date" id="trxTanggal" class="docs-select-input" style="margin-top:4px;" required />
-        </label>
-        <label style="font-size:11px; font-weight:700; color:var(--slate-700); text-transform:uppercase;">Jenis Transaksi
-          <select id="trxJenis" class="docs-select-input" style="margin-top:4px;" required>
-            <option value="Pemasukan Kas">Pemasukan Kas</option>
-            <option value="Pemasukan Cicilan">Pemasukan Cicilan (Terkait Pemohon)</option>
-            <option value="Pengeluaran Operasional">Pengeluaran Operasional</option>
-            <option value="Pengeluaran Kas">Pengeluaran Kas Lainnya</option>
-          </select>
-        </label>
-        <label id="trxPemohonLabel" style="font-size:11px; font-weight:700; color:var(--slate-700); text-transform:uppercase; display:none;">Terkait ID Pemohon
-          <input type="text" id="trxIdPemohon" list="pemohonList" class="docs-select-input" placeholder="Pilih ID / Nama..." style="margin-top:4px;" />
-        </label>
-        <label style="font-size:11px; font-weight:700; color:var(--slate-700); text-transform:uppercase;">Nominal Transaksi (Rp)
-          <input type="number" id="trxNominal" class="docs-select-input" placeholder="Contoh: 150000" style="margin-top:4px;" required min="1" />
-        </label>
-        <label style="font-size:11px; font-weight:700; color:var(--slate-700); text-transform:uppercase;">Keterangan Peruntukan
-          <textarea id="trxKeterangan" class="docs-select-input" rows="2" placeholder="Rincian peruntukan transaksi..." style="margin-top:4px;" required></textarea>
-        </label>
-        <label style="font-size:11px; font-weight:700; color:var(--slate-700); text-transform:uppercase;">Bukti Pembayaran (Opsional, Foto / PDF)
-          <input type="file" id="trxBukti" accept="image/*,.pdf" style="margin-top:4px; font-size:12px;" />
-          <input type="hidden" id="trxBuktiOld" />
-          <div id="trxBuktiPreview" style="margin-top:4px; font-size:11.5px;"></div>
-        </label>
+      <div class="modal-glass-head">
+        <div class="modal-glass-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">💰</div>
+        <div style="flex: 1; min-width: 0;">
+          <h2 id="trxModalTitle" class="modal-glass-title">Transaksi Keuangan</h2>
+          <p class="modal-glass-subtitle">Catat pemasukan atau pengeluaran kas pertanahan</p>
+        </div>
+        <button id="btnCloseTrx" class="modal-glass-close" onclick="$('trxModal').close()" aria-label="Tutup">✕</button>
       </div>
-      <div class="modal-foot">
-        <button type="button" id="btnCancelTrx" class="btn btn-action-secondary" onclick="$('trxModal').close()">Batal</button>
-        <button type="submit" id="btnSaveTrx" class="btn primary">💾 Simpan Transaksi</button>
+      <div class="modal-glass-body">
+        <div class="glass-card">
+          <h3 class="glass-card-title">Informasi Transaksi</h3>
+          <div class="glass-field-row">
+            <div class="glass-field">
+              <label for="trxTanggal">Tanggal Transaksi</label>
+              <input type="date" id="trxTanggal" class="glass-input" required />
+            </div>
+            <div class="glass-field">
+              <label for="trxJenis">Jenis Transaksi</label>
+              <select id="trxJenis" class="glass-input" required>
+                <option value="">Pilih jenis</option>
+                <option value="Pemasukan Kas">Pemasukan Kas</option>
+                <option value="Pemasukan Cicilan">Pemasukan Cicilan (Terkait Pemohon)</option>
+                <option value="Pengeluaran Operasional">Pengeluaran Operasional</option>
+                <option value="Pengeluaran Kas">Pengeluaran Kas Lainnya</option>
+              </select>
+            </div>
+          </div>
+          <div class="glass-field-row" id="trxPemohonRow" style="display:none; margin-top: 10px;">
+            <div class="glass-field full">
+              <label for="trxIdPemohon">ID Pemohon Terkait</label>
+              <input type="text" id="trxIdPemohon" list="pemohonList" class="glass-input" placeholder="Pilih ID / Nama pemohon" />
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h3 class="glass-card-title">Nominal &amp; Keterangan</h3>
+          <div class="glass-field" style="margin-bottom: 12px;">
+            <label for="trxNominal">Nominal (Rp)</label>
+            <input type="number" id="trxNominal" class="glass-input" placeholder="Contoh: 150000" required min="1" />
+          </div>
+          <div class="glass-field">
+            <label for="trxKeterangan">Keterangan Peruntukan</label>
+            <textarea id="trxKeterangan" class="glass-input glass-textarea" rows="3" placeholder="Rincian peruntukan transaksi..." required></textarea>
+          </div>
+        </div>
+
+        <div class="glass-card" style="margin-bottom: 0;">
+          <h3 class="glass-card-title">Bukti Pembayaran</h3>
+          <div class="glass-field">
+            <label for="trxBukti">Foto / PDF (Opsional)</label>
+            <input type="file" id="trxBukti" class="glass-input glass-file" accept="image/*,.pdf" />
+            <input type="hidden" id="trxBuktiOld" />
+            <div id="trxBuktiPreview" class="glass-file-preview"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-glass-foot">
+        <button type="button" class="btn-glass btn-glass-secondary" onclick="$('trxModal').close()">Batal</button>
+        <button type="submit" id="btnSaveTrx" class="btn-glass btn-glass-primary">Simpan Transaksi</button>
       </div>
     </form>
   </dialog>
 
   <!-- Modal Login Petugas Desa -->
-  <dialog id="loginModal" style="max-width: 440px; width: 92vw; border-radius: var(--radius-lg); padding: 0; overflow: hidden; border: 1px solid var(--slate-200); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
-    <div style="background: linear-gradient(135deg, #14532d 0%, #166534 100%); padding: 24px 24px 20px; color: #ffffff; text-align: center; position: relative;">
-      <button id="btnCloseLogin" class="btn-ghost" onclick="closeLogin()" style="position: absolute; top: 12px; right: 12px; color: rgba(255,255,255,0.8); font-size: 18px;">✕</button>
-      <img src="logo-desa.png" alt="Logo Desa Batetangnga" style="width: 54px; height: 54px; object-fit: contain; margin: 0 auto 10px; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
-      <h2 style="font-size: 17px; font-weight: 800; color: #ffffff; margin: 0 0 4px 0; letter-spacing: -0.3px;">Sistem Informasi Pertanahan</h2>
-      <p style="font-size: 11.5px; color: rgba(255,255,255,0.85); margin: 0;">Desa Batetangnga · Masuk Petugas &amp; Admin</p>
+  <dialog id="loginModal" class="modal-glass" style="max-width: 440px; width: 92vw;">
+    <div style="background: linear-gradient(135deg, #14532d 0%, #166534 60%, #15803d 100%); padding: 26px 24px 22px; color: #ffffff; text-align: center; position: relative; border-radius: 22px 22px 0 0; box-shadow: inset 0 -1px 0 rgba(255,255,255,0.15);">
+      <button id="btnCloseLogin" class="modal-glass-close" onclick="closeLogin()" style="position: absolute; top: 14px; right: 14px; color: #ffffff; background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2);" aria-label="Tutup">✕</button>
+      <div style="width: 62px; height: 62px; margin: 0 auto 12px; background: rgba(255,255,255,0.95); border-radius: 16px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.4) inset; display: flex; align-items: center; justify-content: center;">
+        <img src="logo-desa.png" alt="Logo Desa Batetangnga" style="width: 100%; height: 100%; object-fit: contain;" />
+      </div>
+      <h2 style="font-family: var(--font-display, 'Space Grotesk', sans-serif); font-size: 18px; font-weight: 800; color: #ffffff; margin: 0 0 4px 0; letter-spacing: -0.3px;">Sistem Pertanahan Digital</h2>
+      <p style="font-size: 12px; color: rgba(255,255,255,0.85); margin: 0;">Desa Batetangnga · Akses Petugas &amp; Admin</p>
     </div>
 
-    <form id="loginForm" onsubmit="handleLogin(event)" style="padding: 20px 24px 24px; background: #ffffff;">
+    <form id="loginForm" onsubmit="handleLogin(event)" style="padding: 22px 24px 24px; background: transparent;">
       <div style="display: flex; flex-direction: column; gap: 14px;">
-        <div id="loginError" class="badge err" style="display:none; padding: 9px 12px; font-size: 12px; border-radius: var(--radius-sm); border: 1px solid #fca5a5; background: #fef2f2; color: #991b1b; white-space: normal;"></div>
+        <div id="loginError" class="badge err" style="display:none; padding: 10px 14px; font-size: 12px; border-radius: 10px; border: 1px solid #fca5a5; background: #fef2f2; color: #991b1b; white-space: normal;"></div>
 
-        <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: var(--slate-700); margin-bottom: 5px; display: block;">
-            USERNAME / ID PENGGUNA
-          </label>
+        <div class="glass-field">
+          <label for="loginEmail">USERNAME / ID PENGGUNA</label>
           <div style="position: relative;">
-            <input type="text" id="loginEmail" class="docs-select-input" placeholder="Ketik username (misal: admin)" required autocomplete="username" style="padding-left: 34px;" />
-            <i data-lucide="user" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--slate-400);"></i>
+            <input type="text" id="loginEmail" class="glass-input" placeholder="Ketik username (misal: admin)" required autocomplete="username" style="padding-left: 38px;" />
+            <i data-lucide="user" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--slate-400);"></i>
           </div>
         </div>
 
-        <div>
-          <label style="font-size: 11.5px; font-weight: 700; color: var(--slate-700); margin-bottom: 5px; display: block;">
-            KATA SANDI
-          </label>
+        <div class="glass-field">
+          <label for="loginPassword">KATA SANDI</label>
           <div style="position: relative;">
-            <input type="password" id="loginPassword" class="docs-select-input" placeholder="••••••••" required autocomplete="current-password" style="padding-left: 34px; padding-right: 36px;" />
-            <i data-lucide="lock" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--slate-400);"></i>
-            <button type="button" id="togglePassword" onclick="togglePassword()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--slate-400); display: flex; align-items: center; padding: 4px;">
+            <input type="password" id="loginPassword" class="glass-input" placeholder="••••••••" required autocomplete="current-password" style="padding-left: 38px; padding-right: 38px;" />
+            <i data-lucide="lock" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--slate-400);"></i>
+            <button type="button" id="togglePassword" onclick="togglePassword()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--slate-400); display: flex; align-items: center; padding: 4px;">
               <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
             </button>
           </div>
         </div>
 
-        <button type="submit" id="btnLoginSubmit" class="btn primary" style="padding: 11px; font-size: 13.5px; font-weight: 800; border-radius: var(--radius-md); justify-content: center; margin-top: 4px; box-shadow: 0 4px 12px rgba(20, 83, 45, 0.2);">
+        <button type="submit" id="btnLoginSubmit" class="btn-glass btn-glass-primary" style="padding: 12px; font-size: 13.5px; font-weight: 800; border-radius: 12px; justify-content: center; margin-top: 6px; background: linear-gradient(135deg, #15803d, #166534); box-shadow: 0 4px 16px rgba(22, 101, 52, 0.3);">
           <span id="loginSpinner" style="display:none; margin-right: 6px;">⏳</span>
           <span id="loginSubmitLabel">Masuk ke Sistem</span>
         </button>
       </div>
 
-      <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--slate-100); display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--slate-500);">
-        <span>🔒 Akses Terproteksi &amp; Aman</span>
-        <button type="button" class="btn-ghost" onclick="closeLogin()" style="font-size: 11.5px; padding: 2px 6px;">Batal</button>
+      <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(148,163,184,0.2); display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--slate-500);">
+        <span style="display: flex; align-items: center; gap: 4px;">🔒 Akses Terproteksi &amp; Aman</span>
+        <button type="button" class="btn-ghost" onclick="closeLogin()" style="font-size: 11.5px; padding: 2px 8px; border-radius: 6px;">Batal</button>
       </div>
     </form>
   </dialog>
 
   <!-- Modal Kelola Jenis Dokumen -->
-  <dialog id="docsManageModal">
-    <div class="modal-head">
-      <h2>Kelola Jenis Dokumen &amp; Template</h2>
-      <button class="btn-ghost" onclick="$('docsManageModal').close()">✕</button>
+  <dialog id="docsManageModal" class="modal-glass" style="max-width: 640px; width: 94vw;">
+    <div class="modal-glass-head">
+      <div class="modal-glass-icon" style="background: linear-gradient(135deg, #0284c7, #0369a1);">📂</div>
+      <div style="flex: 1; min-width: 0;">
+        <h2 class="modal-glass-title">Kelola Jenis Dokumen &amp; Template</h2>
+        <p class="modal-glass-subtitle">Atur daftar jenis surat dan tautan template Google Docs</p>
+      </div>
+      <button class="modal-glass-close" onclick="$('docsManageModal').close()" aria-label="Tutup">✕</button>
     </div>
-    <div class="modal-body">
-      <div id="listJenisDokumen" style="display:flex; flex-direction:column; gap:8px; margin-bottom:18px;"></div>
-      <form id="formTambahJenis" style="border-top:1px solid var(--slate-200); padding-top:14px; display:flex; gap:8px; align-items:flex-end;">
-        <label style="flex:1; font-size:12px; font-weight:700;">Nama Dokumen Baru
-          <input type="text" id="inputNamaJenis" class="docs-select-input" placeholder="Contoh: Surat Hibah Khusus" required style="margin-top:4px;" />
-        </label>
-        <label style="width:70px; font-size:12px; font-weight:700;">Ikon
-          <input type="text" id="inputIconJenis" class="docs-select-input" value="📄" style="margin-top:4px;" />
-        </label>
-        <button type="submit" class="btn primary">Tambah</button>
-      </form>
+    <div class="modal-glass-body">
+      <div class="glass-card" style="margin-bottom: 14px;">
+        <h3 class="glass-card-title">Daftar Jenis Surat Terdaftar</h3>
+        <div id="listJenisDokumen" style="display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
+      <div class="glass-card" style="margin-bottom: 0;">
+        <h3 class="glass-card-title">Tambah Jenis Surat Baru</h3>
+        <form id="formTambahJenis" style="display:flex; gap:10px; align-items:flex-end; flex-wrap: wrap;">
+          <div class="glass-field" style="flex: 1; min-width: 200px;">
+            <label for="inputNamaJenis">Nama Dokumen Baru</label>
+            <input type="text" id="inputNamaJenis" class="glass-input" placeholder="Contoh: Surat Hibah Khusus" required />
+          </div>
+          <div class="glass-field" style="width: 70px;">
+            <label for="inputIconJenis">Ikon</label>
+            <input type="text" id="inputIconJenis" class="glass-input" value="📄" />
+          </div>
+          <button type="submit" class="btn-glass btn-glass-primary" style="padding: 10px 16px;">Tambah</button>
+        </form>
+      </div>
     </div>
-    <div class="modal-foot">
-      <button class="btn btn-action-secondary" onclick="$('docsManageModal').close()">Tutup</button>
+    <div class="modal-glass-foot">
+      <button class="btn-glass btn-glass-secondary" onclick="$('docsManageModal').close()">Tutup</button>
     </div>
   </dialog>
 
   <!-- Modal Edit Link Template -->
-  <dialog id="modalEditLink">
-    <div class="modal-head">
-      <h2>Edit Link Template Google Docs</h2>
-      <button class="btn-ghost" onclick="$('modalEditLink').close()">✕</button>
+  <dialog id="modalEditLink" class="modal-glass" style="max-width: 560px; width: 92vw;">
+    <div class="modal-glass-head">
+      <div class="modal-glass-icon" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">🔗</div>
+      <div style="flex: 1; min-width: 0;">
+        <h2 class="modal-glass-title">Edit Link Template Google Docs</h2>
+        <p class="modal-glass-subtitle">Tautkan dokumen master Google Docs untuk automasi surat</p>
+      </div>
+      <button id="btnModalEditLinkClose" class="modal-glass-close" onclick="$('modalEditLink').close()" aria-label="Tutup">✕</button>
     </div>
     <form id="formModalEditLink">
-      <div class="modal-body">
+      <div class="modal-glass-body">
         <input type="hidden" id="editLinkJenisId" />
-        <label style="font-size:12px; font-weight:700;">Jenis Surat
-          <input type="text" id="editLinkJenisNamaDisplay" class="docs-select-input" readonly style="margin-top:4px; background:#f1f5f9;" />
-        </label>
-        <label style="font-size:12px; font-weight:700; margin-top:10px;">Link Google Docs
-          <input type="text" id="editLinkInput" class="docs-select-input" placeholder="https://docs.google.com/document/d/.../edit" required style="margin-top:4px;" />
-        </label>
-        <small style="color:var(--slate-500); margin-top:6px; display:block;">Pastikan akses Google Docs disetel <em>"Anyone with link can view"</em>.</small>
+        <div class="glass-card" style="margin-bottom: 0;">
+          <div class="glass-field" style="margin-bottom: 12px;">
+            <label>Jenis Surat</label>
+            <input type="text" id="editLinkJenisNamaDisplay" class="glass-input" readonly style="background: rgba(241,245,249,0.7); font-weight: 700;" />
+          </div>
+          <div class="glass-field">
+            <label for="editLinkInput">Link Google Docs</label>
+            <input type="text" id="editLinkInput" class="glass-input" placeholder="https://docs.google.com/document/d/.../edit" required />
+            <small style="color:var(--slate-500); margin-top:6px; font-size:11px; display:block;">💡 Pastikan akses link Google Docs disetel: <em>"Anyone with link can view"</em>.</small>
+          </div>
+        </div>
       </div>
-      <div class="modal-foot">
-        <button type="button" id="btnModalEditLinkCancel" class="btn btn-action-secondary" onclick="$('modalEditLink').close()">Batal</button>
-        <button type="submit" class="btn primary">💾 Simpan Link</button>
+      <div class="modal-glass-foot">
+        <button type="button" id="btnModalEditLinkCancel" class="btn-glass btn-glass-secondary" onclick="$('modalEditLink').close()">Batal</button>
+        <button type="submit" class="btn-glass btn-glass-primary">💾 Simpan Link</button>
       </div>
     </form>
   </dialog>
 
   <!-- Modal Laporan Bulanan -->
-  <dialog id="laporanModal" style="max-width:900px; width:95vw; max-height:90vh; border-radius:var(--radius-lg); padding:0; overflow:hidden; border:1px solid var(--slate-200); box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
-    <div style="background:linear-gradient(135deg,#14532d 0%,#166534 100%); padding:18px 24px; color:#fff; display:flex; justify-content:space-between; align-items:center;">
-      <div>
-        <h2 style="font-size:16px; font-weight:800; margin:0;">📋 LAPORAN BULANAN PERTANAHAN</h2>
-        <p style="font-size:11px; margin:2px 0 0; opacity:0.8;">Desa Batetangnga, Kec. Binuang, Kab. Polewali Mandar</p>
+  <dialog id="laporanModal" class="modal-glass" style="max-width:920px; width:95vw; max-height:90vh;">
+    <div class="modal-glass-head" style="background: linear-gradient(135deg, rgba(20,83,45,0.95), rgba(22,101,52,0.95)); color: #fff;">
+      <div class="modal-glass-icon" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);">📋</div>
+      <div style="flex: 1; min-width: 0;">
+        <h2 class="modal-glass-title" style="color: #fff; text-shadow: none;">Laporan Bulanan Pertanahan</h2>
+        <p class="modal-glass-subtitle" style="color: rgba(255,255,255,0.85);">Pemerintah Desa Batetangnga · Kec. Binuang, Kab. Polewali Mandar</p>
       </div>
-      <div style="display:flex; gap:6px;">
-        <button id="btnCetakLaporan" class="btn" style="background:rgba(255,255,255,0.2); color:#fff; border:1px solid rgba(255,255,255,0.3); font-size:12px; padding:8px 14px;">🖨️ Cetak</button>
-        <button onclick="$('laporanModal').close()" class="btn-ghost" style="color:#fff; font-size:18px;">✕</button>
+      <div style="display:flex; gap:8px; align-items: center;">
+        <button id="btnCetakLaporan" class="btn-glass btn-glass-primary" style="background: rgba(255,255,255,0.25); color: #fff; border-color: rgba(255,255,255,0.35); padding: 7px 14px; font-size: 12px;">🖨️ Cetak</button>
+        <button onclick="$('laporanModal').close()" class="modal-glass-close" style="color: #fff; background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2);" aria-label="Tutup">✕</button>
       </div>
     </div>
-    <div style="padding:20px 24px; overflow-y:auto; max-height:calc(90vh - 70px); background:#fff;" id="laporanBody">
+    <div class="modal-glass-body" id="laporanBody" style="max-height:calc(90vh - 120px); overflow-y:auto; background: rgba(255,255,255,0.65);">
       <p style="text-align:center; color:var(--slate-400); padding:40px;">Memuat laporan...</p>
     </div>
   </dialog>
+
+  <!-- Modal Konfirmasi Universal (SweetAlert-Grade UI) -->
+  <dialog id="appCustomConfirmDialog" class="modal-glass">
+    <div class="app-confirm-wrap">
+      <div id="appConfirmIconBox" class="app-confirm-icon-box warning">⚠️</div>
+      <h3 id="appConfirmTitle" class="app-confirm-title">Konfirmasi Tindakan</h3>
+      <p id="appConfirmText" class="app-confirm-text">Apakah Anda yakin ingin melanjutkan tindakan ini?</p>
+      <div class="app-confirm-actions">
+        <button type="button" id="appConfirmCancelBtn" class="btn-glass btn-glass-secondary">Batal</button>
+        <button type="button" id="appConfirmOkBtn" class="btn-glass btn-glass-primary">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Toast Notification Container -->
+  <div id="appToastContainer" class="app-toast-container"></div>
 
   <!-- Script Global App -->
   <script src="app.js?v=20260823_2345_dashboard" defer></script>
